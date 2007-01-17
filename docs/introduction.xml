@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN" "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<chapter id="introduction">
+  <title>Open Hardware Manager Introduction</title>
+
+  <sect1 id="introduction-description">
+    <title>Overall Description</title>
+
+    <para>
+      OHM is a small open source systems daemon which sits above HAL and
+      abstracts out common hardware management tasks such as:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          System wide power management statistics (for instance calculating
+          hysteresis of battery curves).
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Managing system wide inhibit actions, for instance system
+          firmware updating.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Controlling heat dissipation on embedded and PC devices.
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <para>
+      OHM is built using a plugin architecture with a low-overhead messaging
+      structure.
+      This gives a very configurable base system that can be configured in many
+      different ways.
+      Each plugin can query data from HAL or execute methods on HAL devices and
+      expose preferences interfaces for session-space to use.
+    </para>
+
+    <mediaobject id="ohm-structure">
+      <imageobject>
+        <imagedata format="PNG" fileref="ohm-structure.png" align="center"/>
+      </imageobject>
+    </mediaobject>
+ 
+    <para>
+      OHM is LGPL licensed to allow proprietary licensed plug-ins to be used
+      where absolutely required.
+      It is also uses the minimum of memory and processor requirement to fulfill
+      the task.
+      This makes it suitable for use on the latest smart-phones, the OLPC device
+      or any other embedded products such as set top boxes.
+    </para>
+
+    <para>
+      HAL has traditionally been seen too heavyweight for use on an embedded device.
+      While this was once true, there have been very many developers working on
+      adding conditional compilation to parts of HAL, and to reduce memory usage.
+      This can be seen with the startup speed of 0.5.9 being 40% than of 0.5.8.
+      Context switching has been reduced, and memory pressure on coldplug has been
+      reduced for devices with a small amount of devices.
+      It is expected that <literal>hald</literal> will start in the few hundred
+      millisecond range and consume less than half a megabyte of RAM at coldplug.
+    </para>
+
+    <para>
+      Using HAL allows us to use a common framework for hardware management,
+      which means plugins designed for one architecture or chip will work on
+      any other system.
+      Working together is the best way to get high quality, maintainable code
+      rather than all the hacky systems we have now.
+    </para>
+
+    <mediaobject id="ohm-sessions">
+      <imageobject>
+        <imagedata format="PNG" fileref="ohm-sessions.png" align="center"/>
+      </imageobject>
+    </mediaobject>
+
+    <para>
+      Proof of concept code is available on the project page.
+      There are no tarball releases yet, checking out using git is the best
+      option.
+    </para>
+
+    <para>
+      OHM comprises:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          The <literal>ohmd</literal> system daemon which co-ordinates the
+          rules and acts as a keystore for multiple users.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          The interface specification which outlines core
+          <literal>ohmd</literal> functionality
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          A method for plugins to request notification when keys change, for
+          example when the system AC state is changed.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+           The test suite which tests functionality
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <para>
+      OHM is very suitable for embedded devices that need to manage power, heat
+      and other critical tasks early in the boot sequence.
+      Using HAL, it provides an abstract method for all plugins to be written in
+      a generic way, not tied to the specific implementation of the device.
+    </para>
+
+    <para>
+      What OHM is not:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          A power saving daemon.
+          It is not doing power saving specifically, it is just doing device
+          specific rules that manage power and heat dissipation and other
+          hardware specific stuff.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          An abstraction of HAL. HAL acts as the input and the output of OHM,
+          and OHM enforces policy for HAL.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          A huge daemon with lots of dependencies.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          API or ABI stable. Expect the ABI and API to change on a regular
+          basis until we ship 1.0.0.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Targeted to a particular architecture or platform.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Produced by any one vendor.
+          There are many contributors helping to get this done.
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <para>
+      Why not do everything in a session daemon?:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          Sometimes we need to start very early in the boot sequence.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          We don't want to die if X dies.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          On a server with 100 logged in users we don't want an instance for
+          each user.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          We need to apply policy at boot-up or before X starts.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+  <sect1 id="introduction-plugins">
+    <title>Plugins</title>
+    <para>
+      Plugins have keys and policy, and also install a default system
+      preferences file.
+    </para>
+
+    <para>
+      We need to set system preferences when there is no user logged in or we
+      are very early in the boot sequence.
+      We do this with each plugin installing a text file with the plugin key
+      name, the value, and optionally the public switch.
+    </para>
+
+    <para>
+      The core setup file is read from <filename>/etc/ohm/core</filename> and
+      plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
+      Comments are lines with first character <literal>#</literal> and then the
+      rest of the line is ignored.
+      Files are flat text with the following formal description, 
+      <literal>plugin_prefix.key value type public</literal>
+    </para>
+    <important>
+      <para>
+        There is a single space between the values.
+        Line endings have to be UNIX not WIN or MAC.
+        Parsing is very strict, and <literal>ohmd</literal> will exit with an
+        error if the syntax is not perfect. This is by design.
+      </para>
+    </important>
+
+    <note>
+      <para>
+        Public is only set if the key can be changed by the session, and if the
+        key is tried to be set, the set method will fail.
+        This is a way to enforce fine-grained rules on users when writing
+        PolicyKit rules for every action would be too great an overhead.
+      </para>
+    </note>
+
+    <para>
+      Plugins can tell <literal>ohmd</literal> that other plugins are required
+      for certain functionality, for instance, the backlight unit on a mobile
+      phone may require the temperature module to be present, so it can do the
+      temperature shutdown checks.
+      This is done with <literal>ohm_module_require()</literal>.
+      <literal>ohmd</literal> daemon will fail to load if any required plugin
+      is not present after the plugins have finished initializing.
+    </para>
+
+    <para>
+      Plugins can also tell <literal>ohmd</literal> that other plugins are suggested for certain
+      functionality, for instance, the backlight unit may work best when the
+      battery plugin is loaded so we can dim when we are low on power.
+      This is done with <literal>ohm_module_suggest()</literal>.
+      <literal>ohmd</literal> daemon will print a message to the console if any
+      suggested plugin is not present.
+    </para>
+
+    <para>
+      Plugins can also tell <literal>ohmd</literal> that other plugins are banned, for instance,
+      a proprietary battery discharge plugin maybe incompatible with the
+      standard battery plugin.
+      This is done with <literal>ohm_module_prevent()</literal>.
+      <literal>ohmd</literal> will fail to load if any prevented plugin is
+      manually loaded or loaded through a dependency of another plugin.
+    </para>
+
+    <para>
+      In <literal>ohmd</literal>, keys are created read/write by the plugin.
+      Other plugins can watch for changes on these keys (even on other modules)
+      using <literal>ohm_key_monitor()</literal>.
+      The callback will be issued local to the plugin when the state of this
+      key changes.
+    </para>
+
+    <para>
+      NOTE: There is no ordering of priority (yet?) of monitored keys.
+      Make sure that policy per key is kept to one plugin, else strange
+      races might start happening.
+    </para>
+
+    <para>
+      A library called <literal>libohm</literal> allows system and session
+      programs to easily interface with <literal>ohmd</literal>.
+      This library will remove the implementation detail from plugins and
+      session applications.
+      This library, like the rest of OHM will not be API or ABI stable until
+      version 1.0.0 is released.
+    </para>
+
+  </sect1>
+
+  <sect1 id="introduction-deps">
+    <title>Dependencies</title>
+    <para>
+      OHM is lightweight.
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          GLib 2.10.0 (required)
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          DBUS 0.70 (required)
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          HAL 0.5.8 (required)
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          PolicyKit (optional)
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          ConsoleKit (optional)
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
+</chapter>

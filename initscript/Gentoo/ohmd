@@ -1,0 +1,45 @@
+#!/sbin/runscript
+#
+# ohm:   ohm daemon
+#
+# chkconfig: 345 98 02
+# description:  Open Hardware Manager
+#
+# processname: ohm
+# pidfile: /var/run/ohm.pid
+#
+### BEGIN INIT INFO
+# Provides: $network
+### END INIT INFO
+
+# Sanity checks.
+[ -x /usr/sbin/ohmd ] || exit 0
+
+# so we can rearrange this easily
+processname=/usr/sbin/ohmd
+pidfile=/var/run/ohm.pid
+
+depend() {
+	need hald
+}
+
+start()
+{
+	if [ -e ${pidfile} ]; then
+		rm -f ${pidfile}
+	fi
+	ebegin "Starting ohm"
+	start-stop-daemon --start --quiet --exec ${processname}
+	eend $?
+	echo $(/bin/pidof ohm) > ${pidfile}
+}
+
+stop()
+{
+	ebegin "Stopping ohm"
+	start-stop-daemon --stop --quiet --exec ${processname} --pidfile ${pidfile}
+	eend $?
+	if [ -e ${pidfile} ]; then
+		rm -f $pidfile
+	fi
+}

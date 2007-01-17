@@ -1,0 +1,395 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>Open Hardware Manager 0.0.1 Documentation</title><link rel="stylesheet" href="docbook.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.69.1"><meta name="description" content='Executive Summary 
+        OHM is a small open source systems daemon which sits above HAL and
+        abstracts out common hardware management tasks such as system wide
+        inhibit action control and controlling heat dissipation on embedded
+        devices.
+        OHM is built using a lightweight plugin architecture.
+        Each plugin can query data from HAL or execute methods on HAL devices
+        and expose preferences for session programs to modify. 
+        OHM is product and vendor neutral and is currently being developed by
+        a small team of developers.
+       
+        OHM : "Resistance is futile"
+      '></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="book" lang="en"><div class="titlepage"><div><div><h1 class="title"><a name="index"></a>Open Hardware Manager 0.0.1 Documentation</h1></div><div><div class="authorgroup"><div class="author"><h3 class="author"><span class="firstname">Richard</span> <span class="surname">Hughes</span></h3><div class="affiliation"><div class="address"><p><br>
+            <code class="email">&lt;<a href="mailto:richard@hughsie.com">richard@hughsie.com</a>&gt;</code><br>
+          </p></div></div></div></div></div><div><p class="releaseinfo">Version 0.0.1</p></div><div><div class="abstract"><p class="title"><b>Executive Summary</b></p><p>
+        OHM is a small open source systems daemon which sits above HAL and
+        abstracts out common hardware management tasks such as system wide
+        inhibit action control and controlling heat dissipation on embedded
+        devices.
+        OHM is built using a lightweight plugin architecture.
+        Each plugin can query data from HAL or execute methods on HAL devices
+        and expose preferences for session programs to modify. 
+        OHM is product and vendor neutral and is currently being developed by
+        a small team of developers.
+      </p><p>
+        OHM : <span class="emphasis"><em>"Resistance is futile"</em></span>
+      </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#introduction">1. Open Hardware Manager Introduction</a></span></dt><dd><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-plugins">Plugins</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></dd><dt><span class="chapter"><a href="#dbus-interface">2. DBUS Interface</a></span></dt><dd><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
+        <code class="literal">Exported keys</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetVersion">
+        <code class="literal">GetVersion()</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetPlugins">
+        <code class="literal">GetPlugins()</code>
+      </a></span></dt></dl></dd><dt><span class="sect1"><a href="#pm-keystore">Keystore functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-keystore-GetKey">
+        <code class="literal">GetKey()</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-keystore-SetKey">
+        <code class="literal">SetKey()</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-keystore-AddNotifyKey">
+        <code class="literal">AddNotifyKey()</code>
+      </a></span></dt></dl></dd><dt><span class="sect1"><a href="#pm-backlight">Backlight Adjustment</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-backlight-keys">
+        <code class="literal">Exported keys</code>
+      </a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#faq">3. Frequently Asked Questions</a></span></dt><dd><dl><dt><span class="sect1"><a href="#faq-sessionpolicy">
+      How does OHM fit in with other session policy agents?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-specificdevice">
+      Why not just do a specific device hack for all the different
+      embedded hardware?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-lgpl">
+      So it's LGPL... does that mean some of the code is closed source?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-installcode">
+      Can I install the latest stable code?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-releasedate">
+      What is the release date plan for OHM?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-systemprefs">
+      Do you need to use system GConf for the system preferences?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-noxml">
+      Is OHM using XML to define the policy rules?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-whysessionlayer">
+      Why include a session layer for embedded appliances?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-whysinglehash">
+      Why are all the keys exposed in a single hash table?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-restartdeps">
+      Will OHM break if I restart <code class="literal">messagebus</code> or
+      <code class="literal">hald</code>?
+    </a></span></dt></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="introduction"></a>Chapter 1. Open Hardware Manager Introduction</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-plugins">Plugins</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-description"></a>Overall Description</h2></div></div></div><p>
+      OHM is a small open source systems daemon which sits above HAL and
+      abstracts out common hardware management tasks such as:
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+          System wide power management statistics (for instance calculating
+          hysteresis of battery curves).
+        </p></li><li><p>
+          Managing system wide inhibit actions, for instance system
+          firmware updating.
+        </p></li><li><p>
+          Controlling heat dissipation on embedded and PC devices.
+        </p></li></ul></div><p>
+      OHM is built using a plugin architecture with a low-overhead messaging
+      structure.
+      This gives a very configurable base system that can be configured in many
+      different ways.
+      Each plugin can query data from HAL or execute methods on HAL devices and
+      expose preferences interfaces for session-space to use.
+    </p><div class="mediaobject" align="center"><a name="ohm-structure"></a><img src="ohm-structure.png" align="middle"></div><p>
+      OHM is LGPL licensed to allow proprietary licensed plug-ins to be used
+      where absolutely required.
+      It is also uses the minimum of memory and processor requirement to fulfill
+      the task.
+      This makes it suitable for use on the latest smart-phones, the OLPC device
+      or any other embedded products such as set top boxes.
+    </p><p>
+      HAL has traditionally been seen too heavyweight for use on an embedded device.
+      While this was once true, there have been very many developers working on
+      adding conditional compilation to parts of HAL, and to reduce memory usage.
+      This can be seen with the startup speed of 0.5.9 being 40% than of 0.5.8.
+      Context switching has been reduced, and memory pressure on coldplug has been
+      reduced for devices with a small amount of devices.
+      It is expected that <code class="literal">hald</code> will start in the few hundred
+      millisecond range and consume less than half a megabyte of RAM at coldplug.
+    </p><p>
+      Using HAL allows us to use a common framework for hardware management,
+      which means plugins designed for one architecture or chip will work on
+      any other system.
+      Working together is the best way to get high quality, maintainable code
+      rather than all the hacky systems we have now.
+    </p><div class="mediaobject" align="center"><a name="ohm-sessions"></a><img src="ohm-sessions.png" align="middle"></div><p>
+      Proof of concept code is available on the project page.
+      There are no tarball releases yet, checking out using git is the best
+      option.
+    </p><p>
+      OHM comprises:
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+          The <code class="literal">ohmd</code> system daemon which co-ordinates the
+          rules and acts as a keystore for multiple users.
+        </p></li><li><p>
+          The interface specification which outlines core
+          <code class="literal">ohmd</code> functionality
+        </p></li><li><p>
+          A method for plugins to request notification when keys change, for
+          example when the system AC state is changed.
+        </p></li><li><p>
+           The test suite which tests functionality
+        </p></li></ul></div><p>
+      OHM is very suitable for embedded devices that need to manage power, heat
+      and other critical tasks early in the boot sequence.
+      Using HAL, it provides an abstract method for all plugins to be written in
+      a generic way, not tied to the specific implementation of the device.
+    </p><p>
+      What OHM is not:
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+          A power saving daemon.
+          It is not doing power saving specifically, it is just doing device
+          specific rules that manage power and heat dissipation and other
+          hardware specific stuff.
+        </p></li><li><p>
+          An abstraction of HAL. HAL acts as the input and the output of OHM,
+          and OHM enforces policy for HAL.
+        </p></li><li><p>
+          A huge daemon with lots of dependencies.
+        </p></li><li><p>
+          API or ABI stable. Expect the ABI and API to change on a regular
+          basis until we ship 1.0.0.
+        </p></li><li><p>
+          Targeted to a particular architecture or platform.
+        </p></li><li><p>
+          Produced by any one vendor.
+          There are many contributors helping to get this done.
+        </p></li></ul></div><p>
+      Why not do everything in a session daemon?:
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+          Sometimes we need to start very early in the boot sequence.
+        </p></li><li><p>
+          We don't want to die if X dies.
+        </p></li><li><p>
+          On a server with 100 logged in users we don't want an instance for
+          each user.
+        </p></li><li><p>
+          We need to apply policy at boot-up or before X starts.
+        </p></li></ul></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-plugins"></a>Plugins</h2></div></div></div><p>
+      Plugins have keys and policy, and also install a default system
+      preferences file.
+    </p><p>
+      We need to set system preferences when there is no user logged in or we
+      are very early in the boot sequence.
+      We do this with each plugin installing a text file with the plugin key
+      name, the value, and optionally the public switch.
+    </p><p>
+      The core setup file is read from <code class="filename">/etc/ohm/core</code> and
+      plugin preferences are read from <code class="filename">/etc/ohm/plugins/{name}</code>
+      Comments are lines with first character <code class="literal">#</code> and then the
+      rest of the line is ignored.
+      Files are flat text with the following formal description, 
+      <code class="literal">plugin_prefix.key value type public</code>
+    </p><div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Important</h3><p>
+        There is a single space between the values.
+        Line endings have to be UNIX not WIN or MAC.
+        Parsing is very strict, and <code class="literal">ohmd</code> will exit with an
+        error if the syntax is not perfect. This is by design.
+      </p></div><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+        Public is only set if the key can be changed by the session, and if the
+        key is tried to be set, the set method will fail.
+        This is a way to enforce fine-grained rules on users when writing
+        PolicyKit rules for every action would be too great an overhead.
+      </p></div><p>
+      Plugins can tell <code class="literal">ohmd</code> that other plugins are required
+      for certain functionality, for instance, the backlight unit on a mobile
+      phone may require the temperature module to be present, so it can do the
+      temperature shutdown checks.
+      This is done with <code class="literal">ohm_module_require()</code>.
+      <code class="literal">ohmd</code> daemon will fail to load if any required plugin
+      is not present after the plugins have finished initializing.
+    </p><p>
+      Plugins can also tell <code class="literal">ohmd</code> that other plugins are suggested for certain
+      functionality, for instance, the backlight unit may work best when the
+      battery plugin is loaded so we can dim when we are low on power.
+      This is done with <code class="literal">ohm_module_suggest()</code>.
+      <code class="literal">ohmd</code> daemon will print a message to the console if any
+      suggested plugin is not present.
+    </p><p>
+      Plugins can also tell <code class="literal">ohmd</code> that other plugins are banned, for instance,
+      a proprietary battery discharge plugin maybe incompatible with the
+      standard battery plugin.
+      This is done with <code class="literal">ohm_module_prevent()</code>.
+      <code class="literal">ohmd</code> will fail to load if any prevented plugin is
+      manually loaded or loaded through a dependency of another plugin.
+    </p><p>
+      In <code class="literal">ohmd</code>, keys are created read/write by the plugin.
+      Other plugins can watch for changes on these keys (even on other modules)
+      using <code class="literal">ohm_key_monitor()</code>.
+      The callback will be issued local to the plugin when the state of this
+      key changes.
+    </p><p>
+      NOTE: There is no ordering of priority (yet?) of monitored keys.
+      Make sure that policy per key is kept to one plugin, else strange
+      races might start happening.
+    </p><p>
+      A library called <code class="literal">libohm</code> allows system and session
+      programs to easily interface with <code class="literal">ohmd</code>.
+      This library will remove the implementation detail from plugins and
+      session applications.
+      This library, like the rest of OHM will not be API or ABI stable until
+      version 1.0.0 is released.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-deps"></a>Dependencies</h2></div></div></div><p>
+      OHM is lightweight.
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+          GLib 2.10.0 (required)
+        </p></li><li><p>
+          DBUS 0.70 (required)
+        </p></li><li><p>
+          HAL 0.5.8 (required)
+        </p></li><li><p>
+          PolicyKit (optional)
+        </p></li><li><p>
+          ConsoleKit (optional)
+        </p></li></ul></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="dbus-interface"></a>Chapter 2. DBUS Interface</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
+        <code class="literal">Exported keys</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetVersion">
+        <code class="literal">GetVersion()</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetPlugins">
+        <code class="literal">GetPlugins()</code>
+      </a></span></dt></dl></dd><dt><span class="sect1"><a href="#pm-keystore">Keystore functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-keystore-GetKey">
+        <code class="literal">GetKey()</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-keystore-SetKey">
+        <code class="literal">SetKey()</code>
+      </a></span></dt><dt><span class="sect2"><a href="#pm-keystore-AddNotifyKey">
+        <code class="literal">AddNotifyKey()</code>
+      </a></span></dt></dl></dd><dt><span class="sect1"><a href="#pm-backlight">Backlight Adjustment</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-backlight-keys">
+        <code class="literal">Exported keys</code>
+      </a></span></dt></dl></dd></dl></div><p>
+    This API is currently unstable and is likely to change in the future.
+  </p><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="pm-intro"></a>Introduction</h2></div></div></div><p>
+      Open Hardware Manager exposes a DBUS API for programs to obtain information about
+      the power state and to change it if required.
+    </p><p>
+      The following constants are used to uniquely refer to the session-wide
+      Open Hardware Manager object when making DBUS method calls:
+    </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Service:</td><td><code class="literal">org.freedesktop.ohm</code></td></tr></tbody></table></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="pm-manager"></a>Manager functionality</h2></div></div></div><p>
+      The manager is the core of <code class="literal">ohmd</code> and processes all
+      core functionality such as loading plugins.
+    </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Object Path:</td><td><code class="literal">/org/freedesktop/ohm/Manager</code></td></tr><tr><td>DBUS Interface:</td><td><code class="literal">org.freedesktop.ohm.Manager</code></td></tr></tbody></table></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-manager-keys"></a>
+        <code class="literal">Exported keys</code>
+      </h3></div></div></div><p>
+        Keys exported by the manager:
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Key</th><th>Description</th></tr></thead><tbody><tr><td><code class="literal">manager.version.major</code></td><td>The major version number</td></tr><tr><td><code class="literal">manager.version.minor</code></td><td>The minor version number</td></tr><tr><td><code class="literal">manager.version.patch</code></td><td>The patch version number</td></tr></tbody></table></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-manager-GetVersion"></a>
+        <code class="literal">GetVersion()</code>
+      </h3></div></div></div><p>
+        Gets the version of the <code class="literal">ohmd</code> daemon.
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>out</td><td>string</td><td>The version, e.g. 0.2.3</td></tr></tbody></table></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-manager-GetPlugins"></a>
+        <code class="literal">GetPlugins()</code>
+      </h3></div></div></div><p>
+        Gets the plugings currently loaded in the daemon.
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>out</td><td>string array</td><td>A list of plugins, for instance,
+              <code class="literal">backlight</code>, <code class="literal">heat-pol</code></td></tr></tbody></table></div></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="pm-keystore"></a>Keystore functionality</h2></div></div></div><p>
+      The keystore is the configuration plugin and processes all
+      preferences functionality such as the getting and setting of keys.
+      Session software can attempt to redefine any keys for the current user
+      but these may not be marked override and the operation may fail.
+    </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Object Path:</td><td><code class="literal">/org/freedesktop/ohm/Keystore</code></td></tr><tr><td>DBUS Interface:</td><td><code class="literal">org.freedesktop.ohm.Keystore</code></td></tr></tbody></table></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-keystore-GetKey"></a>
+        <code class="literal">GetKey()</code>
+      </h3></div></div></div><p>
+        Gets a 32 bit signed integer value.
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>out</td><td>integer</td><td> </td></tr></tbody></table></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-keystore-SetKey"></a>
+        <code class="literal">SetKey()</code>
+      </h3></div></div></div><p>
+        Sets a 32 bit signed integer value.
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>in</td><td>integer</td><td> </td></tr></tbody></table></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-keystore-AddNotifyKey"></a>
+        <code class="literal">AddNotifyKey()</code>
+      </h3></div></div></div><p>
+        Tells OHM that an application or plugin wants notification of this key
+        change.
+        This prevents uninteresting keys from being changed with no action
+        causing unnecessary context switches and processor usage.
+        <code class="literal">KeyChanged</code> signals will not be sent unless at least
+        one application has requested notifications.
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>in</td><td>integer</td><td> </td></tr></tbody></table></div></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="pm-backlight"></a>Backlight Adjustment</h2></div></div></div><p>
+      Backlight brightness and state can be changed on most backlight hardware.
+      These are the optional DBUS methods for controlling the brightness of
+      the backlight.
+    </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Object Path:</td><td><code class="literal">/org/freedesktop/ohm/Backlight</code></td></tr><tr><td>DBUS Interface:</td><td><code class="literal">org.freedesktop.ohm.Backlight</code></td></tr></tbody></table></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-backlight-keys"></a>
+        <code class="literal">Exported keys</code>
+      </h3></div></div></div><p>
+        Keys exported by this plugin:
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Key</th><th>Description</th></tr></thead><tbody><tr><td><code class="literal">backlight.value_ac</code></td><td>Brightness in percentage when on AC</td></tr><tr><td><code class="literal">backlight.value_battery</code></td><td>Brightness in percentage when on battery</td></tr><tr><td><code class="literal">backlight.value_idle</code></td><td>Brightness in percentage when idle</td></tr><tr><td><code class="literal">backlight.time_idle</code></td><td>
+                The amount of time in seconds before the backlight is put
+                into idle mode, or zero to disable.
+                Idle mode is typically dimming for most backlight devices.
+              </td></tr><tr><td><code class="literal">backlight.time_off</code></td><td>
+                The amount of time in seconds before the backlight is turned
+                off, or zero to disable.
+              </td></tr></tbody></table></div></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="faq"></a>Chapter 3. Frequently Asked Questions</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#faq-sessionpolicy">
+      How does OHM fit in with other session policy agents?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-specificdevice">
+      Why not just do a specific device hack for all the different
+      embedded hardware?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-lgpl">
+      So it's LGPL... does that mean some of the code is closed source?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-installcode">
+      Can I install the latest stable code?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-releasedate">
+      What is the release date plan for OHM?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-systemprefs">
+      Do you need to use system GConf for the system preferences?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-noxml">
+      Is OHM using XML to define the policy rules?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-whysessionlayer">
+      Why include a session layer for embedded appliances?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-whysinglehash">
+      Why are all the keys exposed in a single hash table?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-restartdeps">
+      Will OHM break if I restart <code class="literal">messagebus</code> or
+      <code class="literal">hald</code>?
+    </a></span></dt></dl></div><p>
+    Please read through these common questions and answers before asking
+    developers.
+  </p><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-sessionpolicy"></a>
+      How does OHM fit in with other session policy agents?
+    </h2></div></div></div><p>
+      At the moment, no distributions ship OHM, so there is no problem.
+      When they do, session power daemons will talk to <code class="literal">hald</code>
+      and <code class="literal">ohmd</code> together, and there should be no visible
+      changes to the user.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-specificdevice"></a>
+      Why not just do a specific device hack for all the different
+      embedded hardware?
+    </h2></div></div></div><p>
+      As lots of manufacturers are hacking the same thing, over and over.
+      We need some sort of central common framework.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-lgpl"></a>
+      So it's LGPL... does that mean some of the code is closed source?
+    </h2></div></div></div><p>
+      No. It just means that code protected by intellectual property laws
+      can be used by manufacturers, but OHM works really well without any
+      non-free stuff.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-installcode"></a>
+      Can I install the latest stable code?
+    </h2></div></div></div><p>
+      No, at the moment it is proof of concept and only really useful for
+      developers. Feel free to look at the code and spec and give feedback,
+      but please don't expect anything to actually work well yet.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-releasedate"></a>
+      What is the release date plan for OHM?
+    </h2></div></div></div><p>
+      Currently we are aiming at a 2 month stakeholder involvement prototype
+      period, and then 10 months of code polishing and maturing.
+      That gives an approximate release date of January 2008
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-systemprefs"></a>
+      Do you need to use system GConf for the system preferences?
+    </h2></div></div></div><p>
+      No. We plan to use a flat file for minimum dependencies and speed,
+      and also each file is going to be really small and simple.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-noxml"></a>
+      Is OHM using XML to define the policy rules?
+    </h2></div></div></div><p>
+      No, as we don't need to.
+      We are using compiled logic for speed and low dependencies.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-whysessionlayer"></a>
+      Why include a session layer for embedded appliances?
+    </h2></div></div></div><p>
+      Devices can omit the session layer, and talk directly to OHM on the
+      system bus. This removes the ability to do fast user switching or
+      have multiple logged in users and does reduce security.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-whysinglehash"></a>
+      Why are all the keys exposed in a single hash table?
+    </h2></div></div></div><p>
+      Plugins have to query to state of other plugins.
+      To store the state of each plugin in itself, we would have to do
+      inter-plugin methods, and expose the SetKey and GetKey methods on every
+      plugin.
+      We can also optimise the global keystore for a fast hash lookup to avoid
+      scalability problems.
+      This also makes it easier to code as the keystore can just be a
+      compiled <code class="literal">.o</code> object rather than a shared library.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-restartdeps"></a>
+      Will OHM break if I restart <code class="literal">messagebus</code> or
+      <code class="literal">hald</code>?
+    </h2></div></div></div><p>
+      Yes. Please restart your computer if you want to restart these daemons.
+    </p></div></div></div></body></html>

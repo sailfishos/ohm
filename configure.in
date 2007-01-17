@@ -1,0 +1,180 @@
+AC_PREREQ(2.52)
+
+AC_INIT(ohm, 0.0.1)
+AC_CONFIG_SRCDIR(ohmd)
+AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
+AM_CONFIG_HEADER(config.h)
+
+# libtool versioning - this applies to libohm
+#
+# See http://sources.redhat.com/autobook/autobook/autobook_91.html#SEC91 for details
+#
+LT_CURRENT=1
+LT_REVISION=0
+LT_AGE=0
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION)
+AC_SUBST(LT_AGE)
+
+AC_PROG_CC
+AC_PROG_INSTALL
+AM_PROG_LIBTOOL
+AC_PROG_INTLTOOL([0.33.0])
+AM_GLIB_GNU_GETTEXT
+AC_PATH_PROG(GLIB_GENMARSHAL, glib-genmarshal)
+
+ALL_LINGUAS="en_GB"
+AC_SUBST(ALL_LINGUAS)
+
+AC_DEFINE(GETTEXT_PACKAGE, "AC_PACKAGE_NAME", [foo])
+GETTEXT_PACKAGE=AC_PACKAGE_NAME
+AC_SUBST(GETTEXT_PACKAGE)
+
+dnl ---------------------------------------------------------------------------
+dnl - Extra verbose warning switches
+dnl ---------------------------------------------------------------------------
+if test "$GCC" = "yes"; then
+    CPPFLAGS="$CPPFLAGS -Werror -Wall -Wcast-align -Wno-uninitialized -fno-strict-aliasing"
+    #CPPFLAGS="$CPPFLAGS -Wall"
+fi
+
+AC_ARG_WITH(distro, AC_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, gentoo, debian, or slackware]))
+if test "z$with_distro" = "z"; then
+	AC_CHECK_FILE(/etc/mandrake-release,with_distro="mandrake")
+	AC_CHECK_FILE(/etc/redhat-release,with_distro="redhat")
+	AC_CHECK_FILE(/etc/fedora-release,with_distro="redhat")
+	AC_CHECK_FILE(/etc/gentoo-release,with_distro="gentoo")
+	AC_CHECK_FILE(/etc/debian_version,with_distro="debian")
+	AC_CHECK_FILE(/etc/slackware-version,with_distro="slackware")
+fi
+with_distro=`echo ${with_distro} | tr '[[:upper:]]' '[[:lower:]]' `
+
+if test "z$with_distro" = "z"; then
+	echo "Linux distribution autodetection failed, you must specify the distribution to target using --with-distro=DISTRO"
+	exit 1
+else
+	case $with_distro in
+		redhat|gentoo|debian|slackware) ;;
+		*)
+			echo "Your distribution (${with_distro}) is not yet supported!  (patches welcome)"
+			exit 1
+			;;
+	esac
+fi
+AM_CONDITIONAL(TARGET_REDHAT, test x"$with_distro" = xredhat)
+AM_CONDITIONAL(TARGET_GENTOO, test x"$with_distro" = xgentoo)
+AM_CONDITIONAL(TARGET_DEBIAN, test x"$with_distro" = xdebian)
+AM_CONDITIONAL(TARGET_MANDRAKE, test x"$with_distro" = xmandrake)
+AM_CONDITIONAL(TARGET_SLACKWARE, test x"$with_distro" = xslackware)
+
+PKG_CHECK_MODULES(GLIB, glib-2.0 gobject-2.0)
+AC_SUBST(GLIB_CFLAGS)
+AC_SUBST(GLIB_LIBS)
+
+PKG_CHECK_MODULES(GMODULE, gmodule-2.0)
+AC_SUBST(GMODULE_CFLAGS)
+AC_SUBST(GMODULE_LIBS)
+
+PKG_CHECK_MODULES(GTHREAD, gthread-2.0)
+AC_SUBST(GTHREAD_CFLAGS)
+AC_SUBST(GTHREAD_LIBS)
+
+PKG_CHECK_MODULES(DBUS, dbus-glib-1 >= 0.70 dbus-1 >= 0.70)
+AC_SUBST(DBUS_CFLAGS)
+AC_SUBST(DBUS_LIBS)
+
+PKG_CHECK_MODULES(HAL, hal >= 0.5.7)
+AC_SUBST(HAL_CFLAGS)
+AC_SUBST(HAL_LIBS)
+
+dnl ---------------------------------------------------------------------------
+dnl - Make paths available for source files
+dnl ---------------------------------------------------------------------------
+AC_SUBST(SYSCONFDIR, $sysconfdir)
+AC_SUBST(DATADIR, $datadir)
+AC_SUBST(BINDIR, $bindir)
+AC_SUBST(SBINDIR, $sbindir)
+
+dnl ---------------------------------------------------------------------------
+dnl - Where should we put documentation ?
+dnl ---------------------------------------------------------------------------
+AC_ARG_WITH(doc-dir,
+              [AC_HELP_STRING([--with-doc-dir=<dir>],
+              [directory to install documentation])])
+if ! test -z "$with_doc_dir"; then
+   DOCDIR="$with_doc_dir/ohm-$VERSION"
+else
+   DOCDIR="$DATADIR/ohm-$VERSION"
+fi
+AC_SUBST(DOCDIR)
+
+dnl ---------------------------------------------------------------------------
+dnl - DocBook Documentation
+dnl ---------------------------------------------------------------------------
+AC_ARG_ENABLE(docbook-docs, [  --enable-docbook-docs   build documentation (requires xmlto)],enable_docbook_docs=$enableval,enable_docbook_docs=auto)
+AC_PATH_PROG(XMLTO, xmlto, no)
+AC_MSG_CHECKING([whether to build DocBook documentation])
+if test x$XMLTO = xno ; then
+    have_docbook=no
+else
+    have_docbook=yes
+fi
+if test x$enable_docbook_docs = xauto ; then
+    if test x$have_docbook = xno ; then
+        enable_docbook_docs=no
+    else
+        enable_docbook_docs=yes
+    fi
+fi
+if test x$enable_docbook_docs = xyes; then
+    if test x$have_docbook = xno; then
+	AC_MSG_ERROR([Building DocBook docs explicitly required, but DocBook not found])
+    fi
+fi
+AM_CONDITIONAL(DOCBOOK_DOCS_ENABLED, test x$enable_docbook_docs = xyes)
+AC_MSG_RESULT(yes)
+
+AC_ARG_WITH(dbus-sys, [  --with-dbus-sys=<dir>   where D-BUS system.d directory is])
+
+if ! test -z "$with_dbus_sys" ; then
+    DBUS_SYS_DIR="$with_dbus_sys"
+else
+    DBUS_SYS_DIR="$SYSCONFDIR/dbus-1/system.d"
+fi
+AC_SUBST(DBUS_SYS_DIR)
+AC_DEFINE_UNQUOTED(DBUS_SYSTEMD_DIR, "$DBUS_SYS_DIR", [Where system.d dir for DBUS is])
+
+AC_OUTPUT([
+ohm.pc
+ohm.conf
+Makefile
+etc/Makefile
+plugins/Makefile
+ohmd/Makefile
+po/Makefile.in
+docs/Makefile
+docs/index.xml
+libohm/Makefile
+initscript/Makefile
+initscript/RedHat/Makefile
+initscript/Gentoo/Makefile
+initscript/Debian/Makefile
+initscript/Slackware/Makefile
+])
+
+echo
+echo Distribution targeting: ${with_distro}
+echo 'if this is not correct, please specifiy your distro with --with-distro=DISTRO'
+
+dnl ==========================================================================
+echo "
+                    Open Hardware Manager $VERSION
+                  ==============================
+
+        prefix:                    ${prefix}
+        datadir:                   ${datadir}
+        documentation dir:         $DOCDIR
+        compiler:                  ${CC}
+        cflags:                    ${CFLAGS}
+        Docbook support:           ${enable_docbook_docs}
+"

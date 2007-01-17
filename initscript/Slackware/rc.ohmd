@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# ohm:   ohm daemon
+#
+# description:  Open Hardware Manager
+#
+# processname: ohmd
+# pidfile: /var/run/ohm.pid
+#
+
+processname=ohmd
+servicename=ohm
+pidfile=/var/run/ohm.pid
+
+RETVAL=0
+
+start()
+{
+	if [ "`pgrep dbus-daemon-1`" = "" ]; then
+		echo -n "D-BUS must be running to start ohm"
+		exit 1
+	fi
+	if [ "`pgrep hald`" = "" ]; then
+		echo -n "HAL must be running to start ohm"
+		exit 1
+	fi
+ 
+	echo -n $"Starting Open Hardware Manager: "
+	$servicename
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && echo `/sbin/pidof $processname` > $pidfile
+}
+
+stop()
+{
+	echo -n $"Stopping Open Hardware Manager: "
+
+	killall -s TERM $servicename
+	RETVAL=$?
+	echo
+	if [ $RETVAL -eq 0 ]; then
+		rm -f $pidfile
+	fi
+}
+
+# See how we were called.
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|restart}"
+		;;
+esac
+exit $RETVAL

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN" "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<chapter id="faq">
+  <title>Frequently Asked Questions</title>
+  <para>
+    Please read through these common questions and answers before asking
+    developers.
+  </para>
+
+  <sect1 id="faq-sessionpolicy">
+    <title>
+      How does OHM fit in with other session policy agents?
+    </title>
+    <para>
+      At the moment, no distributions ship OHM, so there is no problem.
+      When they do, session power daemons will talk to <literal>hald</literal>
+      and <literal>ohmd</literal> together, and there should be no visible
+      changes to the user.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-specificdevice">
+    <title>
+      Why not just do a specific device hack for all the different
+      embedded hardware?
+    </title>
+    <para>
+      As lots of manufacturers are hacking the same thing, over and over.
+      We need some sort of central common framework.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-lgpl">
+    <title>
+      So it's LGPL... does that mean some of the code is closed source?
+    </title>
+    <para>
+      No. It just means that code protected by intellectual property laws
+      can be used by manufacturers, but OHM works really well without any
+      non-free stuff.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-installcode">
+    <title>
+      Can I install the latest stable code?
+    </title>
+    <para>
+      No, at the moment it is proof of concept and only really useful for
+      developers. Feel free to look at the code and spec and give feedback,
+      but please don't expect anything to actually work well yet.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-releasedate">
+    <title>
+      What is the release date plan for OHM?
+    </title>
+    <para>
+      Currently we are aiming at a 2 month stakeholder involvement prototype
+      period, and then 10 months of code polishing and maturing.
+      That gives an approximate release date of January 2008
+    </para>
+  </sect1>
+
+  <sect1 id="faq-systemprefs">
+    <title>
+      Do you need to use system GConf for the system preferences?
+    </title>
+    <para>
+      No. We plan to use a flat file for minimum dependencies and speed,
+      and also each file is going to be really small and simple.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-noxml">
+    <title>
+      Is OHM using XML to define the policy rules?
+    </title>
+    <para>
+      No, as we don't need to.
+      We are using compiled logic for speed and low dependencies.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-whysessionlayer">
+    <title>
+      Why include a session layer for embedded appliances?
+    </title>
+    <para>
+      Devices can omit the session layer, and talk directly to OHM on the
+      system bus. This removes the ability to do fast user switching or
+      have multiple logged in users and does reduce security.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-whysinglehash">
+    <title>
+      Why are all the keys exposed in a single hash table?
+    </title>
+    <para>
+      Plugins have to query to state of other plugins.
+      To store the state of each plugin in itself, we would have to do
+      inter-plugin methods, and expose the SetKey and GetKey methods on every
+      plugin.
+      We can also optimise the global keystore for a fast hash lookup to avoid
+      scalability problems.
+      This also makes it easier to code as the keystore can just be a
+      compiled <literal>.o</literal> object rather than a shared library.
+    </para>
+  </sect1>
+
+  <sect1 id="faq-restartdeps">
+    <title>
+      Will OHM break if I restart <literal>messagebus</literal> or
+      <literal>hald</literal>?
+    </title>
+    <para>
+      Yes. Please restart your computer if you want to restart these daemons.
+    </para>
+  </sect1>
+
+</chapter>

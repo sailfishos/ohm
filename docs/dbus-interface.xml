@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- CVSID: $Id: dbus-interface.xml 1820 2007-01-14 23:24:00Z rhughes $ -->
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN" "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<chapter id="dbus-interface">
+  <title>DBUS Interface</title>
+  <para>
+    This API is currently unstable and is likely to change in the future.
+  </para>
+
+  <sect1 id="pm-intro">
+    <title>Introduction</title>
+    <para>
+      Open Hardware Manager exposes a DBUS API for programs to obtain information about
+      the power state and to change it if required.
+    </para>
+    <para>
+      The following constants are used to uniquely refer to the session-wide
+      Open Hardware Manager object when making DBUS method calls:
+    </para>
+    <informaltable>
+      <tgroup cols="2">
+        <tbody>
+          <row>
+            <entry>DBUS Service:</entry>
+            <entry><literal>org.freedesktop.ohm</literal></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </informaltable>
+  </sect1>
+
+  <sect1 id="pm-manager">
+    <title>Manager functionality</title>
+    <para>
+      The manager is the core of <literal>ohmd</literal> and processes all
+      core functionality such as loading plugins.
+    </para>
+
+    <informaltable>
+      <tgroup cols="2">
+        <tbody>
+          <row>
+            <entry>DBUS Object Path:</entry>
+            <entry><literal>/org/freedesktop/ohm/Manager</literal></entry>
+          </row>
+          <row>
+            <entry>DBUS Interface:</entry>
+            <entry><literal>org.freedesktop.ohm.Manager</literal></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </informaltable>
+    <sect2 id="pm-manager-keys">
+      <title>
+        <literal>Exported keys</literal>
+      </title>
+      <para>
+        Keys exported by the manager:
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Key</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry><literal>manager.version.major</literal></entry>
+              <entry>The major version number</entry>
+            </row>
+            <row>
+              <entry><literal>manager.version.minor</literal></entry>
+              <entry>The minor version number</entry>
+            </row>
+            <row>
+              <entry><literal>manager.version.patch</literal></entry>
+              <entry>The patch version number</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+
+    <sect2 id="pm-manager-GetVersion">
+      <title>
+        <literal>GetVersion()</literal>
+      </title>
+      <para>
+        Gets the version of the <literal>ohmd</literal> daemon.
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Direction</entry>
+              <entry>Type</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>out</entry>
+              <entry>string</entry>
+              <entry>The version, e.g. 0.2.3</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+
+    <sect2 id="pm-manager-GetPlugins">
+      <title>
+        <literal>GetPlugins()</literal>
+      </title>
+      <para>
+        Gets the plugings currently loaded in the daemon.
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Direction</entry>
+              <entry>Type</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>out</entry>
+              <entry>string array</entry>
+              <entry>A list of plugins, for instance,
+              <literal>backlight</literal>, <literal>heat-pol</literal></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+  </sect1>
+
+  <sect1 id="pm-keystore">
+    <title>Keystore functionality</title>
+    <para>
+      The keystore is the configuration plugin and processes all
+      preferences functionality such as the getting and setting of keys.
+      Session software can attempt to redefine any keys for the current user
+      but these may not be marked override and the operation may fail.
+    </para>
+
+    <informaltable>
+      <tgroup cols="2">
+        <tbody>
+          <row>
+            <entry>DBUS Object Path:</entry>
+            <entry><literal>/org/freedesktop/ohm/Keystore</literal></entry>
+          </row>
+          <row>
+            <entry>DBUS Interface:</entry>
+            <entry><literal>org.freedesktop.ohm.Keystore</literal></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </informaltable>
+    <sect2 id="pm-keystore-GetKey">
+      <title>
+        <literal>GetKey()</literal>
+      </title>
+      <para>
+        Gets a 32 bit signed integer value.
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Direction</entry>
+              <entry>Type</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>in</entry>
+              <entry>string</entry>
+              <entry>the key name, e.g. <literal>ac.state</literal></entry>
+            </row>
+            <row>
+              <entry>out</entry>
+              <entry>integer</entry>
+              <entry></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+
+    <sect2 id="pm-keystore-SetKey">
+      <title>
+        <literal>SetKey()</literal>
+      </title>
+      <para>
+        Sets a 32 bit signed integer value.
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Direction</entry>
+              <entry>Type</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>in</entry>
+              <entry>string</entry>
+              <entry>the key name, e.g. <literal>ac.state</literal></entry>
+            </row>
+            <row>
+              <entry>in</entry>
+              <entry>integer</entry>
+              <entry></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+
+    <sect2 id="pm-keystore-AddNotifyKey">
+      <title>
+        <literal>AddNotifyKey()</literal>
+      </title>
+      <para>
+        Tells OHM that an application or plugin wants notification of this key
+        change.
+        This prevents uninteresting keys from being changed with no action
+        causing unnecessary context switches and processor usage.
+        <literal>KeyChanged</literal> signals will not be sent unless at least
+        one application has requested notifications.
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Direction</entry>
+              <entry>Type</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>in</entry>
+              <entry>string</entry>
+              <entry>the key name, e.g. <literal>ac.state</literal></entry>
+            </row>
+            <row>
+              <entry>in</entry>
+              <entry>integer</entry>
+              <entry></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="pm-backlight">
+    <title>Backlight Adjustment</title>
+    <para>
+      Backlight brightness and state can be changed on most backlight hardware.
+      These are the optional DBUS methods for controlling the brightness of
+      the backlight.
+    </para>
+
+    <informaltable>
+      <tgroup cols="2">
+        <tbody>
+          <row>
+            <entry>DBUS Object Path:</entry>
+            <entry><literal>/org/freedesktop/ohm/Backlight</literal></entry>
+          </row>
+          <row>
+            <entry>DBUS Interface:</entry>
+            <entry><literal>org.freedesktop.ohm.Backlight</literal></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </informaltable>
+    <sect2 id="pm-backlight-keys">
+      <title>
+        <literal>Exported keys</literal>
+      </title>
+      <para>
+        Keys exported by this plugin:
+      </para>
+      <informaltable>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Key</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry><literal>backlight.value_ac</literal></entry>
+              <entry>Brightness in percentage when on AC</entry>
+            </row>
+            <row>
+              <entry><literal>backlight.value_battery</literal></entry>
+              <entry>Brightness in percentage when on battery</entry>
+            </row>
+            <row>
+              <entry><literal>backlight.value_idle</literal></entry>
+              <entry>Brightness in percentage when idle</entry>
+            </row>
+            <row>
+              <entry><literal>backlight.time_idle</literal></entry>
+              <entry>
+                The amount of time in seconds before the backlight is put
+                into idle mode, or zero to disable.
+                Idle mode is typically dimming for most backlight devices.
+              </entry>
+            </row>
+            <row>
+              <entry><literal>backlight.time_off</literal></entry>
+              <entry>
+                The amount of time in seconds before the backlight is turned
+                off, or zero to disable.
+              </entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+    </sect2>
+
+  </sect1>
+
+</chapter>
