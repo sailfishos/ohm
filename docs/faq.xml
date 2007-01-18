@@ -121,4 +121,18 @@
     </para>
   </sect1>
 
+  <sect1 id="faq-shellscripts">
+    <title>
+      Can I execute shell scripts from OHM on an event?
+    </title>
+    <para>
+      Well you can, but you really don't want to.
+      Executing a shell takes a long time on an embedded system, and OHM
+      provides (deliberately) no methods to easily launch scripts.
+      A critical design feature of <literal>ohmd</literal> is that it is fast
+      and lightweight, with policy written in compiled modules, and so writing
+      stuff in shell is very discouraged.
+    </para>
+  </sect1>
+
 </chapter>
