@@ -36,6 +36,7 @@
 
 #include <glib/gi18n.h>
 
+#include "ohm-debug.h"
 #include "ohm-conf.h"
 #include "ohm-marshal.h"
 
@@ -216,7 +217,7 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 	entry = g_hash_table_lookup (conf->priv->keys, key);
 	if (entry == NULL) {
 		/* create a new key */
-		g_debug ("create key '%s' : %i", key, value);
+		ohm_debug ("create key '%s' : %i", key, value);
 		entry = g_new0 (OhmConfObjectMulti, 1);
 
 		/* maybe point to the key in the hashtable to save memory? */
@@ -225,7 +226,7 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 		entry->value = value;
 
 		/* all new keys have to have an added signal */
-		g_debug ("emit key-added : %s", key);
+		ohm_debug ("emit key-added : %s", key);
 		g_signal_emit (conf, signals [KEY_ADDED], 0, key, value);
 
 		/* assume the setting user is the current user */
@@ -235,7 +236,7 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 		/* if we are externally calling this key, check to see if
 		   we are allowed to set this key */
 		if (internal == FALSE && entry->public == FALSE) {
-			g_debug ("tried to overwrite private key : %s", key);
+			ohm_debug ("tried to overwrite private key : %s", key);
 			*error = g_error_new (ohm_conf_error_quark (),
 					      OHM_CONF_ERROR_KEY_OVERRIDE,
 					      "Key cannot overwrite private key");
@@ -243,12 +244,12 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 		}
 
 		/* check for the correct type */
-		g_debug ("overwrite key '%s' : %i", key, value);
+		ohm_debug ("overwrite key '%s' : %i", key, value);
 
 		/* Only force signal if different */
 		if (entry->value != value) {
 			entry->value = value;
-			g_debug ("emit key-changed : %s", key);
+			ohm_debug ("emit key-changed : %s", key);
 			g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
 		}
 	}
@@ -452,7 +453,7 @@ ohm_conf_finalize (GObject *object)
 	g_return_if_fail (OHM_IS_CONF (object));
 	conf = OHM_CONF (object);
 
-	g_debug ("freeing conf");
+	ohm_debug ("freeing conf");
 	g_hash_table_foreach_remove (conf->priv->keys,
 				     ohm_hash_remove_return, NULL);
 	g_hash_table_destroy (conf->priv->keys);

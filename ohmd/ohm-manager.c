@@ -38,6 +38,7 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
+#include "ohm-debug.h"
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-conf.h"
@@ -97,7 +98,7 @@ moo (OhmManager  *manager)
 
 	ohm_conf_print_all (manager->priv->conf);
 
-	g_debug ("ret=%i, intval=%i, error=%p", ret, intval, error);
+	ohm_debug ("ret=%i, intval=%i, error=%p", ret, intval, error);
 
 }
 

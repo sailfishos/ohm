@@ -37,6 +37,7 @@
 #include <glib/gi18n.h>
 #include <dbus/dbus-glib.h>
 
+#include "ohm-debug.h"
 #include "ohm-keystore.h"
 #include "ohm-conf.h"
 

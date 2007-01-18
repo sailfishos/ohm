@@ -37,6 +37,7 @@
 #include <glib/gi18n.h>
 #include <gmodule.h>
 
+#include "ohm-debug.h"
 #include "ohm-module.h"
 #include "ohm-plugin.h"
 #include "ohm-conf.h"
@@ -69,7 +70,7 @@ gboolean
 ohm_module_require (OhmModule   *module,
 		    const gchar *name)
 {
-	g_debug ("module:require '%s'", name);
+	ohm_debug ("module:require '%s'", name);
 	return TRUE;
 }
 
@@ -80,7 +81,7 @@ gboolean
 ohm_module_suggest (OhmModule   *module,
 		    const gchar *name)
 {
-	g_debug ("module:suggest '%s'", name);
+	ohm_debug ("module:suggest '%s'", name);
 	return TRUE;
 }
 
@@ -92,7 +93,7 @@ gboolean
 ohm_module_prevent (OhmModule   *module,
 		    const gchar *name)
 {
-	g_debug ("module:prevent '%s'", name);
+	ohm_debug ("module:prevent '%s'", name);
 	return TRUE;
 }
 
@@ -107,7 +108,7 @@ key_changed_cb (OhmConf     *conf,
 	OhmModuleNofif *notif;
 	const gchar *name;
 
-	g_debug ("module:key changed! %s : %i", key, value);
+	ohm_debug ("module:key changed! %s : %i", key, value);
 
 	/* if present, add to SList, if not, add to hash as slist object */
 	entry = g_hash_table_lookup (module->priv->interested, key);
@@ -117,12 +118,12 @@ key_changed_cb (OhmConf     *conf,
 		return;
 	}
 
-	g_debug ("module:found watched key %s", key);
+	ohm_debug ("module:found watched key %s", key);
 	/* go thru the SList and notify each plugin */
 	for (l=*entry; l != NULL; l=l->next) {
 		notif = (OhmModuleNofif *) l->data;
 		name = ohm_plugin_get_name (notif->plugin);
-		g_debug ("module:notify %s with id:%i", name, notif->id);
+		ohm_debug ("module:notify %s with id:%i", name, notif->id);
 		ohm_plugin_conf_notify (notif->plugin, notif->id, value);
 	}
 }
@@ -136,7 +137,7 @@ add_interested_cb (OhmPlugin   *plugin,
 	GSList **entry;
 	GSList **l;
 	OhmModuleNofif *notif;
-	g_debug ("module:add interested! %s : %i", key, id);
+	ohm_debug ("module:add interested! %s : %i", key, id);
 
 	/* if present, add to SList, if not, add to hash as slist object */
 	entry = g_hash_table_lookup (module->priv->interested, key);
@@ -148,10 +149,10 @@ add_interested_cb (OhmPlugin   *plugin,
 
 	if (entry != NULL) {
 		/* already present, just append to SList */
-		g_debug ("module:key already watched by someting else");
+		ohm_debug ("module:key already watched by someting else");
 		*entry = g_slist_prepend (*entry, (gpointer) notif);
 	} else {
-		g_debug ("module:key not already watched by someting else");
+		ohm_debug ("module:key not already watched by someting else");
 		/* create the new SList andd add the new notification to it */
 		l = g_new0 (GSList *, 1);
 		*l = NULL;

@@ -29,6 +29,7 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
+#include "ohm-debug.h"
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-dbus-manager.h"
@@ -64,7 +65,7 @@ ohm_object_register (DBusGConnection *connection,
 				 G_TYPE_UINT, &request_name_result,
 				 G_TYPE_INVALID);
 	if (error) {
-		g_debug ("ERROR: %s", error->message);
+		ohm_debug ("ERROR: %s", error->message);
 		g_error_free (error);
 	}
 	if (ret == FALSE) {
@@ -139,12 +140,13 @@ main (int argc, char *argv[])
 		g_thread_init (NULL);
 	dbus_g_thread_init ();
 
-	/* we need to daemonize before we get a system connection to fix #366057 */
+	/* we need to daemonize before we get a system connection */
 	if (no_daemon == FALSE) {
 		if (daemon (0, 0)) {
 			g_error ("Could not daemonize.");
 		}
 	}
+	ohm_debug_init (verbose);
 
 	/* check dbus connections, exit if not valid */
 	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
@@ -155,14 +157,14 @@ main (int argc, char *argv[])
 			 "the dbus system service.");
 	}
 
-	g_debug ("Creating manager");
+	ohm_debug ("Creating manager");
 	manager = ohm_manager_new ();
 	if (!ohm_object_register (connection, G_OBJECT (manager))) {
 		g_error ("%s failed to start.", OHM_NAME);
 		return 0;
 	}
 
-	g_debug ("Idle");
+	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
 
 	/* Only timeout and close the mainloop if we have specified it

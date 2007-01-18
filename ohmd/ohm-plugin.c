@@ -39,6 +39,7 @@
 #include <glib/gi18n.h>
 #include <gmodule.h>
 
+#include "ohm-debug.h"
 #include "ohm-plugin.h"
 #include "ohm-conf.h"
 #include "ohm-marshal.h"
@@ -69,7 +70,7 @@ gboolean
 ohm_plugin_require (OhmPlugin   *plugin,
 		    const gchar *name)
 {
-	g_debug ("require '%s'", name);
+	ohm_debug ("require '%s'", name);
 	return TRUE;
 }
 
@@ -80,7 +81,7 @@ gboolean
 ohm_plugin_suggest (OhmPlugin   *plugin,
 		    const gchar *name)
 {
-	g_debug ("suggest '%s'", name);
+	ohm_debug ("suggest '%s'", name);
 	return TRUE;
 }
 
@@ -92,7 +93,7 @@ gboolean
 ohm_plugin_prevent (OhmPlugin   *plugin,
 		    const gchar *name)
 {
-	g_debug ("prevent '%s'", name);
+	ohm_debug ("prevent '%s'", name);
 	return TRUE;
 }
 
@@ -157,7 +158,7 @@ G_MODULE_EXPORT gboolean
 ohm_plugin_conf_provide (OhmPlugin *plugin,
 			 const gchar *name)
 {
-	g_debug ("%s provides %s", plugin->priv->name, name);
+	ohm_debug ("%s provides %s", plugin->priv->name, name);
 	/* TODO; check that nothing else provides this key */
 	return FALSE;
 }
@@ -192,7 +193,7 @@ ohm_plugin_conf_interested (OhmPlugin   *plugin,
 			    const gchar	*key,
 			    gint         id)
 {
-	g_debug ("%s provides wants notification of %s on signal %i", plugin->priv->name, key, id);
+	ohm_debug ("%s provides wants notification of %s on signal %i", plugin->priv->name, key, id);
 	g_signal_emit (plugin, signals [ADD_INTERESTED], 0, key, id);
 	return TRUE;
 }
