@@ -93,6 +93,7 @@ dnl ---------------------------------------------------------------------------
 AC_SUBST(SYSCONFDIR, $sysconfdir)
 AC_SUBST(DATADIR, $datadir)
 AC_SUBST(BINDIR, $bindir)
+AC_SUBST(LIBDIR, $bindir)
 AC_SUBST(SBINDIR, $sbindir)
 
 dnl ---------------------------------------------------------------------------

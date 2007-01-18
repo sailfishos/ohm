@@ -4,6 +4,7 @@ INCLUDES =							\
 	$(GTHREAD_CFLAGS)					\
 	-DDBUS_API_SUBJECT_TO_CHANGE				\
 	-DBINDIR=\"$(bindir)\"					\
+	-DLIBDIR=\"$(libdir)\"					\
 	-DSBINDIR=\"$(sbindir)\"				\
 	-DSYSCONFDIR=\"$(sysconfdir)\"				\
 	-DDATADIR=\"$(datadir)\"

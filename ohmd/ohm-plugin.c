@@ -62,8 +62,6 @@ static guint	     signals [LAST_SIGNAL] = { 0, };
 
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
 
-#define LIBDIR "../plugins/.libs"
-
 /**
  * ohm_plugin_get_key:
  **/
