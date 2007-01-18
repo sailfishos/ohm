@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN" "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<chapter id="plugins">
+  <title>Plugins</title>
+
+  <sect1 id="plugins-introduction">
+    <title>Introduction</title>
+    <para>
+      Plugins have keys and policy, and also install a default system
+      preferences file.
+    </para>
+
+    <para>
+      We need to set system preferences when there is no user logged in or we
+      are very early in the boot sequence.
+      We do this with each plugin installing a text file with the plugin key
+      name, the value, and optionally the public switch.
+    </para>
+
+    <para>
+      The core setup file is read from <filename>/etc/ohm/core</filename> and
+      plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
+      Comments are lines with first character <literal>#</literal> and then the
+      rest of the line is ignored.
+      Files are flat text with the following formal description, 
+      <literal>plugin_prefix.key value type public</literal>
+    </para>
+    <important>
+      <para>
+        There is a single space between the values.
+        Line endings have to be UNIX not WIN or MAC.
+        Parsing is very strict, and <literal>ohmd</literal> will exit with an
+        error if the syntax is not perfect. This is by design.
+      </para>
+    </important>
+
+    <note>
+      <para>
+        Public is only set if the key can be changed by the session, and if the
+        key is tried to be set, the set method will fail.
+        This is a way to enforce fine-grained rules on users when writing
+        PolicyKit rules for every action would be too great an overhead.
+      </para>
+    </note>
+
+    <para>
+      Plugins can tell <literal>ohmd</literal> that other plugins are required
+      for certain functionality, for instance, the backlight unit on a mobile
+      phone may require the temperature module to be present, so it can do the
+      temperature shutdown checks.
+      This is done with <literal>ohm_plugin_require()</literal>.
+      <literal>ohmd</literal> daemon will fail to load if any required plugin
+      is not present after the plugins have finished initializing.
+    </para>
+
+    <para>
+      Plugins can also tell <literal>ohmd</literal> that other plugins are suggested for certain
+      functionality, for instance, the backlight unit may work best when the
+      battery plugin is loaded so we can dim when we are low on power.
+      This is done with <literal>ohm_plugin_suggest()</literal>.
+      <literal>ohmd</literal> daemon will print a message to the console if any
+      suggested plugin is not present.
+    </para>
+
+    <para>
+      Plugins can also tell <literal>ohmd</literal> that other plugins are
+      banned, for instance, a proprietary battery discharge plugin maybe
+      incompatible with the standard battery plugin.
+      This is done with <literal>ohm_plugin_prevent()</literal>.
+      <literal>ohmd</literal> will fail to load if any prevented plugin is
+      manually loaded or loaded through a dependency of another plugin.
+    </para>
+
+    <para>
+      Plugins must also tell OHM that they will provide certain keys.
+      This is done using <literal>ohm_plugin_conf_provide()</literal> and
+      then OHM can check to see if the plugin is trying to provide keys
+      that are managed by another plugin.
+      This will stop the system doing odd things when two plugins try to write
+      to one key and is a good check when building policy.
+      In production code this check should be turned off using the command
+      line argument <literal>--no-checks</literal> as this speeds up the
+      initial coldplug considerably.
+    </para>
+
+    <para>
+      To get key values from the global keystore, a plugin must use
+      <literal>ohm_plugin_conf_get_key()</literal> which will return false
+      if the key is not available.
+      Keys can be set using <literal>ohm_plugin_conf_set_key</literal>.
+    </para>
+
+    <para>
+      A plugin may want to be notified when a key changes.
+      In typical code, the key and the value would be passed to the plugin
+      and then the key name compared against a fixed list.
+      This is too slow for the plugin system in OHM, as many plugins may
+      have to be chained together for a policy action.
+      It was found that repeated <literal>strcmp()</literal>'s on all the
+      changed value keys was causing high load on embedded machines.
+    </para>
+
+    <para>
+      To register interest in a key change, a plugin must call
+      <literal>ohm_plugin_conf_interested()</literal> along with an integer ID
+      unique to the plugin.
+      The integer ID does not have to be unique among the other plugins.
+      When the key is changed in OHM by another plugin of the session user,
+      this is matched against a hash table for O(1) complexity, and then
+      a list iterated over sending the indervidual ID's to the plugins.
+      Matching integer ID's in plugins is much faster than matching strings,
+      for a small coldplug overhead.
+      See the example plugin code for more details.
+    </para>
+
+  </sect1>
+
+</chapter>

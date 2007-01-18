@@ -99,7 +99,7 @@
       <listitem>
         <para>
           The interface specification which outlines core
-          <literal>ohmd</literal> functionality
+          <literal>ohmd</literal> functionality.
         </para>
       </listitem>
       <listitem>
@@ -110,7 +110,7 @@
       </listitem>
       <listitem>
         <para>
-           The test suite which tests functionality
+           The test suite which tests functionality.
         </para>
       </listitem>
     </itemizedlist>
@@ -120,6 +120,14 @@
       and other critical tasks early in the boot sequence.
       Using HAL, it provides an abstract method for all plugins to be written in
       a generic way, not tied to the specific implementation of the device.
+    </para>
+
+    <para>
+      A library called <literal>libohm</literal> allows system and session
+      programs to easily interface with <literal>ohmd</literal>.
+      This library will remove the implementation detail from session software.
+      This library, like the rest of OHM will not be API or ABI stable until
+      version 1.0.0 is released.
     </para>
 
     <para>
@@ -190,99 +198,6 @@
         </para>
       </listitem>
     </itemizedlist>
-  </sect1>
-
-  <sect1 id="introduction-plugins">
-    <title>Plugins</title>
-    <para>
-      Plugins have keys and policy, and also install a default system
-      preferences file.
-    </para>
-
-    <para>
-      We need to set system preferences when there is no user logged in or we
-      are very early in the boot sequence.
-      We do this with each plugin installing a text file with the plugin key
-      name, the value, and optionally the public switch.
-    </para>
-
-    <para>
-      The core setup file is read from <filename>/etc/ohm/core</filename> and
-      plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
-      Comments are lines with first character <literal>#</literal> and then the
-      rest of the line is ignored.
-      Files are flat text with the following formal description, 
-      <literal>plugin_prefix.key value type public</literal>
-    </para>
-    <important>
-      <para>
-        There is a single space between the values.
-        Line endings have to be UNIX not WIN or MAC.
-        Parsing is very strict, and <literal>ohmd</literal> will exit with an
-        error if the syntax is not perfect. This is by design.
-      </para>
-    </important>
-
-    <note>
-      <para>
-        Public is only set if the key can be changed by the session, and if the
-        key is tried to be set, the set method will fail.
-        This is a way to enforce fine-grained rules on users when writing
-        PolicyKit rules for every action would be too great an overhead.
-      </para>
-    </note>
-
-    <para>
-      Plugins can tell <literal>ohmd</literal> that other plugins are required
-      for certain functionality, for instance, the backlight unit on a mobile
-      phone may require the temperature module to be present, so it can do the
-      temperature shutdown checks.
-      This is done with <literal>ohm_module_require()</literal>.
-      <literal>ohmd</literal> daemon will fail to load if any required plugin
-      is not present after the plugins have finished initializing.
-    </para>
-
-    <para>
-      Plugins can also tell <literal>ohmd</literal> that other plugins are suggested for certain
-      functionality, for instance, the backlight unit may work best when the
-      battery plugin is loaded so we can dim when we are low on power.
-      This is done with <literal>ohm_module_suggest()</literal>.
-      <literal>ohmd</literal> daemon will print a message to the console if any
-      suggested plugin is not present.
-    </para>
-
-    <para>
-      Plugins can also tell <literal>ohmd</literal> that other plugins are banned, for instance,
-      a proprietary battery discharge plugin maybe incompatible with the
-      standard battery plugin.
-      This is done with <literal>ohm_module_prevent()</literal>.
-      <literal>ohmd</literal> will fail to load if any prevented plugin is
-      manually loaded or loaded through a dependency of another plugin.
-    </para>
-
-    <para>
-      In <literal>ohmd</literal>, keys are created read/write by the plugin.
-      Other plugins can watch for changes on these keys (even on other modules)
-      using <literal>ohm_key_monitor()</literal>.
-      The callback will be issued local to the plugin when the state of this
-      key changes.
-    </para>
-
-    <para>
-      NOTE: There is no ordering of priority (yet?) of monitored keys.
-      Make sure that policy per key is kept to one plugin, else strange
-      races might start happening.
-    </para>
-
-    <para>
-      A library called <literal>libohm</literal> allows system and session
-      programs to easily interface with <literal>ohmd</literal>.
-      This library will remove the implementation detail from plugins and
-      session applications.
-      This library, like the rest of OHM will not be API or ABI stable until
-      version 1.0.0 is released.
-    </para>
-
   </sect1>
 
   <sect1 id="introduction-deps">

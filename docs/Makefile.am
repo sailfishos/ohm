@@ -9,6 +9,7 @@ IMAGE_FILES =				\
 SPEC_XML_FILES =			\
 	index.xml			\
 	introduction.xml		\
+	plugins.xml			\
 	faq.xml				\
 	dbus-interface.xml
 
