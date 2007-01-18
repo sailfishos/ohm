@@ -9,6 +9,11 @@ INCLUDES =							\
 	-DSYSCONFDIR=\"$(sysconfdir)\"				\
 	-DDATADIR=\"$(datadir)\"
 
+ohmpluginincludedir=$(includedir)/ohm
+
+ohmplugininclude_HEADERS =					\
+	ohm-plugin.h
+
 sbin_PROGRAMS = ohmd
 
 ohmd_SOURCES = 							\

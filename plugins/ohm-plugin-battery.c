@@ -21,7 +21,7 @@
 #include <gmodule.h>
 #include <glib.h>
 
-#include "../ohmd/ohm-plugin.h"
+#include <ohm-plugin.h>
 
 enum {
 	CONF_SOMETHINGBACKLIGHTCHANGED = 666,
