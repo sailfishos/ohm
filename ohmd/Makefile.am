@@ -20,14 +20,25 @@ ohmd_SOURCES = 							\
 	ohm-keystore.h						\
 	ohm-conf.c						\
 	ohm-conf.h						\
+	ohm-marshal.h						\
+	ohm-marshal.c						\
 	ohm-manager.c						\
 	ohm-manager.h						\
 	ohm-main.c
 ohmd_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 
 BUILT_SOURCES =							\
+	ohm-marshal.c						\
+	ohm-marshal.h						\
 	ohm-dbus-manager.h					\
 	ohm-dbus-keystore.h
+
+ohm-marshal.c: ohm-marshal.list
+	echo "#include \"ohm-marshal.h\"" > $@ && \
+	@GLIB_GENMARSHAL@ $< --prefix=ohm_marshal --body >> $@
+
+ohm-marshal.h: ohm-marshal.list
+	@GLIB_GENMARSHAL@ $< --prefix=ohm_marshal --header > $@
 
 ohm-dbus-manager.h: ohm-dbus-manager.xml
 	libtool --mode=execute dbus-binding-tool --prefix=ohm_manager --mode=glib-server --output=ohm-dbus-manager.h $(srcdir)/ohm-dbus-manager.xml
@@ -38,5 +49,6 @@ ohm-dbus-keystore.h: ohm-dbus-keystore.xml
 CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST =							\
+	ohm-marshal.list					\
 	ohm-dbus-manager.xml					\
 	ohm-dbus-keystore.xml

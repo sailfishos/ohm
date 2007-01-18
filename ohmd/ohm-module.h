@@ -22,6 +22,7 @@
 #define __OHM_MODULE_H
 
 #include <glib-object.h>
+#include "ohm-plugin.h"
 
 G_BEGIN_DECLS
 

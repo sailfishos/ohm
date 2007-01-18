@@ -1,0 +1,11 @@
+.deps
+.libs
+Makefile
+Makefile.in
+ohmd
+ohm-marshal.c
+ohm-marshal.h
+ohm-dbus-*.h
+*.o
+*~
+massif.*

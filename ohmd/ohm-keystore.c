@@ -76,7 +76,9 @@ ohm_keystore_add_notify_key (OhmKeystore *keystore,
 		             const gchar *key,
 		             GError     **error)
 {
-	return ohm_conf_add_notify_key (keystore->priv->conf, key, error);
+	/* do this internally to this module with a hashtable! */
+	//return ohm_conf_add_notify_key (keystore->priv->conf, key, error);
+	return FALSE;
 }
 
 /**

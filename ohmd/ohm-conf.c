@@ -37,6 +37,7 @@
 #include <glib/gi18n.h>
 
 #include "ohm-conf.h"
+#include "ohm-marshal.h"
 
 #define OHM_CONF_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_CONF, OhmConfPrivate))
 
@@ -48,12 +49,12 @@ struct OhmConfPrivate
 typedef struct {
 	gchar		  *key;
 	gboolean	   public;
-	gboolean	   notify;
 	gint		  *current;
 	gint		   value; // use hashtable/list for multiple values for each user?
 } OhmConfObjectMulti;
 
 enum {
+	KEY_ADDED,
 	KEY_CHANGED,
 	LAST_SIGNAL
 };
@@ -93,8 +94,8 @@ ohm_conf_compare_func (gconstpointer a, gconstpointer b)
  **/
 static void
 ohm_conf_to_slist_iter (gpointer	     key,
-			    OhmConfObjectMulti *entry,
-			    gpointer	    *user_data)
+			OhmConfObjectMulti *entry,
+			gpointer	    *user_data)
 {
 	GSList **list = (GSList **) user_data;
 	*list = g_slist_insert_sorted (*list, (gpointer) entry, ohm_conf_compare_func);
@@ -154,16 +155,15 @@ ohm_conf_print_all (OhmConf *conf)
  * ohm_conf_get_key:
  **/
 gboolean
-ohm_conf_get_key (OhmConf *conf,
-		      const gchar *key,
-		      gint        *value,
-		      GError     **error)
+ohm_conf_get_key (OhmConf     *conf,
+		  const gchar *key,
+		  gint        *value,
+		  GError     **error)
 {
 	OhmConfObjectMulti *entry;
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (key != NULL, FALSE);
 	g_return_val_if_fail (value != NULL, FALSE);
-	g_return_val_if_fail (error != NULL, FALSE);
 
 	if (conf->priv->keys == NULL) {
 		*error = g_error_new (ohm_conf_error_quark (),
@@ -189,54 +189,18 @@ ohm_conf_get_key (OhmConf *conf,
 }
 
 /**
- * ohm_conf_add_notify_key:
- **/
-gboolean
-ohm_conf_add_notify_key (OhmConf *conf,
-		             const gchar *key,
-		             GError     **error)
-{
-	OhmConfObjectMulti *entry;
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-	g_return_val_if_fail (key != NULL, FALSE);
-
-	if (conf->priv->keys == NULL) {
-		*error = g_error_new (ohm_conf_error_quark (),
-				      OHM_CONF_ERROR_INVALID,
-				      "Conf invalid");
-		return FALSE;
-	}
-
-	/* try to find the key in the global conf */
-	entry = g_hash_table_lookup (conf->priv->keys, key);
-	if (entry == NULL) {
-		*error = g_error_new (ohm_conf_error_quark (),
-				      OHM_CONF_ERROR_KEY_MISSING,
-				      "Key missing");
-		return FALSE;
-	}
-
-	/* start notifying */
-	g_debug ("notifying of change : %s", key);
-	entry->notify = TRUE;
-	return TRUE;
-}
-
-/**
  * ohm_conf_set_key:
  * internal set true for plugin access and false for public dbus
  *
  **/
 gboolean
-ohm_conf_set_key_internal (OhmConf *conf,
-		               const gchar *key,
-		               gint         value,
-		               gboolean     internal,
-		               GError     **error)
+ohm_conf_set_key_internal (OhmConf     *conf,
+		           const gchar *key,
+		           gint         value,
+		           gboolean     internal,
+		           GError     **error)
 {
 	OhmConfObjectMulti *entry;
-	gboolean force_signal;
-	gboolean value_changed;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (key != NULL, FALSE);
@@ -258,12 +222,11 @@ ohm_conf_set_key_internal (OhmConf *conf,
 		/* maybe point to the key in the hashtable to save memory? */
 		entry->key = g_strdup (key);
 		entry->public = FALSE;
-		entry->notify = FALSE;
 		entry->value = value;
 
-		/* all new keys have to have a changed signal */
-		force_signal = TRUE;
-		value_changed = FALSE;
+		/* all new keys have to have an added signal */
+		g_debug ("emit key-added : %s", key);
+		g_signal_emit (conf, signals [KEY_ADDED], 0, key, value);
 
 		/* assume the setting user is the current user */
 		entry->current = &(entry->value);
@@ -283,18 +246,11 @@ ohm_conf_set_key_internal (OhmConf *conf,
 		g_debug ("overwrite key '%s' : %i", key, value);
 
 		/* Only force signal if different */
-		force_signal = FALSE;
-		value_changed = FALSE;
 		if (entry->value != value) {
 			entry->value = value;
-			value_changed = TRUE;
+			g_debug ("emit key-changed : %s", key);
+			g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
 		}
-	}
-
-	/* set the key value and emit signal only if new, or different and watched */
-	if (force_signal == TRUE || (entry->notify && value_changed)) {
-		g_debug ("emit key-changed : %s", key);
-		g_signal_emit (conf, signals [KEY_CHANGED], 0, key);
 	}
 
 	return TRUE;
@@ -305,10 +261,10 @@ ohm_conf_set_key_internal (OhmConf *conf,
  *
  **/
 static gboolean
-ohm_conf_set_public (OhmConf *conf,
-			 const gchar *key,
-		         gboolean     public,
-		         GError     **error)
+ohm_conf_set_public (OhmConf     *conf,
+		     const gchar *key,
+		     gboolean     public,
+		     GError     **error)
 {
 	OhmConfObjectMulti *entry;
 
@@ -343,9 +299,9 @@ ohm_conf_set_public (OhmConf *conf,
  * ohm_conf_process_line:
  **/
 static gboolean
-ohm_conf_process_line (OhmConf *conf,
-			   const gchar *line,
-			   const gchar *plugin_name)
+ohm_conf_process_line (OhmConf     *conf,
+		       const gchar *line,
+		       const gchar *plugin_name)
 {
 	gint len;
 	len = strlen (line);
@@ -431,9 +387,9 @@ ohm_conf_process_line (OhmConf *conf,
  * ohm_conf_load_defaults:
  **/
 gboolean
-ohm_conf_load_defaults (OhmConf *conf,
-			    const gchar *plugin_name,
-			    GError     **error)
+ohm_conf_load_defaults (OhmConf     *conf,
+			const gchar *plugin_name,
+			GError     **error)
 {
 	gboolean ret;
 	gchar *contents;
@@ -470,6 +426,7 @@ ohm_conf_load_defaults (OhmConf *conf,
 	g_free (contents);
 	return TRUE;
 }
+
 /**
  * ohm_hash_remove_return:
  * FIXME: there must be a better way to do this
@@ -514,14 +471,22 @@ ohm_conf_class_init (OhmConfClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize	   = ohm_conf_finalize;
 
+	signals [KEY_ADDED] =
+		g_signal_new ("key-added",
+			      G_TYPE_FROM_CLASS (object_class),
+			      G_SIGNAL_RUN_LAST,
+			      G_STRUCT_OFFSET (OhmConfClass, key_added),
+			      NULL, NULL,
+			      ohm_marshal_VOID__STRING_INT,
+			      G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_INT);
 	signals [KEY_CHANGED] =
 		g_signal_new ("key-changed",
 			      G_TYPE_FROM_CLASS (object_class),
 			      G_SIGNAL_RUN_LAST,
 			      G_STRUCT_OFFSET (OhmConfClass, key_changed),
 			      NULL, NULL,
-			      g_cclosure_marshal_VOID__STRING,
-			      G_TYPE_NONE, 1, G_TYPE_STRING);
+			      ohm_marshal_VOID__STRING_INT,
+			      G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_INT);
 
 	g_type_class_add_private (klass, sizeof (OhmConfPrivate));
 }

@@ -1,0 +1,9 @@
+.deps
+.libs
+Makefile
+Makefile.in
+libohm-test
+*.la
+*.lo
+*.o
+*~

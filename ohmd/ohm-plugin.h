@@ -18,43 +18,83 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef __OHM_PLUGIN_H
+#define __OHM_PLUGIN_H
 
 #include <glib-object.h>
+#include "ohm-plugin.h"
 
-void	ohm_plugin_get_key (int value);
+G_BEGIN_DECLS
 
-typedef struct _OhmPlugin OhmPlugin;
-typedef struct _OhmPluginInfo OhmPluginInfo;
+#define OHM_TYPE_PLUGIN		(ohm_plugin_get_type ())
+#define OHM_PLUGIN(o)		(G_TYPE_CHECK_INSTANCE_CAST ((o), OHM_TYPE_PLUGIN, OhmPlugin))
+#define OHM_PLUGIN_CLASS(k)	(G_TYPE_CHECK_CLASS_CAST((k), OHM_TYPE_PLUGIN, OhmPluginClass))
+#define OHM_IS_PLUGIN(o)	(G_TYPE_CHECK_INSTANCE_TYPE ((o), OHM_TYPE_PLUGIN))
+#define OHM_IS_PLUGIN_CLASS(k)	(G_TYPE_CHECK_CLASS_TYPE ((k), OHM_TYPE_PLUGIN))
+#define OHM_PLUGIN_GET_CLASS(o)	(G_TYPE_INSTANCE_GET_CLASS ((o), OHM_TYPE_PLUGIN, OhmPluginClass))
 
-struct _OhmPluginInfo {
+typedef struct OhmPluginPrivate OhmPluginPrivate;
+
+typedef struct
+{
+	GObject		  parent;
+	OhmPluginPrivate *priv;
+} OhmPlugin;
+
+typedef struct
+{
+	GObjectClass	parent_class;
+	void		(* add_interested)		(OhmPlugin	*plugin,
+							 const gchar	*key,
+							 gint		 id);
+} OhmPluginClass;
+
+typedef struct {
 	gchar *description;
 	gchar *version;
 	gchar *author;
-	void (*load) (OhmPlugin * plugin);
-	void (*unload) (OhmPlugin * plugin);
-};
+	void (*load) (OhmPlugin *plugin);
+	void (*unload) (OhmPlugin *plugin);
+	void (*conf_notify) (OhmPlugin *plugin, gint id, gint value);
+} OhmPluginInfo;
 
-struct _OhmPlugin {
-	OhmPluginInfo *info;
-	GType type;
-	GModule *handle;
-	gchar *name;
-	guint ref_count;
-};
+#define OHM_INIT_PLUGIN(plugininfo) G_MODULE_EXPORT OhmPluginInfo *ohm_init_plugin (OhmPlugin *plugin) {return &(plugin_info);}
 
-#define OHM_INIT_PLUGIN(initfunc, plugininfo) \
-G_MODULE_EXPORT gboolean ohm_init_plugin(OhmPlugin *plugin) { \
-				plugin->info = &(plugininfo); \
-				return initfunc((plugin)); \
-}
+GType		 ohm_plugin_get_type			(void);
+OhmPlugin 	*ohm_plugin_new				(void);
 
-OhmPlugin *ohm_plugin_load (const gchar * name);
-gboolean ohm_plugin_unload (OhmPlugin * plugin);
+gboolean	 ohm_plugin_load			(OhmPlugin      *plugin,
+							 const gchar	*name);
 
-G_CONST_RETURN gchar *ohm_plugin_get_name (OhmPlugin * plugin);
-G_CONST_RETURN gchar *ohm_plugin_get_version (OhmPlugin * plugin);
-G_CONST_RETURN gchar *ohm_plugin_get_author (OhmPlugin * plugin);
+gboolean	 ohm_plugin_require			(OhmPlugin	*plugin,
+							 const gchar	*name);
+gboolean	 ohm_plugin_suggest			(OhmPlugin	*plugin,
+							 const gchar	*name);
+gboolean	 ohm_plugin_prevent			(OhmPlugin	*plugin,
+							 const gchar	*name);
 
-#endif /* SERVER_H */
+const gchar	*ohm_plugin_get_name			(OhmPlugin	*plugin);
+const gchar	*ohm_plugin_get_version			(OhmPlugin	*plugin);
+const gchar	*ohm_plugin_get_author			(OhmPlugin	*plugin);
+
+/* used by plugin to manager */
+gboolean	 ohm_plugin_conf_provide		(OhmPlugin      *plugin,
+							 const gchar	*name);
+gboolean	 ohm_plugin_conf_get_key		(OhmPlugin      *plugin,
+							 const gchar	*key,
+							 gint		*value);
+gboolean	 ohm_plugin_conf_set_key		(OhmPlugin      *plugin,
+							 const gchar	*key,
+							 gint		 value);
+gboolean	 ohm_plugin_conf_interested		(OhmPlugin      *plugin,
+							 const gchar	*key,
+							 gint		 id);
+
+/* used by manager to plugin */
+gboolean	 ohm_plugin_conf_notify			(OhmPlugin      *plugin,
+							 gint		 id,
+							 gint		 value);
+
+G_END_DECLS
+
+#endif /* __OHM_PLUGIN_H */

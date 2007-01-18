@@ -23,32 +23,50 @@
 
 #include "../ohmd/ohm-plugin.h"
 
-static gboolean 
-init_plugin (OhmPlugin *plugin)
-{
-	g_debug ("plugin init");
-	return TRUE;
-}
+enum {
+	CONF_SOMETHINGBACKLIGHTCHANGED = 666,
+	CONF_LAST
+};
 
 static void
 load_plugin (OhmPlugin *plugin)
 {
-	g_debug ("load plugin");
-	ohm_plugin_get_key (888);
+	g_debug ("plug:load plugin %p", plugin);
+	gint value;
+	ohm_plugin_conf_provide (plugin, "battery.percentage");
+	ohm_plugin_conf_set_key (plugin, "battery.percentage", 99);
+	ohm_plugin_conf_get_key (plugin, "battery.percentage", &value);
+
+	/* these don't have to be one enum per key, you can clump them as classes */
+	ohm_plugin_conf_interested (plugin, "backlight.value_foo", CONF_SOMETHINGBACKLIGHTCHANGED);
+	ohm_plugin_conf_interested (plugin, "backlight.value_idle", CONF_SOMETHINGBACKLIGHTCHANGED);
+
+	g_debug ("plug:got conf from plugin! %i", value);	
 }
 
 static void
 unload_plugin (OhmPlugin *plugin)
 {
-	g_debug ("unload plugin");
+	g_debug ("plug:unload plugin");
+}
+
+static void
+conf_notify (OhmPlugin *plugin, gint id, gint value)
+{
+	g_debug ("plug:conf_notify %i: %i", id, value);
+	/* using an integer enumeration is much faster than a load of strcmp's */
+	if (id == CONF_SOMETHINGBACKLIGHTCHANGED) {
+		g_error ("plug:backlight changed, so maybe we need to update something or re-evaluate policy");
+	}
 }
 
 static OhmPluginInfo plugin_info = {
-	"Ohm RTP plugin",                              /* description */
-	"0.1.0",                                            /* version */
-	"richard@hughsie.com",                              /* author */
-	load_plugin,                                        /* load */
-	unload_plugin,                                      /* unload */
+	"OHM HAL Battery",		/* description */
+	"0.0.1",			/* version */
+	"richard@hughsie.com",		/* author */
+	load_plugin,			/* load */
+	unload_plugin,			/* unload */
+	conf_notify,			/* conf_notify */
 };
 
-OHM_INIT_PLUGIN (init_plugin, plugin_info);
+OHM_INIT_PLUGIN (plugin_info);

@@ -43,8 +43,12 @@ typedef struct
 typedef struct
 {
 	GObjectClass	parent_class;
+	void		(* key_added)			(OhmConf	*conf,
+							 const gchar	*key,
+							 gint		 value);
 	void		(* key_changed)			(OhmConf	*conf,
-							 const gchar	*key);
+							 const gchar	*key,
+							 gint		 value);
 } OhmConfClass;
 
 typedef enum
@@ -68,9 +72,6 @@ gboolean	 ohm_conf_set_key_internal		(OhmConf	*conf,
 							 const gchar	*key,
 							 gint		 value,
 							 gboolean	 internal,
-							 GError		**error);
-gboolean	 ohm_conf_add_notify_key		(OhmConf	*conf,
-							 const gchar	*key,
 							 GError		**error);
 gboolean	 ohm_conf_load_defaults			(OhmConf	*conf,
 							 const gchar	*pluginname,
