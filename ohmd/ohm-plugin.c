@@ -30,7 +30,7 @@ static void ohm_plugin_destroy (OhmPlugin * plugin);
 static OhmPlugin *ohm_plugins_find_with_name (const gchar * name);
 static GList *plugins = NULL;
 	
-#define LIBDIR ".libs"
+#define LIBDIR "../plugins/.libs"
 
 G_MODULE_EXPORT void
 ohm_plugin_get_key (int value)
@@ -158,20 +158,3 @@ ohm_plugin_get_author (OhmPlugin * plugin)
 
 	return plugin->info->author;
 }
-#if 0
-
-/**
- * main:
- **/
-int
-main (int argc, char *argv[])
-{
-	g_type_init ();
-
-OhmPlugin *plugin;
-plugin = ohm_plugin_load ("libpluginbattery.so");
-ohm_plugin_unload (plugin);
-
-	return 0;
-}
-#endif

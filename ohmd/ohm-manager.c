@@ -42,6 +42,7 @@
 #include "ohm-manager.h"
 #include "ohm-conf.h"
 #include "ohm-keystore.h"
+#include "ohm-module.h"
 #include "ohm-dbus-keystore.h"
 
 static void     ohm_manager_class_init	(OhmManagerClass *klass);
@@ -52,11 +53,8 @@ static void     ohm_manager_finalize	(GObject	 *object);
 
 struct OhmManagerPrivate
 {
-	GSList			*module_require;
-	GSList			*module_suggest;
-	GSList			*module_prevent;
-	GSList			*module_loaded;
 	OhmConf			*conf;
+	OhmModule		*module;
 	OhmKeystore		*keystore;
 };
 
@@ -181,17 +179,12 @@ ohm_manager_init (OhmManager *manager)
 	DBusGConnection *connection;
 	manager->priv = OHM_MANAGER_GET_PRIVATE (manager);
 
-	/* clear lists */
-	manager->priv->module_require = NULL;
-	manager->priv->module_suggest = NULL;
-	manager->priv->module_prevent = NULL;
-	manager->priv->module_loaded = NULL;
-
 	/* get system bus connection */
 	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
 	/* FIXME: check error */
 
 	manager->priv->conf = ohm_conf_new ();
+	manager->priv->module = ohm_module_new ();
 
 	/* add the keystore and the DBUS interface */
 	manager->priv->keystore = ohm_keystore_new ();
@@ -204,22 +197,10 @@ ohm_manager_init (OhmManager *manager)
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.patch", 1, TRUE, NULL);
 	ohm_conf_print_all (manager->priv->conf);
 
-#if 0
-static void
-ohm_module_module_require (OhmManager *manager, const gchar *name);
-{
-	/* make sure name isn't on the module_prevent list */
-	fooo
-	/* make sure name isn't already the module_loaded list */
-	fooo
-	/* try to load name */
-	
-}
-	/* add module_suggest modules */
-	ohm_module_module_require ("ac_adapter");
-	ohm_module_module_suggest ("battery");
-	ohm_module_module_prevent ("olpc");
-#endif
+	/* add modules - this needs to be done from a file */
+	ohm_module_require (manager->priv->module, "ac_adapter");
+	ohm_module_suggest (manager->priv->module, "battery");
+	ohm_module_prevent (manager->priv->module, "olpc");
 
 	moo (manager);
 }
@@ -240,6 +221,7 @@ ohm_manager_finalize (GObject *object)
 	manager = OHM_MANAGER (object);
 	g_return_if_fail (manager->priv != NULL);
 
+	g_object_unref (manager->priv->module);
 	g_object_unref (manager->priv->keystore);
 	g_object_unref (manager->priv->conf);
 

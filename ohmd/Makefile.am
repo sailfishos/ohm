@@ -12,6 +12,8 @@ sbin_PROGRAMS = ohmd
 
 ohmd_SOURCES = 							\
 	ohm-common.h						\
+	ohm-module.c						\
+	ohm-module.h						\
 	ohm-plugin.c						\
 	ohm-plugin.h						\
 	ohm-keystore.c						\
