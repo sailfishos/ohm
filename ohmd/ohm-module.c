@@ -49,9 +49,9 @@ struct OhmModulePrivate
 	GSList			*mod_require;
 	GSList			*mod_suggest;
 	GSList			*mod_prevent;
-	GSList			*mod_loaded;
+	GSList			*mod_loaded;	/* list of loaded module names */
+	GSList			*plugins;	/* list of loaded OhmPlugin's */
 	GHashTable		*interested;
-	OhmPlugin		*plugin; /* needs to be a list */
 	OhmConf			*conf;
 };
 
@@ -238,6 +238,29 @@ add_interested_cb (OhmPlugin   *plugin,
 	}
 }
 
+static gboolean
+ohm_module_add_plugin (OhmModule *module, const gchar *name)
+{
+	OhmPlugin *plugin;
+	gboolean ret;
+
+	/* play for now, we really need to read in from disk a list of modules to load */
+	plugin = ohm_plugin_new ();
+	g_signal_connect (plugin, "add-interested",
+			  G_CALLBACK (add_interested_cb), module);
+	/* try to load plugin, this might fail */
+	ret = ohm_plugin_load (plugin, name);
+	if (ret == TRUE) {
+		ohm_debug ("adding %s to module list", name);
+		module->priv->plugins = g_slist_prepend (module->priv->plugins, (gpointer) plugin);
+	} else {
+		/* if it does, just unref and warn */
+		ohm_debug ("not adding %s to module list as cannot load", name);
+		g_object_unref (plugin);
+	}
+	return ret;
+}
+
 /* adds plugins from require and suggests lists. Failure of require is error, failure of suggests is warning */
 /* we have to make sure we do not load banned plugins from the prevent list or load already loaded plugins */
 /* this should be very fast (two or three runs) for the common case */
@@ -246,7 +269,7 @@ ohm_module_add_all_plugins (OhmModule *module)
 {
 	GSList *lfound;
 	gchar *entry;
-	gboolean ret = TRUE;
+	gboolean ret;
 
 	/* go through requires */
 	if (module->priv->mod_require != NULL) {
@@ -264,8 +287,8 @@ ohm_module_add_all_plugins (OhmModule *module)
 		/* make sure it's not already loaded */
 		lfound = g_slist_find_custom (module->priv->mod_loaded, entry, (GCompareFunc) strcmp);
 		if (lfound == NULL) {
-			/* TODO: load module */
-			ohm_debug ("enforce add: %s", entry);
+			/* load module */
+			ret = ohm_module_add_plugin (module, entry);
 			if (ret == FALSE) {
 				g_error ("module %s failed to load but listed in require", entry);
 			}
@@ -297,7 +320,8 @@ ohm_module_add_all_plugins (OhmModule *module)
 			lfound = g_slist_find_custom (module->priv->mod_loaded, entry, (GCompareFunc) strcmp);
 			if (lfound == NULL) {
 				ohm_debug ("try add: %s", entry);
-				/* TODO: load module */
+				/* load module */
+				ret = ohm_module_add_plugin (module, entry);
 				if (ret == TRUE) {
 					/* add to loaded list */
 					module->priv->mod_loaded = g_slist_prepend (module->priv->mod_loaded, (gpointer) entry);
@@ -319,13 +343,21 @@ static void
 ohm_module_finalize (GObject *object)
 {
 	OhmModule *module;
+	GSList *l;
+	OhmPlugin *plugin;
+
 	g_return_if_fail (object != NULL);
 	g_return_if_fail (OHM_IS_MODULE (object));
 	module = OHM_MODULE (object);
 
 	g_hash_table_destroy (module->priv->interested);
 	g_object_unref (module->priv->conf);
-	g_object_unref (module->priv->plugin);
+
+	/* unref each plugin */
+	for (l=module->priv->plugins; l != NULL; l=l->next) {
+		plugin = (OhmPlugin *) l->data;
+		g_object_unref (plugin);
+	}
 
 	g_return_if_fail (module->priv != NULL);
 	G_OBJECT_CLASS (ohm_module_parent_class)->finalize (object);
@@ -364,11 +396,6 @@ ohm_module_init (OhmModule *module)
 	g_signal_connect (module->priv->conf, "key-changed",
 			  G_CALLBACK (key_changed_cb), module);
 
-	/* play for now, we really need to read in from disk a list of modules to load */
-	module->priv->plugin = ohm_plugin_new ();
-	g_signal_connect (module->priv->plugin, "add-interested",
-			  G_CALLBACK (add_interested_cb), module);
-
 	ohm_module_add_initial (module, "require", &(module->priv->mod_require));
 	ohm_module_add_initial (module, "suggest", &(module->priv->mod_suggest));
 	ohm_module_add_initial (module, "prevent", &(module->priv->mod_prevent));
@@ -385,9 +412,6 @@ ohm_module_init (OhmModule *module)
 			g_error ("coldplug too complex, please file a bug");
 		}
 	}
-
-	/* hardcode for now, TODO: make a list of plugins */
-	ohm_plugin_load (module->priv->plugin, "libpluginbattery.so");
 }
 
 /**

@@ -116,7 +116,9 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	path = g_build_filename (LIBDIR, name, NULL);
 	handle = g_module_open (path, 0);
 	if (!handle) {
-		g_error ("opening module %s failed : %s\n", path, g_module_error ());
+		ohm_debug ("opening module %s failed : %s\n", path, g_module_error ());
+		g_free (path);
+		return FALSE;
 	}
 	g_free (path);
 
@@ -217,9 +219,11 @@ ohm_plugin_finalize (GObject *object)
 
 	g_object_unref (plugin->priv->conf);
 
-	if (plugin->priv->info->unload != NULL)
-		plugin->priv->info->unload (plugin);
-
+	if (plugin->priv->info != NULL) {
+		if (plugin->priv->info->unload != NULL) {
+			plugin->priv->info->unload (plugin);
+		}
+	}
 	if (plugin->priv->handle != NULL)
 		g_module_close (plugin->priv->handle);
 
