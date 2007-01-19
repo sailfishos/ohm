@@ -97,6 +97,82 @@ ohm_module_prevent (OhmModule   *module,
 	return TRUE;
 }
 
+/**
+ * ohm_module_process_line:
+ **/
+static gboolean
+ohm_module_process_line (OhmModule   *module,
+		         const gchar *line,
+		         GSList     **store,
+		         const gchar *file_name)
+{
+	gint len;
+
+	/* check we have a long enough string */
+	len = strlen (line);
+	if (len < 2) {
+		return TRUE;
+	}
+
+	/* check to see if we are a comment */
+	if (line[0] == '#') {
+		return TRUE;
+	}
+
+	ohm_debug ("processing from %s store : %s", file_name, line);
+	*store = g_slist_prepend (*store, (gpointer) strdup (line));
+	
+	return TRUE;
+}
+
+/**
+ * ohm_module_add_initial:
+ **/
+gboolean
+ohm_module_add_initial (OhmModule   *module,
+			const gchar *file_name,
+			GSList     **store)
+{
+	gboolean ret;
+	gchar *contents;
+	gsize length;
+	gchar **lines;
+	guint i;
+	gchar *filename;
+	GError *error;
+
+	g_return_val_if_fail (OHM_IS_MODULE (module), FALSE);
+	g_return_val_if_fail (file_name != NULL, FALSE);
+
+	/* generate path for each module */
+	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", file_name, NULL);
+
+	/* load from file */
+	error = NULL;
+	ret = g_file_get_contents (filename, &contents, &length, &error);
+	g_free (filename);
+	if (ret == FALSE) {
+		/* fixme: display and clear error */
+		g_error ("Could not get contents of %s", file_name);
+		return FALSE;
+	}
+
+	/* split into lines and process each one */
+	lines = g_strsplit (contents, "\n", -1);
+	i = 0;
+	while (lines[i] != NULL) {
+		ret = ohm_module_process_line (module, lines[i], store, file_name);
+		if (ret == FALSE) {
+			g_error ("Loading module info from %s failed", file_name);
+		}
+		i++;
+	}
+	g_strfreev (lines);
+	g_free (contents);
+	return TRUE;
+}
+
+
 static void
 key_changed_cb (OhmConf     *conf,
 		const gchar *key,
@@ -217,6 +293,11 @@ ohm_module_init (OhmModule *module)
 	g_signal_connect (module->priv->plugin, "add-interested",
 			  G_CALLBACK (add_interested_cb), module);
 
+	ohm_module_add_initial (module, "require", &(module->priv->module_require));
+	ohm_module_add_initial (module, "suggest", &(module->priv->module_suggest));
+	ohm_module_add_initial (module, "prevent", &(module->priv->module_prevent));
+
+	/* hardcode for now */
 	ohm_plugin_load (module->priv->plugin, "libpluginbattery.so");
 }
 
