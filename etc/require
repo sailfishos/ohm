@@ -1,0 +1,2 @@
+# This file should list all the modules that are required for coldplug
+libbattery.so

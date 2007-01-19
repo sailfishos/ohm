@@ -150,6 +150,7 @@ ohm.pc
 ohm.conf
 Makefile
 etc/Makefile
+etc/plugins/Makefile
 plugins/Makefile
 ohmd/Makefile
 po/Makefile.in

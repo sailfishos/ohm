@@ -403,7 +403,7 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	g_return_val_if_fail (plugin_name != NULL, FALSE);
 
 	/* generate path for each module */
-	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", plugin_name, NULL);
+	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins", plugin_name, NULL);
 
 	/* load from file */
 	ret = g_file_get_contents (filename, &contents, &length, error);
