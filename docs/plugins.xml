@@ -19,8 +19,7 @@
     </para>
 
     <para>
-      The core setup file is read from <filename>/etc/ohm/core</filename> and
-      plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
+      The plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
       Comments are lines with first character <literal>#</literal> and then the
       rest of the line is ignored.
       Files are flat text with the following formal description, 
@@ -70,6 +69,18 @@
       This is done with <literal>ohm_plugin_prevent()</literal>.
       <literal>ohmd</literal> will fail to load if any prevented plugin is
       manually loaded or loaded through a dependency of another plugin.
+    </para>
+
+    <para>
+      The files <filename>/etc/ohm/require</filename>,
+      <filename>/etc/ohm/suggest</filename> and
+      <filename>/etc/ohm/prevent</filename> allow the system builder to set
+      the modules at startup.
+      For instance, on a fast PC we may want to suggest
+      <literal>libcpufreq.so</literal>, but we may not want this for embedded
+      ARM.
+      Comments are lines with first character <literal>#</literal> and then the
+      rest of the line is ignored.
     </para>
 
     <para>

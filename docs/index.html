@@ -60,6 +60,8 @@
     </a></span></dt><dt><span class="sect1"><a href="#faq-restartdeps">
       Will OHM break if I restart <code class="literal">messagebus</code> or
       <code class="literal">hald</code>?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-shellscripts">
+      Can I execute shell scripts from OHM on an event?
     </a></span></dt></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="introduction"></a>Chapter 1. Open Hardware Manager Introduction</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-description"></a>Overall Description</h2></div></div></div><p>
       OHM is a small open source systems daemon which sits above HAL and
       abstracts out common hardware management tasks such as:
@@ -180,8 +182,7 @@
       We do this with each plugin installing a text file with the plugin key
       name, the value, and optionally the public switch.
     </p><p>
-      The core setup file is read from <code class="filename">/etc/ohm/core</code> and
-      plugin preferences are read from <code class="filename">/etc/ohm/plugins/{name}</code>
+      The plugin preferences are read from <code class="filename">/etc/ohm/plugins/{name}</code>
       Comments are lines with first character <code class="literal">#</code> and then the
       rest of the line is ignored.
       Files are flat text with the following formal description, 
@@ -218,6 +219,16 @@
       This is done with <code class="literal">ohm_plugin_prevent()</code>.
       <code class="literal">ohmd</code> will fail to load if any prevented plugin is
       manually loaded or loaded through a dependency of another plugin.
+    </p><p>
+      The files <code class="filename">/etc/ohm/require</code>,
+      <code class="filename">/etc/ohm/suggest</code> and
+      <code class="filename">/etc/ohm/prevent</code> allow the system builder to set
+      the modules at startup.
+      For instance, on a fast PC we may want to suggest
+      <code class="literal">libcpufreq.so</code>, but we may not want this for embedded
+      ARM.
+      Comments are lines with first character <code class="literal">#</code> and then the
+      rest of the line is ignored.
     </p><p>
       Plugins must also tell OHM that they will provide certain keys.
       This is done using <code class="literal">ohm_plugin_conf_provide()</code> and
@@ -349,6 +360,8 @@
     </a></span></dt><dt><span class="sect1"><a href="#faq-restartdeps">
       Will OHM break if I restart <code class="literal">messagebus</code> or
       <code class="literal">hald</code>?
+    </a></span></dt><dt><span class="sect1"><a href="#faq-shellscripts">
+      Can I execute shell scripts from OHM on an event?
     </a></span></dt></dl></div><p>
     Please read through these common questions and answers before asking
     developers.
@@ -415,4 +428,13 @@
       <code class="literal">hald</code>?
     </h2></div></div></div><p>
       Yes. Please restart your computer if you want to restart these daemons.
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="faq-shellscripts"></a>
+      Can I execute shell scripts from OHM on an event?
+    </h2></div></div></div><p>
+      Well you can, but you really don't want to.
+      Executing a shell takes a long time on an embedded system, and OHM
+      provides (deliberately) no methods to easily launch scripts.
+      A critical design feature of <code class="literal">ohmd</code> is that it is fast
+      and lightweight, with policy written in compiled modules, and so writing
+      stuff in shell is very discouraged.
     </p></div></div></div></body></html>
