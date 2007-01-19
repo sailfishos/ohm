@@ -46,10 +46,10 @@
 
 struct OhmModulePrivate
 {
-	GSList			*module_require;
-	GSList			*module_suggest;
-	GSList			*module_prevent;
-	GSList			*module_loaded;
+	GSList			*mod_require;
+	GSList			*mod_suggest;
+	GSList			*mod_prevent;
+	GSList			*mod_loaded;
 	GHashTable		*interested;
 	OhmPlugin		*plugin; /* needs to be a list */
 	OhmConf			*conf;
@@ -238,6 +238,80 @@ add_interested_cb (OhmPlugin   *plugin,
 	}
 }
 
+/* adds plugins from require and suggests lists. Failure of require is error, failure of suggests is warning */
+/* we have to make sure we do not load banned plugins from the prevent list or load already loaded plugins */
+/* this should be very fast (two or three runs) for the common case */
+static void
+ohm_module_add_all_plugins (OhmModule *module)
+{
+	GSList *lfound;
+	gchar *entry;
+	gboolean ret = TRUE;
+
+	/* go through requires */
+	if (module->priv->mod_require != NULL) {
+		ohm_debug ("processing require");
+	}
+	while (module->priv->mod_require != NULL) {
+		entry = (gchar *) module->priv->mod_require->data;
+
+		/* make sure it's not banned */
+		lfound = g_slist_find_custom (module->priv->mod_prevent, entry, (GCompareFunc) strcmp);
+		if (lfound != NULL) {
+			g_error ("module listed in require is also listed in prevent");
+		}
+
+		/* make sure it's not already loaded */
+		lfound = g_slist_find_custom (module->priv->mod_loaded, entry, (GCompareFunc) strcmp);
+		if (lfound == NULL) {
+			/* TODO: load module */
+			ohm_debug ("enforce add: %s", entry);
+			if (ret == FALSE) {
+				g_error ("module %s failed to load but listed in require", entry);
+			}
+
+			/* add to loaded list */
+			module->priv->mod_loaded = g_slist_prepend (module->priv->mod_loaded, (gpointer) entry);
+		} else {
+			ohm_debug ("module %s already loaded", entry);
+		}
+
+		/* remove this entry from the list */
+		module->priv->mod_require = g_slist_delete_link (module->priv->mod_require, module->priv->mod_require);
+	}
+
+	/* go through suggest */
+	if (module->priv->mod_suggest != NULL) {
+		ohm_debug ("processing suggest");
+	}
+	while (module->priv->mod_suggest != NULL) {
+		entry = (gchar *) module->priv->mod_suggest->data;
+		module->priv->mod_suggest = g_slist_remove (module->priv->mod_suggest, entry);
+
+		/* make sure it's not banned */
+		lfound = g_slist_find_custom (module->priv->mod_prevent, entry, (GCompareFunc) strcmp);
+		if (lfound != NULL) {
+			ohm_debug ("module %s listed in suggest is also listed in prevent, so ignoring", entry);
+		} else {
+			/* make sure it's not already loaded */
+			lfound = g_slist_find_custom (module->priv->mod_loaded, entry, (GCompareFunc) strcmp);
+			if (lfound == NULL) {
+				ohm_debug ("try add: %s", entry);
+				/* TODO: load module */
+				if (ret == TRUE) {
+					/* add to loaded list */
+					module->priv->mod_loaded = g_slist_prepend (module->priv->mod_loaded, (gpointer) entry);
+				} else {
+					ohm_debug ("module %s failed to load but only suggested so no problem", entry);
+				}
+			}
+		}
+	
+		/* remove this entry from the list */
+		module->priv->mod_suggest = g_slist_delete_link (module->priv->mod_suggest, module->priv->mod_suggest);
+	}
+}
+
 /**
  * ohm_module_finalize:
  **/
@@ -275,12 +349,14 @@ ohm_module_class_init (OhmModuleClass *klass)
 static void
 ohm_module_init (OhmModule *module)
 {
+	guint i;
+
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
 	/* clear lists */
-	module->priv->module_require = NULL;
-	module->priv->module_suggest = NULL;
-	module->priv->module_prevent = NULL;
-	module->priv->module_loaded = NULL;
+	module->priv->mod_require = NULL;
+	module->priv->mod_suggest = NULL;
+	module->priv->mod_prevent = NULL;
+	module->priv->mod_loaded = NULL;
 
 	module->priv->interested = g_hash_table_new (g_str_hash, g_str_equal);
 
@@ -293,11 +369,24 @@ ohm_module_init (OhmModule *module)
 	g_signal_connect (module->priv->plugin, "add-interested",
 			  G_CALLBACK (add_interested_cb), module);
 
-	ohm_module_add_initial (module, "require", &(module->priv->module_require));
-	ohm_module_add_initial (module, "suggest", &(module->priv->module_suggest));
-	ohm_module_add_initial (module, "prevent", &(module->priv->module_prevent));
+	ohm_module_add_initial (module, "require", &(module->priv->mod_require));
+	ohm_module_add_initial (module, "suggest", &(module->priv->mod_suggest));
+	ohm_module_add_initial (module, "prevent", &(module->priv->mod_prevent));
 
-	/* hardcode for now */
+	/* Keep trying to empty both require and suggested lists.
+	 * We could have done this recursively, but that is really bad for the stack.
+	 * We also have to keep in mind the lists may be being updated by plugins as we load them */
+	i = 1;
+	while (module->priv->mod_require != NULL ||
+	       module->priv->mod_suggest != NULL) {
+		ohm_debug ("coldplug iteration #%i", i++);
+		ohm_module_add_all_plugins (module);
+		if (i > 10) {
+			g_error ("coldplug too complex, please file a bug");
+		}
+	}
+
+	/* hardcode for now, TODO: make a list of plugins */
 	ohm_plugin_load (module->priv->plugin, "libpluginbattery.so");
 }
 

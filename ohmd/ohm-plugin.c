@@ -56,10 +56,13 @@ struct OhmPluginPrivate
 
 enum {
 	ADD_INTERESTED,
+	ADD_REQUIRE,
+	ADD_SUGGEST,
+	ADD_PREVENT,
 	LAST_SIGNAL
 };
 
-static guint	     signals [LAST_SIGNAL] = { 0, };
+static guint	     signals[LAST_SIGNAL] = { 0, };
 
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
 
@@ -70,7 +73,8 @@ gboolean
 ohm_plugin_require (OhmPlugin   *plugin,
 		    const gchar *name)
 {
-	ohm_debug ("require '%s'", name);
+	ohm_debug ("emitting add-require '%s'", name);
+	g_signal_emit (plugin, signals[ADD_REQUIRE], 0, name);
 	return TRUE;
 }
 
@@ -81,7 +85,8 @@ gboolean
 ohm_plugin_suggest (OhmPlugin   *plugin,
 		    const gchar *name)
 {
-	ohm_debug ("suggest '%s'", name);
+	ohm_debug ("emitting add-suggest '%s'", name);
+	g_signal_emit (plugin, signals[ADD_SUGGEST], 0, name);
 	return TRUE;
 }
 
@@ -93,7 +98,8 @@ gboolean
 ohm_plugin_prevent (OhmPlugin   *plugin,
 		    const gchar *name)
 {
-	ohm_debug ("prevent '%s'", name);
+	ohm_debug ("emitting add-prevent '%s'", name);
+	g_signal_emit (plugin, signals[ADD_PREVENT], 0, name);
 	return TRUE;
 }
 
@@ -194,7 +200,7 @@ ohm_plugin_conf_interested (OhmPlugin   *plugin,
 			    gint         id)
 {
 	ohm_debug ("%s provides wants notification of %s on signal %i", plugin->priv->name, key, id);
-	g_signal_emit (plugin, signals [ADD_INTERESTED], 0, key, id);
+	g_signal_emit (plugin, signals[ADD_INTERESTED], 0, key, id);
 	return TRUE;
 }
 
@@ -233,7 +239,7 @@ ohm_plugin_class_init (OhmPluginClass *klass)
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize	   = ohm_plugin_finalize;
 
-	signals [ADD_INTERESTED] =
+	signals[ADD_INTERESTED] =
 		g_signal_new ("add-interested",
 			      G_TYPE_FROM_CLASS (object_class),
 			      G_SIGNAL_RUN_LAST,
@@ -241,6 +247,33 @@ ohm_plugin_class_init (OhmPluginClass *klass)
 			      NULL, NULL,
 			      ohm_marshal_VOID__STRING_INT,
 			      G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_INT);
+
+	signals[ADD_REQUIRE] =
+		g_signal_new ("add-require",
+			      G_TYPE_FROM_CLASS (object_class),
+			      G_SIGNAL_RUN_LAST,
+			      G_STRUCT_OFFSET (OhmPluginClass, add_require),
+			      NULL, NULL,
+			      ohm_marshal_VOID__STRING,
+			      G_TYPE_NONE, 1, G_TYPE_STRING);
+
+	signals[ADD_SUGGEST] =
+		g_signal_new ("add-suggest",
+			      G_TYPE_FROM_CLASS (object_class),
+			      G_SIGNAL_RUN_LAST,
+			      G_STRUCT_OFFSET (OhmPluginClass, add_suggest),
+			      NULL, NULL,
+			      ohm_marshal_VOID__STRING,
+			      G_TYPE_NONE, 1, G_TYPE_STRING);
+
+	signals[ADD_PREVENT] =
+		g_signal_new ("add-prevent",
+			      G_TYPE_FROM_CLASS (object_class),
+			      G_SIGNAL_RUN_LAST,
+			      G_STRUCT_OFFSET (OhmPluginClass, add_prevent),
+			      NULL, NULL,
+			      ohm_marshal_VOID__STRING,
+			      G_TYPE_NONE, 1, G_TYPE_STRING);
 
 	g_type_class_add_private (klass, sizeof (OhmPluginPrivate));
 }

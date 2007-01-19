@@ -47,6 +47,12 @@ typedef struct
 	void		(* add_interested)		(OhmPlugin	*plugin,
 							 const gchar	*key,
 							 gint		 id);
+	void		(* add_require)			(OhmPlugin	*plugin,
+							 const gchar	*name);
+	void		(* add_suggest)			(OhmPlugin	*plugin,
+							 const gchar	*name);
+	void		(* add_prevent)			(OhmPlugin	*plugin,
+							 const gchar	*name);
 } OhmPluginClass;
 
 typedef struct {
