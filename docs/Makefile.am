@@ -1,6 +1,8 @@
 IMAGE_FILES =				\
 	ohm-logo.png			\
 	ohm-logo.svg			\
+	ohm-dbus-access.png		\
+	ohm-dbus-access.svg		\
 	ohm-structure.png		\
 	ohm-structure.svg		\
 	ohm-sessions.png		\

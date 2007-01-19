@@ -53,7 +53,7 @@ struct OhmModulePrivate
 	GSList			*plugins;	/* list of loaded OhmPlugin's */
 	GHashTable		*interested;
 	OhmConf			*conf;
-	gboolean		 doing_coldplug;
+	gboolean		 doing_preload;
 };
 
 /* used as a hash entry type to provide int-passing services to the plugin */
@@ -210,7 +210,7 @@ add_require_cb (OhmPlugin   *plugin,
 		const gchar *name,
 		OhmModule   *module)
 {
-	if (module->priv->doing_coldplug == FALSE) {
+	if (module->priv->doing_preload == FALSE) {
 		g_error ("modules not allowed to call ohm_plugin_require() after load()");
 	}
 	ohm_debug ("adding module require %s", name);
@@ -222,7 +222,7 @@ add_suggest_cb (OhmPlugin   *plugin,
 		const gchar *name,
 		OhmModule   *module)
 {
-	if (module->priv->doing_coldplug == FALSE) {
+	if (module->priv->doing_preload == FALSE) {
 		g_error ("modules not allowed to call ohm_suggest_require() after load()");
 	}
 	ohm_debug ("adding module suggest %s", name);
@@ -234,7 +234,7 @@ add_prevent_cb (OhmPlugin   *plugin,
 		const gchar *name,
 		OhmModule   *module)
 {
-	if (module->priv->doing_coldplug == FALSE) {
+	if (module->priv->doing_preload == FALSE) {
 		g_error ("modules not allowed to call ohm_plugin_prevent() after load()");
 	}
 	ohm_debug ("adding module prevent %s", name);
@@ -393,6 +393,8 @@ static void
 ohm_module_init (OhmModule *module)
 {
 	guint i;
+	GSList *l;
+	OhmPlugin *plugin;
 
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
 	/* clear lists */
@@ -407,11 +409,12 @@ ohm_module_init (OhmModule *module)
 	g_signal_connect (module->priv->conf, "key-changed",
 			  G_CALLBACK (key_changed_cb), module);
 
-	/* do the plugin coldplug, with dependencies */
-	module->priv->doing_coldplug = TRUE;
+	/* do the plugin load, with dependencies */
+	module->priv->doing_preload = TRUE;
 	ohm_module_add_initial (module, "require", &(module->priv->mod_require));
 	ohm_module_add_initial (module, "suggest", &(module->priv->mod_suggest));
 	ohm_module_add_initial (module, "prevent", &(module->priv->mod_prevent));
+
 	/* Keep trying to empty both require and suggested lists.
 	 * We could have done this recursively, but that is really bad for the stack.
 	 * We also have to keep in mind the lists may be being updated by plugins as we load them */
@@ -424,7 +427,14 @@ ohm_module_init (OhmModule *module)
 			g_error ("coldplug too complex, please file a bug");
 		}
 	}
-	module->priv->doing_coldplug = FALSE;
+	module->priv->doing_preload = FALSE;
+
+	/* coldplug each plugin */
+	ohm_debug ("starting plugin coldplug");
+	for (l=module->priv->plugins; l != NULL; l=l->next) {
+		plugin = (OhmPlugin *) l->data;
+		ohm_plugin_coldplug (plugin);
+	}
 }
 
 /**

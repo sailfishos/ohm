@@ -197,6 +197,13 @@ ohm_plugin_conf_notify (OhmPlugin   *plugin,
 }
 
 G_MODULE_EXPORT gboolean
+ohm_plugin_coldplug (OhmPlugin   *plugin)
+{
+	plugin->priv->info->coldplug (plugin);
+	return TRUE;
+}
+
+G_MODULE_EXPORT gboolean
 ohm_plugin_conf_interested (OhmPlugin   *plugin,
 			    const gchar	*key,
 			    gint         id)

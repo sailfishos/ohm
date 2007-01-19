@@ -56,12 +56,13 @@ typedef struct
 } OhmPluginClass;
 
 typedef struct {
-	gchar *description;
-	gchar *version;
-	gchar *author;
-	void (*load) (OhmPlugin *plugin);
-	void (*unload) (OhmPlugin *plugin);
-	void (*conf_notify) (OhmPlugin *plugin, gint id, gint value);
+	gchar		*description;
+	gchar		*version;
+	gchar		*author;
+	void		(*load)				(OhmPlugin *plugin);
+	void		(*unload)			(OhmPlugin *plugin);
+	void		(*coldplug)			(OhmPlugin *plugin);
+	void		(*conf_notify)			(OhmPlugin *plugin, gint id, gint value);
 } OhmPluginInfo;
 
 #define OHM_INIT_PLUGIN(plugininfo) G_MODULE_EXPORT OhmPluginInfo *ohm_init_plugin (OhmPlugin *plugin) {return &(plugin_info);}
@@ -100,6 +101,7 @@ gboolean	 ohm_plugin_conf_interested		(OhmPlugin      *plugin,
 gboolean	 ohm_plugin_conf_notify			(OhmPlugin      *plugin,
 							 gint		 id,
 							 gint		 value);
+gboolean	 ohm_plugin_coldplug			(OhmPlugin      *plugin);
 
 G_END_DECLS
 

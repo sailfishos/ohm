@@ -197,7 +197,14 @@
         key is tried to be set, the set method will fail.
         This is a way to enforce fine-grained rules on users when writing
         PolicyKit rules for every action would be too great an overhead.
-      </p></div><p>
+      </p></div><div class="mediaobject" align="center"><a name="plugins-dbus"></a><img src="ohm-dbus-access.png" align="middle"></div><p>
+      Plugins have direct access to the keystore and can read and write any key
+      even if private.
+      The DBUS interface to the keystore is however limited to only setting
+      public keys to enforce security policy.
+      The DBUS interface should only be used to set preferences, it should
+      never be used to set or change policy - this is the job for the plugin.
+    </p><p>
       Plugins can tell <code class="literal">ohmd</code> that other plugins are required
       for certain functionality, for instance, the backlight unit on a mobile
       phone may require the temperature module to be present, so it can do the

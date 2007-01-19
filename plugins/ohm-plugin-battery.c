@@ -29,17 +29,55 @@ enum {
 	CONF_LAST
 };
 
+/**
+ * plugin_load:
+ * @plugin: This class instance
+ *
+ * Called before the plugin is coldplg.
+ * Define any modules that the plugin depends on, but do not do coldplug here
+ * as some of the modules may not have loaded yet.
+ */
 static void
-load_plugin (OhmPlugin *plugin)
+plugin_load (OhmPlugin *plugin)
 {
-	g_debug ("plug:load plugin %p", plugin);
+	g_debug ("plug:load plugin %s", ohm_plugin_get_name (plugin));
 
+	/* add in the required, suggested and prevented plugins */
 //	ohm_plugin_require (plugin, "libmoo.so");
 	ohm_plugin_suggest (plugin, "libtemperature.so");
 	ohm_plugin_prevent (plugin, "libembedded.so");
 
-	gint value;
+	/* tell ohmd what keys we are going to provide - don't set keys
+	 * unless you provide them or you know a plugin you require provides them */
 	ohm_plugin_conf_provide (plugin, "battery.percentage");
+}
+
+/**
+ * plugin_unload:
+ * @plugin: This class instance
+ *
+ * Called just beforet the plugin module is unloaded, and gives the plugin
+ * a chance to free private memory.
+ */
+static void
+plugin_unload (OhmPlugin *plugin)
+{
+	g_debug ("plug:unload plugin");
+}
+
+/**
+ * plugin_coldplug:
+ * @plugin: This class instance
+ *
+ * Coldplug, i.e. read and set the initial state of the plugin.
+ * We can assume all the required modules have been loaded, although it's
+ * dangerous to assume the key values are anything other than the defaults.
+ */
+static void
+plugin_coldplug (OhmPlugin *plugin)
+{
+	g_debug ("plug:coldplug");
+	gint value;
 	ohm_plugin_conf_set_key (plugin, "battery.percentage", 99);
 	ohm_plugin_conf_get_key (plugin, "battery.percentage", &value);
 
@@ -50,16 +88,18 @@ load_plugin (OhmPlugin *plugin)
 	g_debug ("plug:got conf from plugin! %i", value);	
 }
 
+/**
+ * plugin_conf_notify:
+ * @plugin: This class instance
+ *
+ * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
+ * has it's value changed.
+ * An enumerated numeric id rather than the key is returned for processing speed.
+ */
 static void
-unload_plugin (OhmPlugin *plugin)
+plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
-	g_debug ("plug:unload plugin");
-}
-
-static void
-conf_notify (OhmPlugin *plugin, gint id, gint value)
-{
-	g_debug ("plug:conf_notify %i: %i", id, value);
+	g_debug ("plug:plugin_conf_notify %i: %i", id, value);
 	/* using an integer enumeration is much faster than a load of strcmp's */
 	if (id == CONF_BACKLIGHTCHANGED) {
 		g_error ("plug:backlight changed, so maybe we need to update something or re-evaluate policy");
@@ -72,9 +112,10 @@ static OhmPluginInfo plugin_info = {
 	"OHM HAL Battery",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	load_plugin,			/* load */
-	unload_plugin,			/* unload */
-	conf_notify,			/* conf_notify */
+	plugin_load,			/* load */
+	plugin_unload,			/* unload */
+	plugin_coldplug,		/* coldplug */
+	plugin_conf_notify,		/* conf_notify */
 };
 
 OHM_INIT_PLUGIN (plugin_info);
