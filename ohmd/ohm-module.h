@@ -49,13 +49,6 @@ typedef struct
 GType		 ohm_module_get_type			(void);
 OhmModule 	*ohm_module_new				(void);
 
-gboolean	 ohm_module_require			(OhmModule	*module,
-							 const gchar	*name);
-gboolean	 ohm_module_suggest			(OhmModule	*module,
-							 const gchar	*name);
-gboolean	 ohm_module_prevent			(OhmModule	*module,
-							 const gchar	*name);
-
 G_END_DECLS
 
 #endif /* __OHM_MODULE_H */

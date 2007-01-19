@@ -198,11 +198,6 @@ ohm_manager_init (OhmManager *manager)
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.patch", 1, TRUE, NULL);
 	ohm_conf_print_all (manager->priv->conf);
 
-	/* add modules - this needs to be done from a file */
-	ohm_module_require (manager->priv->module, "ac_adapter");
-	ohm_module_suggest (manager->priv->module, "battery");
-	ohm_module_prevent (manager->priv->module, "olpc");
-
 	moo (manager);
 }
 

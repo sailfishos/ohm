@@ -53,6 +53,7 @@ struct OhmModulePrivate
 	GSList			*plugins;	/* list of loaded OhmPlugin's */
 	GHashTable		*interested;
 	OhmConf			*conf;
+	gboolean		 doing_coldplug;
 };
 
 /* used as a hash entry type to provide int-passing services to the plugin */
@@ -62,40 +63,6 @@ typedef struct {
 } OhmModuleNofif;
 
 G_DEFINE_TYPE (OhmModule, ohm_module, G_TYPE_OBJECT)
-
-/**
- * ohm_module_require:
- **/
-gboolean
-ohm_module_require (OhmModule   *module,
-		    const gchar *name)
-{
-	ohm_debug ("module:require '%s'", name);
-	return TRUE;
-}
-
-/**
- * ohm_module_suggest:
- **/
-gboolean
-ohm_module_suggest (OhmModule   *module,
-		    const gchar *name)
-{
-	ohm_debug ("module:suggest '%s'", name);
-	return TRUE;
-}
-
-/**
- * ohm_module_prevent:
- *
- **/
-gboolean
-ohm_module_prevent (OhmModule   *module,
-		    const gchar *name)
-{
-	ohm_debug ("module:prevent '%s'", name);
-	return TRUE;
-}
 
 /**
  * ohm_module_process_line:
@@ -184,7 +151,7 @@ key_changed_cb (OhmConf     *conf,
 	OhmModuleNofif *notif;
 	const gchar *name;
 
-	ohm_debug ("module:key changed! %s : %i", key, value);
+	ohm_debug ("key changed! %s : %i", key, value);
 
 	/* if present, add to SList, if not, add to hash as slist object */
 	entry = g_hash_table_lookup (module->priv->interested, key);
@@ -194,12 +161,12 @@ key_changed_cb (OhmConf     *conf,
 		return;
 	}
 
-	ohm_debug ("module:found watched key %s", key);
+	ohm_debug ("found watched key %s", key);
 	/* go thru the SList and notify each plugin */
 	for (l=*entry; l != NULL; l=l->next) {
 		notif = (OhmModuleNofif *) l->data;
 		name = ohm_plugin_get_name (notif->plugin);
-		ohm_debug ("module:notify %s with id:%i", name, notif->id);
+		ohm_debug ("notify %s with id:%i", name, notif->id);
 		ohm_plugin_conf_notify (notif->plugin, notif->id, value);
 	}
 }
@@ -213,7 +180,7 @@ add_interested_cb (OhmPlugin   *plugin,
 	GSList **entry;
 	GSList **l;
 	OhmModuleNofif *notif;
-	ohm_debug ("module:add interested! %s : %i", key, id);
+	ohm_debug ("add interested! %s : %i", key, id);
 
 	/* if present, add to SList, if not, add to hash as slist object */
 	entry = g_hash_table_lookup (module->priv->interested, key);
@@ -225,10 +192,10 @@ add_interested_cb (OhmPlugin   *plugin,
 
 	if (entry != NULL) {
 		/* already present, just append to SList */
-		ohm_debug ("module:key already watched by someting else");
+		ohm_debug ("key already watched by someting else");
 		*entry = g_slist_prepend (*entry, (gpointer) notif);
 	} else {
-		ohm_debug ("module:key not already watched by someting else");
+		ohm_debug ("key not already watched by someting else");
 		/* create the new SList andd add the new notification to it */
 		l = g_new0 (GSList *, 1);
 		*l = NULL;
@@ -236,6 +203,42 @@ add_interested_cb (OhmPlugin   *plugin,
 		/* fixme we need to free this g_strdup at finalize and clear the list */
 		g_hash_table_insert (module->priv->interested, (gpointer) g_strdup (key), l);
 	}
+}
+
+static void
+add_require_cb (OhmPlugin   *plugin,
+		const gchar *name,
+		OhmModule   *module)
+{
+	if (module->priv->doing_coldplug == FALSE) {
+		g_error ("modules not allowed to call ohm_plugin_require() after load()");
+	}
+	ohm_debug ("adding module require %s", name);
+	module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) strdup (name));
+}
+
+static void
+add_suggest_cb (OhmPlugin   *plugin,
+		const gchar *name,
+		OhmModule   *module)
+{
+	if (module->priv->doing_coldplug == FALSE) {
+		g_error ("modules not allowed to call ohm_suggest_require() after load()");
+	}
+	ohm_debug ("adding module suggest %s", name);
+	module->priv->mod_suggest = g_slist_prepend (module->priv->mod_suggest, (gpointer) strdup (name));
+}
+
+static void
+add_prevent_cb (OhmPlugin   *plugin,
+		const gchar *name,
+		OhmModule   *module)
+{
+	if (module->priv->doing_coldplug == FALSE) {
+		g_error ("modules not allowed to call ohm_plugin_prevent() after load()");
+	}
+	ohm_debug ("adding module prevent %s", name);
+	module->priv->mod_prevent = g_slist_prepend (module->priv->mod_prevent, (gpointer) strdup (name));
 }
 
 static gboolean
@@ -248,6 +251,12 @@ ohm_module_add_plugin (OhmModule *module, const gchar *name)
 	plugin = ohm_plugin_new ();
 	g_signal_connect (plugin, "add-interested",
 			  G_CALLBACK (add_interested_cb), module);
+	g_signal_connect (plugin, "add-require",
+			  G_CALLBACK (add_require_cb), module);
+	g_signal_connect (plugin, "add-suggest",
+			  G_CALLBACK (add_suggest_cb), module);
+	g_signal_connect (plugin, "add-prevent",
+			  G_CALLBACK (add_prevent_cb), module);
 	/* try to load plugin, this might fail */
 	ret = ohm_plugin_load (plugin, name);
 	if (ret == TRUE) {
@@ -268,6 +277,7 @@ static void
 ohm_module_add_all_plugins (OhmModule *module)
 {
 	GSList *lfound;
+	GSList *current;
 	gchar *entry;
 	gboolean ret;
 
@@ -276,7 +286,8 @@ ohm_module_add_all_plugins (OhmModule *module)
 		ohm_debug ("processing require");
 	}
 	while (module->priv->mod_require != NULL) {
-		entry = (gchar *) module->priv->mod_require->data;
+		current = module->priv->mod_require;
+		entry = (gchar *) current->data;
 
 		/* make sure it's not banned */
 		lfound = g_slist_find_custom (module->priv->mod_prevent, entry, (GCompareFunc) strcmp);
@@ -299,8 +310,8 @@ ohm_module_add_all_plugins (OhmModule *module)
 			ohm_debug ("module %s already loaded", entry);
 		}
 
-		/* remove this entry from the list */
-		module->priv->mod_require = g_slist_delete_link (module->priv->mod_require, module->priv->mod_require);
+		/* remove this entry from the list, and use cached current as the head may have changed */
+		module->priv->mod_require = g_slist_delete_link (module->priv->mod_require, current);
 	}
 
 	/* go through suggest */
@@ -308,8 +319,8 @@ ohm_module_add_all_plugins (OhmModule *module)
 		ohm_debug ("processing suggest");
 	}
 	while (module->priv->mod_suggest != NULL) {
-		entry = (gchar *) module->priv->mod_suggest->data;
-		module->priv->mod_suggest = g_slist_remove (module->priv->mod_suggest, entry);
+		current = module->priv->mod_suggest;
+		entry = (gchar *) current->data;
 
 		/* make sure it's not banned */
 		lfound = g_slist_find_custom (module->priv->mod_prevent, entry, (GCompareFunc) strcmp);
@@ -332,7 +343,7 @@ ohm_module_add_all_plugins (OhmModule *module)
 		}
 	
 		/* remove this entry from the list */
-		module->priv->mod_suggest = g_slist_delete_link (module->priv->mod_suggest, module->priv->mod_suggest);
+		module->priv->mod_suggest = g_slist_delete_link (module->priv->mod_suggest, current);
 	}
 }
 
@@ -396,10 +407,11 @@ ohm_module_init (OhmModule *module)
 	g_signal_connect (module->priv->conf, "key-changed",
 			  G_CALLBACK (key_changed_cb), module);
 
+	/* do the plugin coldplug, with dependencies */
+	module->priv->doing_coldplug = TRUE;
 	ohm_module_add_initial (module, "require", &(module->priv->mod_require));
 	ohm_module_add_initial (module, "suggest", &(module->priv->mod_suggest));
 	ohm_module_add_initial (module, "prevent", &(module->priv->mod_prevent));
-
 	/* Keep trying to empty both require and suggested lists.
 	 * We could have done this recursively, but that is really bad for the stack.
 	 * We also have to keep in mind the lists may be being updated by plugins as we load them */
@@ -412,6 +424,7 @@ ohm_module_init (OhmModule *module)
 			g_error ("coldplug too complex, please file a bug");
 		}
 	}
+	module->priv->doing_coldplug = FALSE;
 }
 
 /**

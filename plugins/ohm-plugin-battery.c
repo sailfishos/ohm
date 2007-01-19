@@ -24,7 +24,8 @@
 #include <ohm-plugin.h>
 
 enum {
-	CONF_SOMETHINGBACKLIGHTCHANGED = 666,
+	CONF_BACKLIGHTCHANGED,
+	CONF_ACCHANGED,
 	CONF_LAST
 };
 
@@ -32,14 +33,19 @@ static void
 load_plugin (OhmPlugin *plugin)
 {
 	g_debug ("plug:load plugin %p", plugin);
+
+//	ohm_plugin_require (plugin, "libmoo.so");
+	ohm_plugin_suggest (plugin, "libtemperature.so");
+	ohm_plugin_prevent (plugin, "libembedded.so");
+
 	gint value;
 	ohm_plugin_conf_provide (plugin, "battery.percentage");
 	ohm_plugin_conf_set_key (plugin, "battery.percentage", 99);
 	ohm_plugin_conf_get_key (plugin, "battery.percentage", &value);
 
 	/* these don't have to be one enum per key, you can clump them as classes */
-	ohm_plugin_conf_interested (plugin, "backlight.value_foo", CONF_SOMETHINGBACKLIGHTCHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.value_idle", CONF_SOMETHINGBACKLIGHTCHANGED);
+	ohm_plugin_conf_interested (plugin, "backlight.value_foo", CONF_BACKLIGHTCHANGED);
+	ohm_plugin_conf_interested (plugin, "system.ac_state", CONF_ACCHANGED);
 
 	g_debug ("plug:got conf from plugin! %i", value);	
 }
@@ -55,8 +61,10 @@ conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	g_debug ("plug:conf_notify %i: %i", id, value);
 	/* using an integer enumeration is much faster than a load of strcmp's */
-	if (id == CONF_SOMETHINGBACKLIGHTCHANGED) {
+	if (id == CONF_BACKLIGHTCHANGED) {
 		g_error ("plug:backlight changed, so maybe we need to update something or re-evaluate policy");
+	} else if (id == CONF_ACCHANGED) {
+		g_error ("plug:ac status changed, so maybe we need to update something or re-evaluate policy");
 	}
 }
 

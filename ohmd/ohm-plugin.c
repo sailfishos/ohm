@@ -116,7 +116,7 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	path = g_build_filename (LIBDIR, name, NULL);
 	handle = g_module_open (path, 0);
 	if (!handle) {
-		ohm_debug ("opening module %s failed : %s\n", path, g_module_error ());
+		ohm_debug ("opening module %s failed : %s", name, g_module_error ());
 		g_free (path);
 		return FALSE;
 	}
@@ -124,7 +124,7 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 
 	if (!g_module_symbol (handle, "ohm_init_plugin", (gpointer) &ohm_init_plugin)) {
 		g_module_close (handle);
-		g_error ("could not find init function in plugin\n");
+		g_error ("could not find init function in plugin");
 	}
 
 	plugin->priv->handle = handle;
