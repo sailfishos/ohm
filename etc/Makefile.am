@@ -1,5 +1,3 @@
-SUBDIRS = plugins
-
 EXTRA_DIST =				\
 	$(Data_DATA)
 

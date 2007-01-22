@@ -1,0 +1,2 @@
+powerstatus.percentage_low 20 public
+powerstatus.percentage_critical 10 public

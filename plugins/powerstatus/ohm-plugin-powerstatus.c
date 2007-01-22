@@ -24,10 +24,19 @@
 #include <ohm-plugin.h>
 
 enum {
-	CONF_BACKLIGHTCHANGED,
-	CONF_ACCHANGED,
+	CONF_PERCENT_LOW_CHANGED,
+	CONF_PERCENT_CRITICAL_CHANGED,
+	CONF_BATTERY_CHANGED,
 	CONF_LAST
 };
+
+typedef struct {
+	gint percentage;
+	gint percentage_low;
+	gint percentage_critical;
+} OhmPluginCacheData;
+
+OhmPluginCacheData data;
 
 /**
  * plugin_load:
@@ -40,29 +49,32 @@ enum {
 static void
 plugin_load (OhmPlugin *plugin)
 {
-	g_debug ("plug:load plugin %s", ohm_plugin_get_name (plugin));
-
 	/* add in the required, suggested and prevented plugins */
-//	ohm_plugin_require (plugin, "libmoo.so");
-	ohm_plugin_suggest (plugin, "libtemperature.so");
-	ohm_plugin_prevent (plugin, "libembedded.so");
+	ohm_plugin_suggest (plugin, "libpluginbattery.so");
 
-	/* tell ohmd what keys we are going to provide - don't set keys
-	 * unless you provide them or you know a plugin you require provides them */
-	ohm_plugin_conf_provide (plugin, "battery.percentage");
+	/* tell ohmd what keys we are going to provide */
+	ohm_plugin_conf_provide (plugin, "powerstatus.low");
+	ohm_plugin_conf_provide (plugin, "powerstatus.critical");
 }
 
 /**
- * plugin_unload:
+ * check_system_power_state:
  * @plugin: This class instance
  *
- * Called just beforet the plugin module is unloaded, and gives the plugin
- * a chance to free private memory.
+ * Check the battery, and set the low and critical values if battery is low
  */
 static void
-plugin_unload (OhmPlugin *plugin)
+check_system_power_state (OhmPlugin *plugin)
 {
-	g_debug ("plug:unload plugin");
+	if (data.percentage < data.percentage_critical) {
+		ohm_plugin_conf_set_key (plugin, "powerstatus.low", 1);
+		ohm_plugin_conf_set_key (plugin, "powerstatus.critical", 1);
+	} else if (data.percentage < data.percentage_low) {
+		ohm_plugin_conf_set_key (plugin, "powerstatus.low", 1);
+		ohm_plugin_conf_set_key (plugin, "powerstatus.critical", 0);
+	}
+	ohm_plugin_conf_set_key (plugin, "powerstatus.low", 0);
+	ohm_plugin_conf_set_key (plugin, "powerstatus.critical", 0);
 }
 
 /**
@@ -76,16 +88,17 @@ plugin_unload (OhmPlugin *plugin)
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
-	g_debug ("plug:coldplug");
-	gint value;
-	ohm_plugin_conf_set_key (plugin, "battery.percentage", 99);
-	ohm_plugin_conf_get_key (plugin, "battery.percentage", &value);
+	/* interested keys */
+	ohm_plugin_conf_interested (plugin, "battery.percentage", CONF_BATTERY_CHANGED);
+	ohm_plugin_conf_interested (plugin, "powerstatus.percentage_low", CONF_BATTERY_CHANGED);
+	ohm_plugin_conf_interested (plugin, "powerstatus.percentage_critical", CONF_BATTERY_CHANGED);
 
-	/* these don't have to be one enum per key, you can clump them as classes */
-	ohm_plugin_conf_interested (plugin, "backlight.value_foo", CONF_BACKLIGHTCHANGED);
-	ohm_plugin_conf_interested (plugin, "system.ac_state", CONF_ACCHANGED);
+	/* initial values */
+	ohm_plugin_conf_get_key (plugin, "battery.percentage", &(data.percentage));
+	ohm_plugin_conf_get_key (plugin, "powerstatus.percentage_low", &(data.percentage_low));
+	ohm_plugin_conf_get_key (plugin, "powerstatus.percentage_critical", &(data.percentage_critical));
 
-	g_debug ("plug:got conf from plugin! %i", value);	
+	check_system_power_state (plugin);
 }
 
 /**
@@ -99,21 +112,24 @@ plugin_coldplug (OhmPlugin *plugin)
 static void
 plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
-	g_debug ("plug:plugin_conf_notify %i: %i", id, value);
-	/* using an integer enumeration is much faster than a load of strcmp's */
-	if (id == CONF_BACKLIGHTCHANGED) {
-		g_error ("plug:backlight changed, so maybe we need to update something or re-evaluate policy");
-	} else if (id == CONF_ACCHANGED) {
-		g_error ("plug:ac status changed, so maybe we need to update something or re-evaluate policy");
+	if (id == CONF_BATTERY_CHANGED) {
+		data.percentage = value;
+		check_system_power_state (plugin);
+	} else if (id == CONF_PERCENT_LOW_CHANGED) {
+		data.percentage_low = value;
+		check_system_power_state (plugin);
+	} else if (id == CONF_PERCENT_CRITICAL_CHANGED) {
+		data.percentage_critical = value;
+		check_system_power_state (plugin);
 	}
 }
 
 static OhmPluginInfo plugin_info = {
-	"OHM HAL Battery",		/* description */
+	"OHM PowerStatus",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
 	plugin_load,			/* load */
-	plugin_unload,			/* unload */
+	NULL,				/* unload */
 	plugin_coldplug,		/* coldplug */
 	plugin_conf_notify,		/* conf_notify */
 };

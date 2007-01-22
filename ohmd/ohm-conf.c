@@ -142,7 +142,11 @@ ohm_conf_print_all (OhmConf *conf)
 		entry = (OhmConfObjectMulti *) l->data;
 		g_print ("%s", entry->key);
 		spaces = g_strnfill (max - strlen(entry->key), ' ');	
-		g_print ("%s : %i\n", spaces, entry->value);
+		if (entry->public == TRUE) {
+			g_print ("%s : %i\t(public)\n", spaces, entry->value);
+		} else {
+			g_print ("%s : %i\t(private)\n", spaces, entry->value);
+		}
 		g_free (spaces);
 	}
 
@@ -165,6 +169,8 @@ ohm_conf_get_key (OhmConf     *conf,
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (key != NULL, FALSE);
 	g_return_val_if_fail (value != NULL, FALSE);
+	g_return_val_if_fail (error != NULL, FALSE);
+	g_return_val_if_fail (*error == NULL, FALSE);
 
 	if (conf->priv->keys == NULL) {
 		*error = g_error_new (ohm_conf_error_quark (),
@@ -404,6 +410,8 @@ ohm_conf_load_defaults (OhmConf     *conf,
 
 	/* generate path for each module */
 	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins", plugin_name, NULL);
+
+	ohm_debug ("Loading %s defaults from %s", plugin_name, filename);
 
 	/* load from file */
 	ret = g_file_get_contents (filename, &contents, &length, error);

@@ -1,2 +1,5 @@
 # This file should list all the modules that are suggested for coldplug
 libacadapter.so
+libpluginbattery.so
+libpolicyexample.so
+libpolicypowerstatus.so

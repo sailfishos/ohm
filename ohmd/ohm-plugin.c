@@ -176,7 +176,12 @@ ohm_plugin_conf_get_key (OhmPlugin   *plugin,
 			 const gchar *key,
 			 int         *value)
 {
-	return ohm_conf_get_key (plugin->priv->conf, key, value, NULL);
+	GError *error;
+	gboolean ret;
+	error = NULL;
+	ret = ohm_conf_get_key (plugin->priv->conf, key, value, &error);
+	/* fixme print and clear error */
+	return ret;
 }
 
 G_MODULE_EXPORT gboolean
