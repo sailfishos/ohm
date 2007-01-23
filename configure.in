@@ -151,6 +151,8 @@ ohm.conf
 Makefile
 etc/Makefile
 plugins/Makefile
+plugins/acadapter/Makefile
+plugins/idle/Makefile
 plugins/powerstatus/Makefile
 plugins/backlight/Makefile
 ohmd/Makefile

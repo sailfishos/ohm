@@ -50,7 +50,7 @@ static void
 plugin_load (OhmPlugin *plugin)
 {
 	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_suggest (plugin, "libpluginbattery.so");
+	ohm_plugin_suggest (plugin, "battery");
 
 	/* tell ohmd what keys we are going to provide */
 	ohm_plugin_conf_provide (plugin, "powerstatus.low");

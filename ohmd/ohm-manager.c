@@ -158,7 +158,6 @@ ohm_manager_init (OhmManager *manager)
 {
 	GError *error = NULL;
 	DBusGConnection *connection;
-	gboolean ret;
 	manager->priv = OHM_MANAGER_GET_PRIVATE (manager);
 
 	/* get system bus connection */
@@ -177,16 +176,6 @@ ohm_manager_init (OhmManager *manager)
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.major", 0, TRUE, NULL);
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.minor", 0, TRUE, NULL);
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.patch", 1, TRUE, NULL);
-
-	/* fixme: move to OhmModule */
-	ret = ohm_conf_load_defaults (manager->priv->conf, "backlight", &error);
-	if (ret == FALSE) {
-		g_error ("could not load defaults : %s", error->message);
-	}
-	ret = ohm_conf_load_defaults (manager->priv->conf, "powerstatus", &error);
-	if (ret == FALSE) {
-		g_error ("could not load defaults : %s", error->message);
-	}
 
 	ohm_conf_print_all (manager->priv->conf);
 }

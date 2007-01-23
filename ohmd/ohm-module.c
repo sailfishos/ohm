@@ -247,7 +247,7 @@ ohm_module_add_plugin (OhmModule *module, const gchar *name)
 	OhmPlugin *plugin;
 	gboolean ret;
 
-	/* play for now, we really need to read in from disk a list of modules to load */
+	/* setup new plugin */
 	plugin = ohm_plugin_new ();
 	g_signal_connect (plugin, "add-interested",
 			  G_CALLBACK (add_interested_cb), module);

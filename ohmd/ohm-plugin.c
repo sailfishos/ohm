@@ -108,12 +108,17 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 {
 	gchar *path;
 	GModule *handle;
+	gchar *filename;
+	GError *error = NULL;
+	gboolean ret;
 
 	OhmPluginInfo * (*ohm_init_plugin) (OhmPlugin *);
 
 	g_return_val_if_fail (name != NULL, FALSE);
 
-	path = g_build_filename (LIBDIR, name, NULL);
+	filename = g_strdup_printf ("libohm_%s.so", name);
+	path = g_build_filename (LIBDIR, filename, NULL);
+	g_free (filename);
 	handle = g_module_open (path, 0);
 	if (!handle) {
 		ohm_debug ("opening module %s failed : %s", name, g_module_error ());
@@ -131,6 +136,13 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	plugin->priv->name = g_strdup (name);
 	plugin->priv->info = ohm_init_plugin (plugin);
 
+	/* load defaults from disk */
+	ret = ohm_conf_load_defaults (plugin->priv->conf, name, &error);
+	if (ret == FALSE) {
+		g_error ("could not load defaults : %s", error->message);
+	}
+
+	/* do the load */
 	if (plugin->priv->info->load != NULL) {
 		plugin->priv->info->load (plugin);
 	}

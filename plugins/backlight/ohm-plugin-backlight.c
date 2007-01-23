@@ -30,8 +30,10 @@
 #include <ohm-plugin.h>
 
 enum {
+	CONF_AC_STATE_CHANGED,
 	CONF_SYSTEM_IDLE_CHANGED,
 	CONF_BRIGHTNESS_AC_CHANGED,
+	CONF_BRIGHTNESS_BATTERY_CHANGED,
 	CONF_BRIGHTNESS_IDLE_CHANGED,
 	CONF_TIME_IDLE_CHANGED,
 	CONF_TIME_OFF_CHANGED,
@@ -39,10 +41,12 @@ enum {
 };
 
 typedef struct {
+	gint ac_state;
 	gint system_idle;
 	gint state;
 	gint brightness;
 	gint brightness_ac;
+	gint brightness_battery;
 	gint brightness_idle;
 	gint time_idle;
 	gint time_off;
@@ -63,7 +67,8 @@ plugin_load (OhmPlugin *plugin)
 {
 	/* FIXME: detect if we have any backlights in the system and return false if not */
 	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_suggest (plugin, "libpluginidle.so");
+	ohm_plugin_suggest (plugin, "idle");
+	ohm_plugin_suggest (plugin, "acadapter");
 }
 
 /**
@@ -84,12 +89,17 @@ check_system_backlight_state (OhmPlugin *plugin)
 		data.state = 1;
 		data.brightness = data.brightness_idle;
 	} else {
-		/* set brightness to default */
+		/* set brightness to default value */
 		data.state = 1;
-		data.brightness = data.brightness_ac;
+		if (data.ac_state == 1) {
+			data.brightness = data.brightness_ac;
+		} else {
+			data.brightness = data.brightness_battery;
+		}
 	}
 	ohm_plugin_conf_set_key (plugin, "backlight.state", data.state);
 	ohm_plugin_conf_set_key (plugin, "backlight.brightness", data.brightness);
+	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
 }
 
 /**
@@ -104,15 +114,19 @@ static void
 plugin_coldplug (OhmPlugin *plugin)
 {
 	/* interested keys */
+	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "idle.system_idle", CONF_SYSTEM_IDLE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "backlight.value_ac", CONF_BRIGHTNESS_AC_CHANGED);
+	ohm_plugin_conf_interested (plugin, "backlight.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED);
 	ohm_plugin_conf_interested (plugin, "backlight.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "backlight.time_idle", CONF_TIME_IDLE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "backlight.time_off", CONF_TIME_OFF_CHANGED);
 
 	/* initial values */
+	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
 	ohm_plugin_conf_get_key (plugin, "idle.system_idle", &(data.system_idle));
 	ohm_plugin_conf_get_key (plugin, "backlight.value_ac", &(data.brightness_ac));
+	ohm_plugin_conf_get_key (plugin, "backlight.value_battery", &(data.brightness_battery));
 	ohm_plugin_conf_get_key (plugin, "backlight.value_idle", &(data.brightness_idle));
 	ohm_plugin_conf_get_key (plugin, "backlight.time_idle", &(data.time_idle));
 	ohm_plugin_conf_get_key (plugin, "backlight.time_off", &(data.time_off));
@@ -134,8 +148,14 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	if (id == CONF_SYSTEM_IDLE_CHANGED) {
 		data.system_idle = value;
 		check_system_backlight_state (plugin);
+	} else if (id == CONF_AC_STATE_CHANGED) {
+		data.ac_state = value;
+		check_system_backlight_state (plugin);
 	} else if (id == CONF_BRIGHTNESS_AC_CHANGED) {
 		data.brightness_ac = value;
+		check_system_backlight_state (plugin);
+	} else if (id == CONF_BRIGHTNESS_BATTERY_CHANGED) {
+		data.brightness_battery = value;
 		check_system_backlight_state (plugin);
 	} else if (id == CONF_BRIGHTNESS_IDLE_CHANGED) {
 		data.brightness_idle = value;

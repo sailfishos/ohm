@@ -1,5 +1,6 @@
 INCLUDES =							\
 	-I$(top_srcdir)/ohmd					\
+	$(HAL_CFLAGS)						\
 	$(GLIB_CFLAGS)						\
 	$(DBUS_CFLAGS)						\
 	$(GMODULE_CFLAGS)					\
@@ -8,13 +9,13 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = backlight
+Data_DATA = acadapter
 
-lib_LTLIBRARIES = libohm_backlight.la
-libohm_backlightincludedir = $(includedir)/ohm
-libohm_backlight_la_SOURCES = ohm-plugin-backlight.c
-libohm_backlight_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
-libohm_backlight_la_LDFLAGS = -module -avoid-version
+lib_LTLIBRARIES = libohm_acadapter.la
+libohm_acadapterincludedir = $(includedir)/ohm
+libohm_acadapter_la_SOURCES = ohm-plugin-acadapter.c
+libohm_acadapter_la_LIBADD = @HAL_LIBS@ @DBUS_LIBS@ $(INTLLIBS)
+libohm_acadapter_la_LDFLAGS = -module -avoid-version
 
 clean-local:
 	rm -f *~

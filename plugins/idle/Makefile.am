@@ -8,13 +8,13 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = backlight
+Data_DATA = idle
 
-lib_LTLIBRARIES = libohm_backlight.la
-libohm_backlightincludedir = $(includedir)/ohm
-libohm_backlight_la_SOURCES = ohm-plugin-backlight.c
-libohm_backlight_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
-libohm_backlight_la_LDFLAGS = -module -avoid-version
+lib_LTLIBRARIES = libohm_idle.la
+libohm_idleincludedir = $(includedir)/ohm
+libohm_idle_la_SOURCES = ohm-plugin-idle.c
+libohm_idle_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
+libohm_idle_la_LDFLAGS = -module -avoid-version
 
 clean-local:
 	rm -f *~
