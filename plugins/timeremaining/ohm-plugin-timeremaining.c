@@ -24,16 +24,14 @@
 #include <ohm-plugin.h>
 
 enum {
-	CONF_PERCENT_LOW_CHANGED,
-	CONF_PERCENT_CRITICAL_CHANGED,
-	CONF_BATTERY_CHANGED,
+	CONF_BATTERY_PERCENT_CHANGED,
+	CONF_AC_STATE_CHANGED,
 	CONF_LAST
 };
 
 typedef struct {
 	gint percentage;
-	gint percentage_low;
-	gint percentage_critical;
+	gint ac_state;
 } OhmPluginCacheData;
 
 OhmPluginCacheData data;
@@ -51,10 +49,11 @@ plugin_load (OhmPlugin *plugin)
 {
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "battery");
+	ohm_plugin_suggest (plugin, "acadapter");
 
 	/* tell ohmd what keys we are going to provide so it can create them */
-	ohm_plugin_conf_provide (plugin, "powerstatus.low");
-	ohm_plugin_conf_provide (plugin, "powerstatus.critical");
+	ohm_plugin_conf_provide (plugin, "timeremaining.to_charge");
+	ohm_plugin_conf_provide (plugin, "timeremaining.to_discharge");
 }
 
 /**
@@ -66,21 +65,8 @@ plugin_load (OhmPlugin *plugin)
 static void
 check_system_power_state (OhmPlugin *plugin)
 {
-	gint is_low;
-	gint is_critical;
-
-	if (data.percentage < data.percentage_critical) {
-		is_low = 1;
-		is_critical = 1;
-	} else if (data.percentage < data.percentage_low) {
-		is_low = 1;
-		is_critical = 0;
-	} else {
-		is_low = 0;
-		is_critical = 0;
-	}
-	ohm_plugin_conf_set_key (plugin, "powerstatus.low", is_low);
-	ohm_plugin_conf_set_key (plugin, "powerstatus.critical", is_critical);
+	ohm_plugin_conf_set_key (plugin, "timeremaining.to_charge", 10);
+	ohm_plugin_conf_set_key (plugin, "timeremaining.to_discharge", 10);
 }
 
 /**
@@ -95,14 +81,12 @@ static void
 plugin_coldplug (OhmPlugin *plugin)
 {
 	/* interested keys */
-	ohm_plugin_conf_interested (plugin, "battery.percentage", CONF_BATTERY_CHANGED);
-	ohm_plugin_conf_interested (plugin, "powerstatus.percentage_low", CONF_BATTERY_CHANGED);
-	ohm_plugin_conf_interested (plugin, "powerstatus.percentage_critical", CONF_BATTERY_CHANGED);
+	ohm_plugin_conf_interested (plugin, "battery.percentage", CONF_BATTERY_PERCENT_CHANGED);
+	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
 
 	/* initial values */
 	ohm_plugin_conf_get_key (plugin, "battery.percentage", &(data.percentage));
-	ohm_plugin_conf_get_key (plugin, "powerstatus.percentage_low", &(data.percentage_low));
-	ohm_plugin_conf_get_key (plugin, "powerstatus.percentage_critical", &(data.percentage_critical));
+	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
 
 	check_system_power_state (plugin);
 }
@@ -118,20 +102,17 @@ plugin_coldplug (OhmPlugin *plugin)
 static void
 plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
-	if (id == CONF_BATTERY_CHANGED) {
+	if (id == CONF_BATTERY_PERCENT_CHANGED) {
 		data.percentage = value;
 		check_system_power_state (plugin);
-	} else if (id == CONF_PERCENT_LOW_CHANGED) {
-		data.percentage_low = value;
-		check_system_power_state (plugin);
-	} else if (id == CONF_PERCENT_CRITICAL_CHANGED) {
-		data.percentage_critical = value;
+	} else if (id == CONF_AC_STATE_CHANGED) {
+		data.ac_state = value;
 		check_system_power_state (plugin);
 	}
 }
 
 static OhmPluginInfo plugin_info = {
-	"OHM PowerStatus",		/* description */
+	"OHM timeremaining",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
 	plugin_load,			/* load */
