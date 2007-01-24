@@ -124,6 +124,18 @@ ohm_conf_user_obj_from_name (OhmConf     *conf,
 }
 
 /**
+ * ohm_conf_switch_user_iter:
+ **/
+static void
+ohm_conf_switch_user_iter (gpointer    key,
+			OhmConfObj *entry,
+			gpointer   *user_data)
+{
+	guint *uid = (guint *) user_data;
+	ohm_confobj_user_switch (entry, *uid);
+}
+
+/**
  * ohm_conf_user_switch:
  *
  * user "root" for default
@@ -153,9 +165,23 @@ ohm_conf_user_switch (OhmConf     *conf,
 	/* switch the current pointers to this uid */
 	ohm_debug ("switching to uid %i, name %s", confuser->uid, confuser->name);
 	conf->priv->current_user = confuser;
-	/* FIXME, switch pointers for all public values */
+
+	/* for each existing key, we need to switch the current pointers for it */
+	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_switch_user_iter, &(confuser->uid));
 
 	return TRUE;
+}
+
+/**
+ * ohm_conf_add_user_iter:
+ **/
+static void
+ohm_conf_add_user_iter (gpointer    key,
+			OhmConfObj *entry,
+			gpointer   *user_data)
+{
+	guint *uid = (guint *) user_data;
+	ohm_confobj_user_add (entry, *uid);
 }
 
 /**
@@ -195,8 +221,24 @@ ohm_conf_user_add (OhmConf     *conf,
 	/* add the user */
 	g_ptr_array_add (conf->priv->users, (gpointer) confuser);
 
+	/* for each existing key, we need to add a user field for it */
+	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_add_user_iter, &(confuser->uid));
+
 	return TRUE;
 }
+
+/**
+ * ohm_conf_remove_user_iter:
+ **/
+static void
+ohm_conf_remove_user_iter (gpointer    key,
+			   OhmConfObj *entry,
+			   gpointer   *user_data)
+{
+	guint *uid = (guint *) user_data;
+	ohm_confobj_user_remove (entry, *uid);
+}
+
 
 /**
  * ohm_conf_user_remove:
@@ -226,6 +268,9 @@ ohm_conf_user_remove (OhmConf     *conf,
 	g_ptr_array_remove (conf->priv->users, (gpointer) confuser);
 	g_free (confuser->name);
 	g_free (confuser);
+
+	/* for each existing key, we need to add a user field for it */
+	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_remove_user_iter, &(confuser->uid));
 
 	/* make sure we are not leaving the current user settings dangling */
 	if (conf->priv->current_user == confuser) {
@@ -309,9 +354,9 @@ ohm_conf_print_all (OhmConf *conf)
 		g_print ("%s", confkey);
 		spaces = g_strnfill (max - strlen (confkey), ' ');
 		if (confpublic == TRUE) {
-			g_print ("%s : %i\t(public)\n", spaces, confvalue);
+			g_print ("%s: %i\t(public)\n", spaces, confvalue);
 		} else {
-			g_print ("%s : %i\t(private)\n", spaces, confvalue);
+			g_print ("%s: %i\t(private)\n", spaces, confvalue);
 		}
 		g_free (spaces);
 	}

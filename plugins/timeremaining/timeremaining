@@ -1,2 +1,2 @@
-powerstatus.percentage_low 20 public
-powerstatus.percentage_critical 10 public
+# timeremaining preference values
+timeremaining.calculate_hysteresis 1 public

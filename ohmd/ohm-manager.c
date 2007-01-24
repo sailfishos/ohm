@@ -180,6 +180,29 @@ ohm_manager_init (OhmManager *manager)
 	gboolean ret;
 //	GError *error;
 
+	/* test the multi-user conf stuff */
+	error = NULL;
+	ret = ohm_conf_user_add (manager->priv->conf, "hughsie", &error);
+	if (ret == FALSE) {
+		g_error ("add: %s", error->message);
+	}
+
+	ohm_debug ("set 999 for root");
+	error = NULL;
+	ret = ohm_conf_set_key_internal (manager->priv->conf, "backlight.time_off", 999, TRUE, &error);
+	if (ret == FALSE) {
+		g_error ("set: %s", error->message);
+	}
+
+	gint value;
+	error = NULL;
+	ret = ohm_conf_get_key (manager->priv->conf, "backlight.time_off", &value, &error);
+	if (ret == FALSE) {
+		g_error ("get: %s", error->message);
+	}
+	ohm_debug ("got for root %i (should be 999)", value);
+
+	ohm_debug ("switch to hughsie");
 	error = NULL;
 	ret = ohm_conf_user_switch (manager->priv->conf, "hughsie", &error);
 	if (ret == FALSE) {
@@ -187,21 +210,46 @@ ohm_manager_init (OhmManager *manager)
 	}
 
 	error = NULL;
+	ret = ohm_conf_get_key (manager->priv->conf, "backlight.time_off", &value, &error);
+	if (ret == FALSE) {
+		g_error ("get: %s", error->message);
+	}
+	ohm_debug ("got for hughsie %i (should be 999)", value);
+
+	ohm_debug ("set 101 for hughsie");
+	error = NULL;
+	ret = ohm_conf_set_key_internal (manager->priv->conf, "backlight.time_off", 101, TRUE, &error);
+	if (ret == FALSE) {
+		g_error ("set: %s", error->message);
+	}
+
+	error = NULL;
+	ret = ohm_conf_get_key (manager->priv->conf, "backlight.time_off", &value, &error);
+	if (ret == FALSE) {
+		g_error ("get: %s", error->message);
+	}
+	ohm_debug ("got for hughsie %i (should be 101)", value);
+
+
+	ohm_debug ("switch to root");
+	error = NULL;
+	ret = ohm_conf_user_switch (manager->priv->conf, "root", &error);
+	if (ret == FALSE) {
+		ohm_debug ("switch: %s", error->message);
+	}
+
+	error = NULL;
+	ret = ohm_conf_get_key (manager->priv->conf, "backlight.time_off", &value, &error);
+	if (ret == FALSE) {
+		g_error ("get: %s", error->message);
+	}
+	ohm_debug ("got for root %i (should be 999)", value);
+
+	ohm_debug ("remove hughsie");
+	error = NULL;
 	ret = ohm_conf_user_remove (manager->priv->conf, "hughsie", &error);
 	if (ret == FALSE) {
 		ohm_debug ("remove: %s", error->message);
-	}
-
-	error = NULL;
-	ret = ohm_conf_user_add (manager->priv->conf, "hughsie", &error);
-	if (ret == FALSE) {
-		ohm_debug ("add: %s", error->message);
-	}
-
-	error = NULL;
-	ret = ohm_conf_user_add (manager->priv->conf, "hughsie", &error);
-	if (ret == FALSE) {
-		ohm_debug ("add: %s", error->message);
 	}
 
 	ohm_conf_user_list (manager->priv->conf);

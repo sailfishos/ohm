@@ -111,16 +111,36 @@ ohm_confobj_set_public (OhmConfObj *confobj, gboolean public)
 
 /**
  * ohm_confobj_user_add:
+ *
+ * Adds the required data space to the store and copies the default data
  **/
 gboolean
 ohm_confobj_user_add (OhmConfObj *confobj, guint uid)
 {
+	gint *intobj;
+	gint *intobj_default;
+
 	g_return_val_if_fail (OHM_IS_CONFOBJ (confobj), FALSE);
 
 	/* if we are public, we only have one value, and this doesn't affect us */
-	if (confobj->priv->public == TRUE) {
+	if (confobj->priv->public == FALSE) {
+		ohm_debug ("not adding data field of %s for uid %i as private", confobj->priv->key, uid);
 		return TRUE;
 	}
+
+	/* check uid is big enough to not clash */
+	if (confobj->priv->store->len > uid) {
+		g_error ("cannot adduser uid %i under total", uid);
+	}
+
+	ohm_debug ("adding data field of %s for uid %i", confobj->priv->key, uid);
+	intobj = g_new0 (gint, 1);
+
+	/* get the default preferences and copy to this new user */
+	intobj_default = g_ptr_array_index (confobj->priv->store, 0);
+	*intobj = *intobj_default;
+
+	g_ptr_array_add (confobj->priv->store, (gpointer) intobj);
 
 	return TRUE;
 }
@@ -131,12 +151,31 @@ ohm_confobj_user_add (OhmConfObj *confobj, guint uid)
 gboolean
 ohm_confobj_user_remove (OhmConfObj *confobj, guint uid)
 {
+	gint *intobj;
+
 	g_return_val_if_fail (OHM_IS_CONFOBJ (confobj), FALSE);
 
 	/* if we are public, we only have one value, and this doesn't affect us */
-	if (confobj->priv->public == TRUE) {
+	if (confobj->priv->public == FALSE) {
 		return TRUE;
 	}
+
+	/* check uid is big enough to not clash */
+	if (uid > confobj->priv->store->len) {
+		g_error ("cannot remove uid %i under total", uid);
+	}
+
+	ohm_debug ("removing %s for uid %i", confobj->priv->key, uid);
+
+	/* get the uid value */
+	intobj = g_ptr_array_index (confobj->priv->store, uid);
+	if (intobj == NULL) {
+		g_error ("already removed uid %i", uid);
+	}
+
+	/* just delete the object and set to NULL */
+	g_free (intobj);
+	intobj = NULL;
 
 	return TRUE;
 }
@@ -147,12 +186,31 @@ ohm_confobj_user_remove (OhmConfObj *confobj, guint uid)
 gboolean
 ohm_confobj_user_switch (OhmConfObj *confobj, guint uid)
 {
+	gint *intobj;
+
 	g_return_val_if_fail (OHM_IS_CONFOBJ (confobj), FALSE);
 
 	/* if we are public, we only have one value, and this doesn't affect us */
-	if (confobj->priv->public == TRUE) {
+	if (confobj->priv->public == FALSE) {
+		ohm_debug ("not adding switching current field of %s for uid %i as private", confobj->priv->key, uid);
 		return TRUE;
 	}
+
+	/* check uid is big enough to not clash */
+	if (uid > confobj->priv->store->len) {
+		g_error ("cannot switch uid %i under total", uid);
+	}
+
+	ohm_debug ("switching current field of %s for uid %i", confobj->priv->key, uid);
+
+	/* get the uid value */
+	intobj = g_ptr_array_index (confobj->priv->store, uid);
+	if (intobj == NULL) {
+		g_error ("cannot switch uid %i after removed", uid);
+	}
+
+	/* just switch the pointer, don't re-araange */
+	confobj->priv->current = intobj;
 
 	return TRUE;
 }
@@ -172,7 +230,7 @@ ohm_confobj_finalize (GObject *object)
 	if (confobj->priv->key != NULL) {
 		g_free (confobj->priv->key);
 	}
-	g_ptr_array_free (confobj->priv->store, FALSE);
+	g_ptr_array_free (confobj->priv->store, TRUE);
 
 	g_return_if_fail (confobj->priv != NULL);
 	G_OBJECT_CLASS (ohm_confobj_parent_class)->finalize (object);
@@ -196,13 +254,13 @@ ohm_confobj_class_init (OhmConfObjClass *klass)
 static void
 ohm_confobj_init (OhmConfObj *confobj)
 {
+	gint *intobj;
+
 	confobj->priv = OHM_CONFOBJ_GET_PRIVATE (confobj);
 	confobj->priv->key = NULL;
 	confobj->priv->public = FALSE;
 	confobj->priv->current = NULL;
 	confobj->priv->store = g_ptr_array_new ();
-
-	gint *intobj;
 
 	/* we always create one int object for the private value */
 	intobj = g_new0 (gint, 1);
