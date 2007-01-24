@@ -38,6 +38,7 @@
 
 #include "ohm-debug.h"
 #include "ohm-conf.h"
+#include "ohm-confobj.h"
 #include "ohm-marshal.h"
 
 #define OHM_CONF_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_CONF, OhmConfPrivate))
@@ -46,13 +47,6 @@ typedef struct {
 	gchar			*name;
 	guint			 uid;
 } OhmConfUser;
-
-typedef struct {
-	gchar			*key;
-	gboolean		 public;
-	gint			*current;
-	GPtrArray		*store; /* gint object are stored for each user if public */
-} OhmConfObjectMulti;
 
 struct OhmConfPrivate
 {
@@ -243,23 +237,25 @@ ohm_conf_user_remove (OhmConf     *conf,
 
 /**
  * ohm_conf_compare_func
- * A GCompareFunc for comparing two OhmConfObjectMulti objects by key.
+ * A GCompareFunc for comparing two OhmConfObj objects by key.
  **/
 static gint
 ohm_conf_compare_func (gconstpointer a, gconstpointer b)
 {
-	OhmConfObjectMulti *entry1 = (OhmConfObjectMulti *) a;
-	OhmConfObjectMulti *entry2 = (OhmConfObjectMulti *) b;
-	return strcmp (entry1->key, entry2->key);
+	OhmConfObj *entry1 = (OhmConfObj *) a;
+	OhmConfObj *entry2 = (OhmConfObj *) b;
+	gchar *confkey1 = ohm_confobj_get_key (entry1);
+	gchar *confkey2 = ohm_confobj_get_key (entry2);
+	return strcmp (confkey1, confkey2);
 }
 
 /**
  * ohm_conf_print_all_iter:
  **/
 static void
-ohm_conf_to_slist_iter (gpointer	     key,
-			OhmConfObjectMulti *entry,
-			gpointer	    *user_data)
+ohm_conf_to_slist_iter (gpointer    key,
+			OhmConfObj *entry,
+			gpointer   *user_data)
 {
 	GSList **list = (GSList **) user_data;
 	*list = g_slist_insert_sorted (*list, (gpointer) entry, ohm_conf_compare_func);
@@ -280,7 +276,10 @@ ohm_conf_print_all (OhmConf *conf)
 	guint max = 0;
 	guint len;
 	gchar *spaces;
-	OhmConfObjectMulti *entry;
+	gchar *confkey;
+	gint confvalue;
+	gboolean confpublic;
+	OhmConfObj *confobj;
 
 	g_print ("All keys and values in database:\n");
 	if (conf->priv->keys == NULL) {
@@ -293,8 +292,9 @@ ohm_conf_print_all (OhmConf *conf)
 
 	/* get max length of keys */
 	for (l=list; l != NULL; l=l->next) {
-		entry = (OhmConfObjectMulti *) l->data;
-		len = strlen (entry->key);
+		confobj = (OhmConfObj *) l->data;
+		confkey = ohm_confobj_get_key (confobj);
+		len = strlen (confkey);
 		if (len > max) {
 			max = len;
 		}
@@ -302,13 +302,16 @@ ohm_conf_print_all (OhmConf *conf)
 
 	/* print the keys */
 	for (l=list; l != NULL; l=l->next) {
-		entry = (OhmConfObjectMulti *) l->data;
-		g_print ("%s", entry->key);
-		spaces = g_strnfill (max - strlen(entry->key), ' ');
-		if (entry->public == TRUE) {
-			g_print ("%s : %i\t(public)\n", spaces, *(entry->current));
+		confobj = (OhmConfObj *) l->data;
+		confkey = ohm_confobj_get_key (confobj);
+		confvalue = ohm_confobj_get_value (confobj);
+		confpublic = ohm_confobj_get_public (confobj);
+		g_print ("%s", confkey);
+		spaces = g_strnfill (max - strlen (confkey), ' ');
+		if (confpublic == TRUE) {
+			g_print ("%s : %i\t(public)\n", spaces, confvalue);
 		} else {
-			g_print ("%s : %i\t(private)\n", spaces, *(entry->current));
+			g_print ("%s : %i\t(private)\n", spaces, confvalue);
 		}
 		g_free (spaces);
 	}
@@ -328,7 +331,7 @@ ohm_conf_get_key (OhmConf     *conf,
 		  gint        *value,
 		  GError     **error)
 {
-	OhmConfObjectMulti *entry;
+	OhmConfObj *confobj;
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (key != NULL, FALSE);
 	g_return_val_if_fail (value != NULL, FALSE);
@@ -344,17 +347,17 @@ ohm_conf_get_key (OhmConf     *conf,
 	}
 
 	/* try to find the key in the global conf */
-	entry = g_hash_table_lookup (conf->priv->keys, key);
-	if (entry == NULL) {
+	confobj = g_hash_table_lookup (conf->priv->keys, key);
+	if (confobj == NULL) {
 		*error = g_error_new (ohm_conf_error_quark (),
 				      OHM_CONF_ERROR_KEY_MISSING,
-				      "Key missing");
+				      "Key %s missing", key);
 		*value = 0;
 		return FALSE;
 	}
 
 	/* copy value from key */
-	*value = *(entry->current);
+	*value = ohm_confobj_get_value (confobj);
 	return TRUE;
 }
 
@@ -364,14 +367,71 @@ ohm_conf_get_key (OhmConf     *conf,
  *
  **/
 gboolean
+ohm_conf_add_key (OhmConf     *conf,
+		  const gchar *key,
+		  gint         value,
+		  gboolean     public,
+		  GError     **error)
+{
+	OhmConfObj *confobj;
+	gchar *confkey;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+	g_return_val_if_fail (key != NULL, FALSE);
+
+	if (conf->priv->keys == NULL) {
+		*error = g_error_new (ohm_conf_error_quark (),
+				      OHM_CONF_ERROR_INVALID,
+				      "Conf invalid");
+		return FALSE;
+	}
+
+	/* try to find the key in the global conf */
+	confobj = g_hash_table_lookup (conf->priv->keys, key);
+	if (confobj != NULL) {
+		*error = g_error_new (ohm_conf_error_quark (),
+				      OHM_CONF_ERROR_KEY_ALREADY_EXISTS,
+				      "Key %s already exists", key);
+		return FALSE;
+	}
+
+	/* create a new key */
+	ohm_debug ("create key '%s' : %i", key, value);
+	confobj = ohm_confobj_new ();
+
+	/* maybe point to the key in the hashtable to save memory? */
+	ohm_confobj_set_key (confobj, key);
+	ohm_confobj_set_public (confobj, public);
+	ohm_confobj_set_value (confobj, value);
+
+	/* we need to create new objects in the store for each added user */
+
+	/* all new keys have to have an added signal */
+	ohm_debug ("emit key-added : %s", key);
+	g_signal_emit (conf, signals [KEY_ADDED], 0, key, value);
+
+	/* add as the strdup'd value as key is constant */
+	confkey = ohm_confobj_get_key (confobj);
+	g_hash_table_insert (conf->priv->keys, (gpointer) confkey, (gpointer) confobj);
+
+	return TRUE;
+}
+
+/**
+ * ohm_conf_set_key:
+ *
+ * Key has to exist first!
+ **/
+gboolean
 ohm_conf_set_key_internal (OhmConf     *conf,
 		           const gchar *key,
 		           gint         value,
 		           gboolean     internal,
 		           GError     **error)
 {
-	OhmConfObjectMulti *entry;
-	gint *intobj;
+	OhmConfObj *confobj;
+	gboolean confpublic;
+	gint confobjvalue;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (key != NULL, FALSE);
@@ -384,92 +444,35 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 	}
 
 	/* try to find the key in the global conf */
-	entry = g_hash_table_lookup (conf->priv->keys, key);
-	if (entry == NULL) {
-		/* create a new key */
-		ohm_debug ("create key '%s' : %i", key, value);
-		entry = g_new0 (OhmConfObjectMulti, 1);
-
-		/* maybe point to the key in the hashtable to save memory? */
-		entry->key = g_strdup (key);
-		entry->public = FALSE;
-		entry->store = g_ptr_array_new ();
-
-		/* we always create one int object for the private value */
-		intobj = g_new0 (gint, 1);
-		g_ptr_array_add (entry->store, (gpointer) intobj);
-
-		/* assume the setting user is the current user */
-		entry->current = intobj;
-		*(entry->current) = value;
-
-		/* we need to create new objects in the store for each added user */
-
-		/* all new keys have to have an added signal */
-		ohm_debug ("emit key-added : %s", key);
-		g_signal_emit (conf, signals [KEY_ADDED], 0, key, value);
-
-		g_hash_table_insert (conf->priv->keys, entry->key, entry);
-	} else {
-		/* if we are externally calling this key, check to see if
-		   we are allowed to set this key */
-		if (internal == FALSE && entry->public == FALSE) {
-			ohm_debug ("tried to overwrite private key : %s", key);
-			*error = g_error_new (ohm_conf_error_quark (),
-					      OHM_CONF_ERROR_KEY_OVERRIDE,
-					      "Key cannot overwrite private key");
-			return FALSE;
-		}
-
-		/* check for the correct type */
-		ohm_debug ("overwrite key '%s' : %i", key, value);
-
-		/* Only force signal if different */
-		if (*(entry->current) != value) {
-			*(entry->current) = value;
-			ohm_debug ("emit key-changed : %s", key);
-			g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
-		}
-	}
-
-	return TRUE;
-}
-
-/**
- * ohm_conf_set_public:
- *
- **/
-static gboolean
-ohm_conf_set_public (OhmConf     *conf,
-		     const gchar *key,
-		     gboolean     public,
-		     GError     **error)
-{
-	OhmConfObjectMulti *entry;
-
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-	g_return_val_if_fail (key != NULL, FALSE);
-
-	if (conf->priv->keys == NULL) {
-		*error = g_error_new (ohm_conf_error_quark (),
-				      OHM_CONF_ERROR_INVALID,
-				      "Conf invalid");
-		return FALSE;
-	}
-
-	/* try to find the key in the global conf */
-	entry = g_hash_table_lookup (conf->priv->keys, key);
-	if (entry == NULL) {
+	confobj = g_hash_table_lookup (conf->priv->keys, key);
+	if (confobj == NULL) {
 		*error = g_error_new (ohm_conf_error_quark (),
 				      OHM_CONF_ERROR_KEY_MISSING,
-				      "Key missing");
+				      "Key %s missing", key);
 		return FALSE;
 	}
 
-	/* set the public bit */
-	entry->public = public;
+	/* if we are externally calling this key, check to see if
+	   we are allowed to set this key */
+	confpublic = ohm_confobj_get_public (confobj);
+	if (internal == FALSE && confpublic == FALSE) {
+		ohm_debug ("tried to set private key : %s", key);
+		*error = g_error_new (ohm_conf_error_quark (),
+				      OHM_CONF_ERROR_KEY_OVERRIDE,
+				      "Cannot overwrite private key %s", key);
+		return FALSE;
+	}
 
-	/* FIXME: do something clever with *current */
+	/* check for the correct type */
+	ohm_debug ("set existing key '%s' : %i", key, value);
+
+	/* Only force signal if different */
+	confobjvalue = ohm_confobj_get_value (confobj);
+	if (confobjvalue != value) {
+		ohm_confobj_set_value (confobj, value);
+		ohm_debug ("emit key-changed : %s", key);
+		g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
+	}
 
 	return TRUE;
 }
@@ -480,7 +483,8 @@ ohm_conf_set_public (OhmConf     *conf,
 static gboolean
 ohm_conf_process_line (OhmConf     *conf,
 		       const gchar *line,
-		       const gchar *plugin_name)
+		       const gchar *plugin_name,
+		       GError     **error)
 {
 	gint len;
 	len = strlen (line);
@@ -490,6 +494,7 @@ ohm_conf_process_line (OhmConf     *conf,
 	guint value;
 	const gchar *key;
 	gboolean public;
+	gboolean ret;
 
 	/* check we have a long enough string */
 	if (len < 2) {
@@ -554,12 +559,11 @@ ohm_conf_process_line (OhmConf     *conf,
 		}
 	}
 
-	ohm_conf_set_key_internal (conf, key, value, TRUE, NULL);
-	ohm_conf_set_public (conf, key, public, NULL);
+	ret = ohm_conf_add_key (conf, key, value, public, error);
 
 	g_strfreev (parts);
 
-	return TRUE;
+	return ret;
 }
 
 /**
@@ -597,9 +601,9 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	lines = g_strsplit (contents, "\n", -1);
 	i = 0;
 	while (lines[i] != NULL) {
-		ret = ohm_conf_process_line (conf, lines[i], plugin_name);
+		ret = ohm_conf_process_line (conf, lines[i], plugin_name, error);
 		if (ret == FALSE) {
-			g_error ("Loading keys from conf failed");
+			g_error ("Loading keys from conf failed: %s", (*error)->message);
 		}
 		i++;
 	}
@@ -617,8 +621,8 @@ ohm_hash_remove_return (gpointer key,
 			gpointer value,
 			gpointer user_data)
 {
-	OhmConfObjectMulti *entry = (OhmConfObjectMulti *) value;
-	g_free (entry->key);
+	OhmConfObj *confobj = (OhmConfObj *) value;
+	g_object_unref (confobj);
 	return TRUE;
 }
 

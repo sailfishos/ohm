@@ -52,7 +52,7 @@ plugin_load (OhmPlugin *plugin)
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "battery");
 
-	/* tell ohmd what keys we are going to provide */
+	/* tell ohmd what keys we are going to provide so it can create them */
 	ohm_plugin_conf_provide (plugin, "powerstatus.low");
 	ohm_plugin_conf_provide (plugin, "powerstatus.critical");
 }

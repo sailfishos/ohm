@@ -173,9 +173,9 @@ ohm_manager_init (OhmManager *manager)
 	dbus_g_connection_register_g_object (connection, OHM_DBUS_PATH_KEYSTORE, G_OBJECT (manager->priv->keystore));
 
 	/* set some predefined keys */
-	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.major", 0, TRUE, NULL);
-	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.minor", 0, TRUE, NULL);
-	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.patch", 1, TRUE, NULL);
+	ohm_conf_add_key (manager->priv->conf, "manager.version.major", 0, FALSE, &error);
+	ohm_conf_add_key (manager->priv->conf, "manager.version.minor", 0, FALSE, &error);
+	ohm_conf_add_key (manager->priv->conf, "manager.version.patch", 1, FALSE, &error);
 
 	gboolean ret;
 //	GError *error;

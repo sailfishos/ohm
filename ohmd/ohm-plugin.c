@@ -109,12 +109,12 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	gchar *path;
 	GModule *handle;
 	gchar *filename;
-	GError *error = NULL;
-	gboolean ret;
 
 	OhmPluginInfo * (*ohm_init_plugin) (OhmPlugin *);
 
 	g_return_val_if_fail (name != NULL, FALSE);
+
+	ohm_debug ("Trying to load : %s", name);
 
 	filename = g_strdup_printf ("libohm_%s.so", name);
 	path = g_build_filename (LIBDIR, filename, NULL);
@@ -136,12 +136,6 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	plugin->priv->name = g_strdup (name);
 	plugin->priv->info = ohm_init_plugin (plugin);
 
-	/* load defaults from disk */
-	ret = ohm_conf_load_defaults (plugin->priv->conf, name, &error);
-	if (ret == FALSE) {
-		g_error ("could not load defaults : %s", error->message);
-	}
-
 	/* do the load */
 	if (plugin->priv->info->load != NULL) {
 		plugin->priv->info->load (plugin);
@@ -151,7 +145,7 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 }
 
 const gchar *
-ohm_plugin_get_name (OhmPlugin * plugin)
+ohm_plugin_get_name (OhmPlugin *plugin)
 {
 	g_return_val_if_fail (plugin != NULL, NULL);
 
@@ -159,7 +153,7 @@ ohm_plugin_get_name (OhmPlugin * plugin)
 }
 
 const gchar *
-ohm_plugin_get_version (OhmPlugin * plugin)
+ohm_plugin_get_version (OhmPlugin *plugin)
 {
 	g_return_val_if_fail (plugin != NULL, NULL);
 
@@ -167,7 +161,7 @@ ohm_plugin_get_version (OhmPlugin * plugin)
 }
 
 const gchar *
-ohm_plugin_get_author (OhmPlugin * plugin)
+ohm_plugin_get_author (OhmPlugin *plugin)
 {
 	g_return_val_if_fail (plugin != NULL, NULL);
 
@@ -178,9 +172,19 @@ G_MODULE_EXPORT gboolean
 ohm_plugin_conf_provide (OhmPlugin *plugin,
 			 const gchar *name)
 {
+	GError *error;
+	gboolean ret;
+	error = NULL;
+
 	ohm_debug ("%s provides %s", plugin->priv->name, name);
-	/* TODO; check that nothing else provides this key */
-	return FALSE;
+
+	/* provides keys are never public and are always preset at zero */
+	ret = ohm_conf_add_key (plugin->priv->conf, name, 0, FALSE, &error);
+	if (ret == FALSE) {
+		ohm_debug ("Cannot provide key: %s", error->message);
+		g_error_free (error);
+	}
+	return ret;
 }
 
 G_MODULE_EXPORT gboolean
@@ -192,7 +196,10 @@ ohm_plugin_conf_get_key (OhmPlugin   *plugin,
 	gboolean ret;
 	error = NULL;
 	ret = ohm_conf_get_key (plugin->priv->conf, key, value, &error);
-	/* fixme print and clear error */
+	if (ret == FALSE) {
+		ohm_debug ("Cannot get key: %s", error->message);
+		g_error_free (error);
+	}
 	return ret;
 }
 
@@ -201,7 +208,16 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 			 const gchar *key,
 			 int          value)
 {
-	return ohm_conf_set_key_internal (plugin->priv->conf, key, value, TRUE, NULL);
+	GError *error;
+	gboolean ret;
+	error = NULL;
+
+	ret = ohm_conf_set_key_internal (plugin->priv->conf, key, value, TRUE, &error);
+	if (ret == FALSE) {
+		g_error ("Cannot set key: %s", error->message);
+		g_error_free (error);
+	}
+	return ret;
 }
 
 G_MODULE_EXPORT gboolean

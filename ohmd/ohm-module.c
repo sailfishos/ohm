@@ -395,6 +395,9 @@ ohm_module_init (OhmModule *module)
 	guint i;
 	GSList *l;
 	OhmPlugin *plugin;
+	const gchar *name;
+	GError *error;
+	gboolean ret;
 
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
 	/* clear lists */
@@ -429,10 +432,30 @@ ohm_module_init (OhmModule *module)
 	}
 	module->priv->doing_preload = FALSE;
 
+	/* add defaults for each plugin before the coldplug */
+	ohm_debug ("starting plugin coldplug");
+	for (l=module->priv->plugins; l != NULL; l=l->next) {
+		plugin = (OhmPlugin *) l->data;
+		name = ohm_plugin_get_name (plugin);
+		ohm_debug ("load defaults %s", name);
+
+		/* load defaults from disk */
+		error = NULL;
+		ret = ohm_conf_load_defaults (module->priv->conf, name, &error);
+		if (ret == FALSE) {
+			g_error ("could not load defaults : %s", error->message);
+			g_error_free (error);
+		}
+
+		ohm_plugin_coldplug (plugin);
+	}
+
 	/* coldplug each plugin */
 	ohm_debug ("starting plugin coldplug");
 	for (l=module->priv->plugins; l != NULL; l=l->next) {
 		plugin = (OhmPlugin *) l->data;
+		name = ohm_plugin_get_name (plugin);
+		ohm_debug ("coldplug %s", name);
 		ohm_plugin_coldplug (plugin);
 	}
 }
