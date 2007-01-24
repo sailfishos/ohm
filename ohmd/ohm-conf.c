@@ -51,7 +51,7 @@ typedef struct {
 	gchar			*key;
 	gboolean		 public;
 	gint			*current;
-	gint			 value; // use hashtable/list for multiple values for each user?
+	GPtrArray		*store; /* gint object are stored for each user if public */
 } OhmConfObjectMulti;
 
 struct OhmConfPrivate
@@ -92,14 +92,14 @@ gboolean
 ohm_conf_user_list (OhmConf *conf)
 {
 	gint i;
-	gchar *userdata;
+	OhmConfUser *confuser;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 
 	g_print ("Printing user list:\n");
 	for (i=0; i < conf->priv->users->len; i++) {
-		userdata = (gchar *) g_ptr_array_index (conf->priv->users, i);
-		g_print ("uid:%i\t%s\n", i, userdata);
+		confuser = (OhmConfUser *) g_ptr_array_index (conf->priv->users, i);
+		g_print ("number:%i\tuid:%i\t%s\n", i, confuser->uid, confuser->name);
 	}
 
 	return TRUE;
@@ -144,11 +144,12 @@ ohm_conf_user_switch (OhmConf     *conf,
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (user != NULL, FALSE);
 
-	ohm_debug ("Trying to switch user to %s.\n", user);
+	ohm_debug ("Trying to switch user to %s", user);
 	confuser = ohm_conf_user_obj_from_name (conf, user);
 
 	/* cannot find the user */
 	if (confuser == NULL) {
+		ohm_debug ("Cannot find user '%s'", user);
 		*error = g_error_new (ohm_conf_error_quark (),
 				      OHM_CONF_ERROR_USER_INVALID,
 				      "user not found");
@@ -174,25 +175,27 @@ ohm_conf_user_add (OhmConf     *conf,
 		   GError     **error)
 {
 	OhmConfUser *confuser;
+	static gint uid_global = 0;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (user != NULL, FALSE);
 
-	ohm_debug ("Trying to add user %s.\n", user);
+	ohm_debug ("Trying to add user %s.", user);
 
 	/* search for existing user */
 	confuser = ohm_conf_user_obj_from_name (conf, user);
 	if (confuser != NULL) {
 		/* we found the user in the list */
+		ohm_debug ("Cannot add user '%s' as already in database.", user);
 		*error = g_error_new (ohm_conf_error_quark (),
 				      OHM_CONF_ERROR_USER_INVALID,
 				      "user already added");
 		return FALSE;
 	}
 
-	/* allocate a new user */
+	/* allocate a new user with a unique uid */
 	confuser = g_new (OhmConfUser, 1);
-	confuser->uid = 0;
+	confuser->uid = uid_global++;
 	confuser->name = g_strdup (user);
 
 	/* add the user */
@@ -214,8 +217,11 @@ ohm_conf_user_remove (OhmConf     *conf,
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (user != NULL, FALSE);
 
+	ohm_debug ("Trying to remove user %s.", user);
+
 	confuser = ohm_conf_user_obj_from_name (conf, user);
 	if (confuser == NULL) {
+		ohm_debug ("Cannot remove user '%s' as does not exist in database", user);
 		*error = g_error_new (ohm_conf_error_quark (),
 				      OHM_CONF_ERROR_USER_INVALID,
 				      "user not found");
@@ -300,9 +306,9 @@ ohm_conf_print_all (OhmConf *conf)
 		g_print ("%s", entry->key);
 		spaces = g_strnfill (max - strlen(entry->key), ' ');
 		if (entry->public == TRUE) {
-			g_print ("%s : %i\t(public)\n", spaces, entry->value);
+			g_print ("%s : %i\t(public)\n", spaces, *(entry->current));
 		} else {
-			g_print ("%s : %i\t(private)\n", spaces, entry->value);
+			g_print ("%s : %i\t(private)\n", spaces, *(entry->current));
 		}
 		g_free (spaces);
 	}
@@ -348,7 +354,7 @@ ohm_conf_get_key (OhmConf     *conf,
 	}
 
 	/* copy value from key */
-	*value = entry->value;
+	*value = *(entry->current);
 	return TRUE;
 }
 
@@ -365,6 +371,7 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 		           GError     **error)
 {
 	OhmConfObjectMulti *entry;
+	gint *intobj;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (key != NULL, FALSE);
@@ -386,14 +393,22 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 		/* maybe point to the key in the hashtable to save memory? */
 		entry->key = g_strdup (key);
 		entry->public = FALSE;
-		entry->value = value;
+		entry->store = g_ptr_array_new ();
+
+		/* we always create one int object for the private value */
+		intobj = g_new0 (gint, 1);
+		g_ptr_array_add (entry->store, (gpointer) intobj);
+
+		/* assume the setting user is the current user */
+		entry->current = intobj;
+		*(entry->current) = value;
+
+		/* we need to create new objects in the store for each added user */
 
 		/* all new keys have to have an added signal */
 		ohm_debug ("emit key-added : %s", key);
 		g_signal_emit (conf, signals [KEY_ADDED], 0, key, value);
 
-		/* assume the setting user is the current user */
-		entry->current = &(entry->value);
 		g_hash_table_insert (conf->priv->keys, entry->key, entry);
 	} else {
 		/* if we are externally calling this key, check to see if
@@ -410,8 +425,8 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 		ohm_debug ("overwrite key '%s' : %i", key, value);
 
 		/* Only force signal if different */
-		if (entry->value != value) {
-			entry->value = value;
+		if (*(entry->current) != value) {
+			*(entry->current) = value;
 			ohm_debug ("emit key-changed : %s", key);
 			g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
 		}
@@ -667,7 +682,8 @@ ohm_conf_init (OhmConf *conf)
 	conf->priv->keys = g_hash_table_new (g_str_hash, g_str_equal);
 	conf->priv->users = g_ptr_array_new ();
 	conf->priv->current_user = NULL;
-	/* fixme, add root user */
+	/* add root user */
+	ohm_conf_user_add (conf, "root", NULL);
 }
 
 /**

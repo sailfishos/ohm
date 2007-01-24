@@ -177,6 +177,34 @@ ohm_manager_init (OhmManager *manager)
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.minor", 0, TRUE, NULL);
 	ohm_conf_set_key_internal (manager->priv->conf, "manager.version.patch", 1, TRUE, NULL);
 
+	gboolean ret;
+//	GError *error;
+
+	error = NULL;
+	ret = ohm_conf_user_switch (manager->priv->conf, "hughsie", &error);
+	if (ret == FALSE) {
+		ohm_debug ("switch: %s", error->message);
+	}
+
+	error = NULL;
+	ret = ohm_conf_user_remove (manager->priv->conf, "hughsie", &error);
+	if (ret == FALSE) {
+		ohm_debug ("remove: %s", error->message);
+	}
+
+	error = NULL;
+	ret = ohm_conf_user_add (manager->priv->conf, "hughsie", &error);
+	if (ret == FALSE) {
+		ohm_debug ("add: %s", error->message);
+	}
+
+	error = NULL;
+	ret = ohm_conf_user_add (manager->priv->conf, "hughsie", &error);
+	if (ret == FALSE) {
+		ohm_debug ("add: %s", error->message);
+	}
+
+	ohm_conf_user_list (manager->priv->conf);
 	ohm_conf_print_all (manager->priv->conf);
 }
 
