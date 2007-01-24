@@ -56,6 +56,7 @@ typedef enum
 	 OHM_CONF_ERROR_INVALID,
 	 OHM_CONF_ERROR_KEY_MISSING,
 	 OHM_CONF_ERROR_KEY_OVERRIDE,
+	 OHM_CONF_ERROR_USER_INVALID,
 	 OHM_CONF_ERROR_KEY_LAST
 } OhmConfError;
 
@@ -76,6 +77,16 @@ gboolean	 ohm_conf_set_key_internal		(OhmConf	*conf,
 gboolean	 ohm_conf_load_defaults			(OhmConf	*conf,
 							 const gchar	*pluginname,
 							 GError		**error);
+gboolean	 ohm_conf_user_switch			(OhmConf	*conf,
+							 const gchar	*user,
+							 GError		**error);
+gboolean	 ohm_conf_user_add			(OhmConf	*conf,
+							 const gchar	*user,
+							 GError		**error);
+gboolean	 ohm_conf_user_remove			(OhmConf	*conf,
+							 const gchar	*user,
+							 GError		**error);
+gboolean	 ohm_conf_user_list			(OhmConf	*conf);
 
 G_END_DECLS
 

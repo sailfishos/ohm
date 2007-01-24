@@ -42,17 +42,24 @@
 
 #define OHM_CONF_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_CONF, OhmConfPrivate))
 
+typedef struct {
+	gchar			*name;
+	guint			 uid;
+} OhmConfUser;
+
+typedef struct {
+	gchar			*key;
+	gboolean		 public;
+	gint			*current;
+	gint			 value; // use hashtable/list for multiple values for each user?
+} OhmConfObjectMulti;
+
 struct OhmConfPrivate
 {
 	GHashTable		*keys;
+	GPtrArray		*users;
+	OhmConfUser		*current_user;
 };
-
-typedef struct {
-	gchar		  *key;
-	gboolean	   public;
-	gint		  *current;
-	gint		   value; // use hashtable/list for multiple values for each user?
-} OhmConfObjectMulti;
 
 enum {
 	KEY_ADDED,
@@ -76,6 +83,156 @@ ohm_conf_error_quark (void)
 		quark = g_quark_from_static_string ("ohm_conf_error");
 	}
 	return quark;
+}
+
+/**
+ * ohm_conf_user_list:
+ **/
+gboolean
+ohm_conf_user_list (OhmConf *conf)
+{
+	gint i;
+	gchar *userdata;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+
+	g_print ("Printing user list:\n");
+	for (i=0; i < conf->priv->users->len; i++) {
+		userdata = (gchar *) g_ptr_array_index (conf->priv->users, i);
+		g_print ("uid:%i\t%s\n", i, userdata);
+	}
+
+	return TRUE;
+}
+
+/**
+ * ohm_conf_user_obj_from_name:
+ *
+ * returns NULL if not found
+ **/
+static OhmConfUser *
+ohm_conf_user_obj_from_name (OhmConf     *conf,
+		             const gchar *user)
+{
+	gint i;
+	OhmConfUser *confuser;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+
+	for (i=0; i < conf->priv->users->len; i++) {
+		confuser = (OhmConfUser *) g_ptr_array_index (conf->priv->users, i);
+		if (strcmp (confuser->name, user) == 0) {
+			return confuser;
+		}
+	}
+
+	return NULL;
+}
+
+/**
+ * ohm_conf_user_switch:
+ *
+ * user "root" for default
+ **/
+gboolean
+ohm_conf_user_switch (OhmConf     *conf,
+		      const gchar *user,
+		      GError     **error)
+{
+	OhmConfUser *confuser;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+	g_return_val_if_fail (user != NULL, FALSE);
+
+	ohm_debug ("Trying to switch user to %s.\n", user);
+	confuser = ohm_conf_user_obj_from_name (conf, user);
+
+	/* cannot find the user */
+	if (confuser == NULL) {
+		*error = g_error_new (ohm_conf_error_quark (),
+				      OHM_CONF_ERROR_USER_INVALID,
+				      "user not found");
+		return FALSE;
+	}
+
+	/* switch the current pointers to this uid */
+	ohm_debug ("switching to uid %i, name %s", confuser->uid, confuser->name);
+	conf->priv->current_user = confuser;
+	/* FIXME, switch pointers for all public values */
+
+	return TRUE;
+}
+
+/**
+ * ohm_conf_user_add:
+ *
+ * Does not switch to the new user, use ohm_conf_user_switch() for this
+ **/
+gboolean
+ohm_conf_user_add (OhmConf     *conf,
+		   const gchar *user,
+		   GError     **error)
+{
+	OhmConfUser *confuser;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+	g_return_val_if_fail (user != NULL, FALSE);
+
+	ohm_debug ("Trying to add user %s.\n", user);
+
+	/* search for existing user */
+	confuser = ohm_conf_user_obj_from_name (conf, user);
+	if (confuser != NULL) {
+		/* we found the user in the list */
+		*error = g_error_new (ohm_conf_error_quark (),
+				      OHM_CONF_ERROR_USER_INVALID,
+				      "user already added");
+		return FALSE;
+	}
+
+	/* allocate a new user */
+	confuser = g_new (OhmConfUser, 1);
+	confuser->uid = 0;
+	confuser->name = g_strdup (user);
+
+	/* add the user */
+	g_ptr_array_add (conf->priv->users, (gpointer) confuser);
+
+	return TRUE;
+}
+
+/**
+ * ohm_conf_user_remove:
+ **/
+gboolean
+ohm_conf_user_remove (OhmConf     *conf,
+		      const gchar *user,
+		      GError     **error)
+{
+	OhmConfUser *confuser;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+	g_return_val_if_fail (user != NULL, FALSE);
+
+	confuser = ohm_conf_user_obj_from_name (conf, user);
+	if (confuser == NULL) {
+		*error = g_error_new (ohm_conf_error_quark (),
+				      OHM_CONF_ERROR_USER_INVALID,
+				      "user not found");
+		return FALSE;
+	}
+
+	/* remove from the userlist */
+	g_ptr_array_remove (conf->priv->users, (gpointer) confuser);
+	g_free (confuser->name);
+	g_free (confuser);
+
+	/* make sure we are not leaving the current user settings dangling */
+	if (conf->priv->current_user == confuser) {
+		ohm_conf_user_switch (conf, "root", NULL);
+	}
+
+	return TRUE;
 }
 
 /**
@@ -141,7 +298,7 @@ ohm_conf_print_all (OhmConf *conf)
 	for (l=list; l != NULL; l=l->next) {
 		entry = (OhmConfObjectMulti *) l->data;
 		g_print ("%s", entry->key);
-		spaces = g_strnfill (max - strlen(entry->key), ' ');	
+		spaces = g_strnfill (max - strlen(entry->key), ' ');
 		if (entry->public == TRUE) {
 			g_print ("%s : %i\t(public)\n", spaces, entry->value);
 		} else {
@@ -508,6 +665,9 @@ ohm_conf_init (OhmConf *conf)
 {
 	conf->priv = OHM_CONF_GET_PRIVATE (conf);
 	conf->priv->keys = g_hash_table_new (g_str_hash, g_str_equal);
+	conf->priv->users = g_ptr_array_new ();
+	conf->priv->current_user = NULL;
+	/* fixme, add root user */
 }
 
 /**
