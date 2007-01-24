@@ -18,4 +18,5 @@ libohm_battery_la_LIBADD = @HAL_LIBS@ @DBUS_LIBS@ $(INTLLIBS)
 libohm_battery_la_LDFLAGS = -module -avoid-version
 
 clean-local:
+	rm -f *.la
 	rm -f *~

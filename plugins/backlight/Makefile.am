@@ -17,4 +17,5 @@ libohm_backlight_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
 libohm_backlight_la_LDFLAGS = -module -avoid-version
 
 clean-local:
+	rm -f *.la
 	rm -f *~

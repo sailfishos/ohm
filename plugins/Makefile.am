@@ -1,6 +1,7 @@
 SUBDIRS = 				\
 	idle				\
 	battery				\
+	dpms				\
 	acadapter			\
 	timeremaining			\
 	powerstatus			\
