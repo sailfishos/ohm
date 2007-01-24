@@ -34,6 +34,16 @@
       </para>
     </important>
 
+    <important>
+      <para>
+        Do not set internal state keys with their initial value here.
+        These should be added using <literal>ohm_plugin_conf_provide()</literal>
+        during <literal>load()</literal> and then the values populated in the
+        <literal>coldplug()</literal> method.
+        This ensures the correct ordering of coldplug.
+      </para>
+    </important>
+
     <note>
       <para>
         Public is only set if the key can be changed by the session, and if the
@@ -139,6 +149,84 @@
       for a small coldplug overhead.
       See the example plugin code for more details.
     </para>
+  </sect1>
+
+  <sect1 id="plugins-defaults">
+    <title>Default plugins</title>
+    <para>
+      Some plugins are shipped by default and provide typical use cases.
+    </para>
+
+    <sect2 id="plugins-backlight">
+      <title>Backlight Adjustment</title>
+      <para>
+        Backlight brightness and state can be changed on most backlight hardware.
+        These are the optional DBUS methods for controlling the brightness of
+        the backlight.
+      </para>
+
+      <informaltable>
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>DBUS Object Path:</entry>
+              <entry><literal>/org/freedesktop/ohm/Backlight</literal></entry>
+            </row>
+            <row>
+              <entry>DBUS Interface:</entry>
+              <entry><literal>org.freedesktop.ohm.Backlight</literal></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
+      <sect3 id="plugins-backlight-keys">
+        <title>
+          <literal>Exported keys</literal>
+        </title>
+        <para>
+          Keys exported by this plugin:
+        </para>
+        <informaltable>
+          <tgroup cols="2">
+            <thead>
+              <row>
+                <entry>Key</entry>
+                <entry>Description</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry><literal>backlight.value_ac</literal></entry>
+                <entry>Brightness in percentage when on AC</entry>
+              </row>
+              <row>
+                <entry><literal>backlight.value_battery</literal></entry>
+                <entry>Brightness in percentage when on battery</entry>
+              </row>
+              <row>
+                <entry><literal>backlight.value_idle</literal></entry>
+                <entry>Brightness in percentage when idle</entry>
+              </row>
+              <row>
+                <entry><literal>backlight.time_idle</literal></entry>
+                <entry>
+                  The amount of time in seconds before the backlight is put
+                  into idle mode, or zero to disable.
+                  Idle mode is typically dimming for most backlight devices.
+                </entry>
+              </row>
+              <row>
+                <entry><literal>backlight.time_off</literal></entry>
+                <entry>
+                  The amount of time in seconds before the backlight is turned
+                  off, or zero to disable.
+                </entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </informaltable>
+      </sect3>
+    </sect2>
 
   </sect1>
 

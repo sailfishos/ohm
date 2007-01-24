@@ -28,6 +28,8 @@ ohmd_SOURCES = 							\
 	ohm-keystore.h						\
 	ohm-conf.c						\
 	ohm-conf.h						\
+	ohm-confobj.c						\
+	ohm-confobj.h						\
 	ohm-marshal.h						\
 	ohm-marshal.c						\
 	ohm-manager.c						\

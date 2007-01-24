@@ -24,7 +24,7 @@
         a small team of developers.
       </p><p>
         OHM : <span class="emphasis"><em>"Resistance is futile"</em></span>
-      </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#introduction">1. Open Hardware Manager Introduction</a></span></dt><dd><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></dd><dt><span class="chapter"><a href="#plugins">2. Plugins</a></span></dt><dd><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt></dl></dd><dt><span class="chapter"><a href="#dbus-interface">3. DBUS Interface</a></span></dt><dd><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
+      </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#introduction">1. Open Hardware Manager Introduction</a></span></dt><dd><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></dd><dt><span class="chapter"><a href="#plugins">2. Plugins</a></span></dt><dd><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt><dt><span class="sect1"><a href="#plugins-defaults">Default plugins</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-backlight">Backlight Adjustment</a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#dbus-interface">3. DBUS Interface</a></span></dt><dd><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
         <code class="literal">Exported keys</code>
       </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetVersion">
         <code class="literal">GetVersion()</code>
@@ -36,8 +36,6 @@
         <code class="literal">SetKey()</code>
       </a></span></dt><dt><span class="sect2"><a href="#pm-keystore-AddNotifyKey">
         <code class="literal">AddNotifyKey()</code>
-      </a></span></dt></dl></dd><dt><span class="sect1"><a href="#pm-backlight">Backlight Adjustment</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-backlight-keys">
-        <code class="literal">Exported keys</code>
       </a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#faq">4. Frequently Asked Questions</a></span></dt><dd><dl><dt><span class="sect1"><a href="#faq-sessionpolicy">
       How does OHM fit in with other session policy agents?
     </a></span></dt><dt><span class="sect1"><a href="#faq-specificdevice">
@@ -173,7 +171,7 @@
           PolicyKit (optional)
         </p></li><li><p>
           ConsoleKit (optional)
-        </p></li></ul></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="plugins"></a>Chapter 2. Plugins</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-introduction"></a>Introduction</h2></div></div></div><p>
+        </p></li></ul></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="plugins"></a>Chapter 2. Plugins</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt><dt><span class="sect1"><a href="#plugins-defaults">Default plugins</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-backlight">Backlight Adjustment</a></span></dt></dl></dd></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-introduction"></a>Introduction</h2></div></div></div><p>
       Plugins have keys and policy, and also install a default system
       preferences file.
     </p><p>
@@ -192,6 +190,12 @@
         Line endings have to be UNIX not WIN or MAC.
         Parsing is very strict, and <code class="literal">ohmd</code> will exit with an
         error if the syntax is not perfect. This is by design.
+      </p></div><div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Important</h3><p>
+        Do not set internal state keys with their initial value here.
+        These should be added using <code class="literal">ohm_plugin_conf_provide()</code>
+        during <code class="literal">load()</code> and then the values populated in the
+        <code class="literal">coldplug()</code> method.
+        This ensures the correct ordering of coldplug.
       </p></div><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
         Public is only set if the key can be changed by the session, and if the
         key is tried to be set, the set method will fail.
@@ -270,7 +274,24 @@
       Matching integer ID's in plugins is much faster than matching strings,
       for a small coldplug overhead.
       See the example plugin code for more details.
-    </p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="dbus-interface"></a>Chapter 3. DBUS Interface</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
+    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-defaults"></a>Default plugins</h2></div></div></div><p>
+      Some plugins are shipped by default and provide typical use cases.
+    </p><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-backlight"></a>Backlight Adjustment</h3></div></div></div><p>
+        Backlight brightness and state can be changed on most backlight hardware.
+        These are the optional DBUS methods for controlling the brightness of
+        the backlight.
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Object Path:</td><td><code class="literal">/org/freedesktop/ohm/Backlight</code></td></tr><tr><td>DBUS Interface:</td><td><code class="literal">org.freedesktop.ohm.Backlight</code></td></tr></tbody></table></div><div class="sect3" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="plugins-backlight-keys"></a>
+          <code class="literal">Exported keys</code>
+        </h4></div></div></div><p>
+          Keys exported by this plugin:
+        </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Key</th><th>Description</th></tr></thead><tbody><tr><td><code class="literal">backlight.value_ac</code></td><td>Brightness in percentage when on AC</td></tr><tr><td><code class="literal">backlight.value_battery</code></td><td>Brightness in percentage when on battery</td></tr><tr><td><code class="literal">backlight.value_idle</code></td><td>Brightness in percentage when idle</td></tr><tr><td><code class="literal">backlight.time_idle</code></td><td>
+                  The amount of time in seconds before the backlight is put
+                  into idle mode, or zero to disable.
+                  Idle mode is typically dimming for most backlight devices.
+                </td></tr><tr><td><code class="literal">backlight.time_off</code></td><td>
+                  The amount of time in seconds before the backlight is turned
+                  off, or zero to disable.
+                </td></tr></tbody></table></div></div></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="dbus-interface"></a>Chapter 3. DBUS Interface</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
         <code class="literal">Exported keys</code>
       </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetVersion">
         <code class="literal">GetVersion()</code>
@@ -282,8 +303,6 @@
         <code class="literal">SetKey()</code>
       </a></span></dt><dt><span class="sect2"><a href="#pm-keystore-AddNotifyKey">
         <code class="literal">AddNotifyKey()</code>
-      </a></span></dt></dl></dd><dt><span class="sect1"><a href="#pm-backlight">Backlight Adjustment</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-backlight-keys">
-        <code class="literal">Exported keys</code>
       </a></span></dt></dl></dd></dl></div><p>
     This API is currently unstable and is likely to change in the future.
   </p><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="pm-intro"></a>Introduction</h2></div></div></div><p>
@@ -317,10 +336,13 @@
         <code class="literal">GetKey()</code>
       </h3></div></div></div><p>
         Gets a 32 bit signed integer value.
+        An error is returned if the key does not exist.
       </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>out</td><td>integer</td><td> </td></tr></tbody></table></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-keystore-SetKey"></a>
         <code class="literal">SetKey()</code>
       </h3></div></div></div><p>
         Sets a 32 bit signed integer value.
+        An error is returned if the key does not exist.
+        The DBUS interface cannot be used to create keys for security.
       </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>in</td><td>integer</td><td> </td></tr></tbody></table></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-keystore-AddNotifyKey"></a>
         <code class="literal">AddNotifyKey()</code>
       </h3></div></div></div><p>
@@ -330,22 +352,7 @@
         causing unnecessary context switches and processor usage.
         <code class="literal">KeyChanged</code> signals will not be sent unless at least
         one application has requested notifications.
-      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>in</td><td>integer</td><td> </td></tr></tbody></table></div></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="pm-backlight"></a>Backlight Adjustment</h2></div></div></div><p>
-      Backlight brightness and state can be changed on most backlight hardware.
-      These are the optional DBUS methods for controlling the brightness of
-      the backlight.
-    </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Object Path:</td><td><code class="literal">/org/freedesktop/ohm/Backlight</code></td></tr><tr><td>DBUS Interface:</td><td><code class="literal">org.freedesktop.ohm.Backlight</code></td></tr></tbody></table></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="pm-backlight-keys"></a>
-        <code class="literal">Exported keys</code>
-      </h3></div></div></div><p>
-        Keys exported by this plugin:
-      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Key</th><th>Description</th></tr></thead><tbody><tr><td><code class="literal">backlight.value_ac</code></td><td>Brightness in percentage when on AC</td></tr><tr><td><code class="literal">backlight.value_battery</code></td><td>Brightness in percentage when on battery</td></tr><tr><td><code class="literal">backlight.value_idle</code></td><td>Brightness in percentage when idle</td></tr><tr><td><code class="literal">backlight.time_idle</code></td><td>
-                The amount of time in seconds before the backlight is put
-                into idle mode, or zero to disable.
-                Idle mode is typically dimming for most backlight devices.
-              </td></tr><tr><td><code class="literal">backlight.time_off</code></td><td>
-                The amount of time in seconds before the backlight is turned
-                off, or zero to disable.
-              </td></tr></tbody></table></div></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="faq"></a>Chapter 4. Frequently Asked Questions</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#faq-sessionpolicy">
+      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><thead><tr><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>in</td><td>string</td><td>the key name, e.g. <code class="literal">ac.state</code></td></tr><tr><td>in</td><td>integer</td><td> </td></tr></tbody></table></div></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="faq"></a>Chapter 4. Frequently Asked Questions</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#faq-sessionpolicy">
       How does OHM fit in with other session policy agents?
     </a></span></dt><dt><span class="sect1"><a href="#faq-specificdevice">
       Why not just do a specific device hack for all the different

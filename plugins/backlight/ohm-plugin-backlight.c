@@ -69,6 +69,10 @@ plugin_load (OhmPlugin *plugin)
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "idle");
 	ohm_plugin_suggest (plugin, "acadapter");
+
+	/* tell ohmd what keys we are going to provide so it can create them */
+	ohm_plugin_conf_provide (plugin, "backlight.state");
+	ohm_plugin_conf_provide (plugin, "backlight.brightness");
 }
 
 /**
@@ -99,7 +103,7 @@ check_system_backlight_state (OhmPlugin *plugin)
 	}
 	ohm_plugin_conf_set_key (plugin, "backlight.state", data.state);
 	ohm_plugin_conf_set_key (plugin, "backlight.brightness", data.brightness);
-	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
+//	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
 }
 
 /**
@@ -122,7 +126,7 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_conf_interested (plugin, "backlight.time_idle", CONF_TIME_IDLE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "backlight.time_off", CONF_TIME_OFF_CHANGED);
 
-	/* initial values */
+	/* preference values */
 	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
 	ohm_plugin_conf_get_key (plugin, "idle.system_idle", &(data.system_idle));
 	ohm_plugin_conf_get_key (plugin, "backlight.value_ac", &(data.brightness_ac));

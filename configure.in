@@ -154,7 +154,9 @@ plugins/Makefile
 plugins/acadapter/Makefile
 plugins/idle/Makefile
 plugins/powerstatus/Makefile
+plugins/timeremaining/Makefile
 plugins/backlight/Makefile
+plugins/battery/Makefile
 ohmd/Makefile
 po/Makefile.in
 docs/Makefile

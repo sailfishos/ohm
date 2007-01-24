@@ -52,7 +52,7 @@ plugin_load (OhmPlugin *plugin)
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "battery");
 
-	/* tell ohmd what keys we are going to provide */
+	/* tell ohmd what keys we are going to provide so it can create them */
 	ohm_plugin_conf_provide (plugin, "powerstatus.low");
 	ohm_plugin_conf_provide (plugin, "powerstatus.critical");
 }
@@ -66,15 +66,21 @@ plugin_load (OhmPlugin *plugin)
 static void
 check_system_power_state (OhmPlugin *plugin)
 {
+	gint is_low;
+	gint is_critical;
+
 	if (data.percentage < data.percentage_critical) {
-		ohm_plugin_conf_set_key (plugin, "powerstatus.low", 1);
-		ohm_plugin_conf_set_key (plugin, "powerstatus.critical", 1);
+		is_low = 1;
+		is_critical = 1;
 	} else if (data.percentage < data.percentage_low) {
-		ohm_plugin_conf_set_key (plugin, "powerstatus.low", 1);
-		ohm_plugin_conf_set_key (plugin, "powerstatus.critical", 0);
+		is_low = 1;
+		is_critical = 0;
+	} else {
+		is_low = 0;
+		is_critical = 0;
 	}
-	ohm_plugin_conf_set_key (plugin, "powerstatus.low", 0);
-	ohm_plugin_conf_set_key (plugin, "powerstatus.critical", 0);
+	ohm_plugin_conf_set_key (plugin, "powerstatus.low", is_low);
+	ohm_plugin_conf_set_key (plugin, "powerstatus.critical", is_critical);
 }
 
 /**

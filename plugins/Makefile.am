@@ -1,6 +1,8 @@
 SUBDIRS = 				\
 	idle				\
+	battery				\
 	acadapter			\
+	timeremaining			\
 	powerstatus			\
 	backlight
 
