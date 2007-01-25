@@ -26,6 +26,9 @@ AC_PATH_PROG(GLIB_GENMARSHAL, glib-genmarshal)
 ALL_LINGUAS="en_GB"
 AC_SUBST(ALL_LINGUAS)
 
+dnl ---------------------------------------------------------------------------
+dnl - gettext stuff
+dnl ---------------------------------------------------------------------------
 AC_DEFINE(GETTEXT_PACKAGE, "AC_PACKAGE_NAME", [foo])
 GETTEXT_PACKAGE=AC_PACKAGE_NAME
 AC_SUBST(GETTEXT_PACKAGE)
@@ -301,6 +304,7 @@ po/Makefile.in
 docs/Makefile
 docs/index.xml
 libohm/Makefile
+tools/Makefile
 initscript/Makefile
 initscript/RedHat/Makefile
 initscript/Gentoo/Makefile

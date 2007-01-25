@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <glib.h>
 
-#include "libohm.h"
+#include <libohm.h>
 
 /**
  * main:

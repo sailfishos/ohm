@@ -1,7 +1,7 @@
 INCLUDES = \
 	$(GLIB_CFLAGS)						\
 	$(DBUS_CFLAGS)						\
-	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
+	-DPACKAGE_DATA_DIR=\""$(datadir)"\"			\
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\"
 
 EXTRA_DIST =							\
@@ -22,15 +22,7 @@ libohm_la_SOURCES =						\
 
 libohm_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
 
-libohm_la_LDFLAGS = -module -avoid-version
-#-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
-
-noinst_PROGRAMS = libohm-test
-
-libohm_test_SOURCES = 						\
-	libohm-test.c
-
-libohm_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(top_builddir)/libohm/libohm.la 
+libohm_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 BUILT_SOURCES = 						\
 	libohm-marshal.c					\

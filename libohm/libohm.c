@@ -27,29 +27,24 @@
 #include "libohm-marshal.h"
 #include "../ohmd/ohm-common.h"
 
-static gboolean do_trace = FALSE;
+#define DOTRACE	0
 
 static void trace (const char *format, ...)
 {
+#if DOTRACE
 	va_list args;
 	gchar *str;
 	FILE *out;
-
-	if (!do_trace)
-		return;
-
 	g_return_if_fail (format != NULL);
-
 	va_start(args, format);
 	str = g_strdup_vprintf(format, args);
 	va_end(args);
-
 	out = stderr;
-
 	fputs("libohm trace: ", out);
 	fputs(str, out);
-
+	fputs("\n", out);
 	g_free(str);
+#endif
 }
 
 enum {
@@ -109,30 +104,21 @@ libohm_class_init (LibOhmClass * class)
 	class->value_changed = NULL;
 
 	object_class->finalize = libohm_finalize;
-
-	if (g_getenv("LIBOHM_DEBUG_TRACE_CTX") != NULL)
-		do_trace = TRUE;
 }
 
+/**
+ * libohm_init:
+ *
+ * Sets up the proxy connection to libohm
+ **/
 static void
 libohm_init (LibOhm *ctx)
 {
 	GError *error = NULL;
 
 	ctx->is_initialized = TRUE;
-	ctx->is_direct = FALSE;
 
-	gchar *direct_addr;
-	direct_addr = getenv ("OHMD_DIRECT_ADDR");
-	if (direct_addr != NULL) {
-		g_error ("got direct address of %s", direct_addr);
-//		DBusGConnection * 	dbus_g_connection_open (const gchar *address, GError **error)
- //	Returns a connection to the given address. 
-//dbus_g_proxy_new_for_peer (DBusGConnection *connection, const char *path_name, const char *interface_name)
-// 	Creates a proxy for an object in peer application (one we're directly connected to). 
-	}
-
-	/* get the DBUS session connection */
+	/* get the DBUS system connection */
 	ctx->connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
 	if (error != NULL) {
 		g_warning ("Unable to get connection : %s", error->message);
@@ -152,6 +138,11 @@ libohm_init (LibOhm *ctx)
 	trace ("ctx created okay");
 }
 
+/**
+ * libohm_finalize:
+ *
+ * TODO: free the connection
+ **/
 static void
 libohm_finalize (GObject *object)
 {
@@ -168,13 +159,14 @@ LibOhm *
 libohm_new (void)
 {
 	LibOhm *ctx;
-
 	ctx = g_object_new (libohm_get_type(), NULL);
 	g_object_ref (G_OBJECT(ctx));
-
 	return ctx;
 }
 
+/**
+ * libohm_keystore_get_key:
+ **/
 gboolean
 libohm_keystore_get_key (LibOhm		*ctx,
 			const gchar	*key,
@@ -198,6 +190,9 @@ libohm_keystore_get_key (LibOhm		*ctx,
 	return ret;
 }
 
+/**
+ * libohm_keystore_set_key:
+ **/
 gboolean
 libohm_keystore_set_key (LibOhm		*ctx,
 			 const gchar	*key,
@@ -218,6 +213,9 @@ libohm_keystore_set_key (LibOhm		*ctx,
 	return ret;
 }
 
+/**
+ * libohm_keystore_add_notify_key:
+ **/
 gboolean
 libohm_keystore_add_notify_key (LibOhm		*ctx,
 				const gchar	*key,
@@ -236,7 +234,98 @@ libohm_keystore_add_notify_key (LibOhm		*ctx,
 	return ret;
 }
 
+gboolean
+libohm_keystore_get_keys (LibOhm  *ctx,
+			  GSList **list,
+			  GError **error)
+{
+	gboolean ret;
+	GValueArray *gva;
+	GValue *gv;
+	GPtrArray *ptrarray = NULL;
+	GType g_type_ptrarray;
+	guint i;
+	LibOhmKeyValue *keyvalue;
+
+	g_return_val_if_fail (ctx != NULL, FALSE);
+	g_return_val_if_fail (ctx->is_initialized, FALSE);
+	g_return_val_if_fail (list != NULL, FALSE);
+	g_return_val_if_fail (*list == NULL, FALSE);
+
+	g_type_ptrarray = dbus_g_type_get_collection ("GPtrArray",
+					dbus_g_type_get_struct("GValueArray",
+						G_TYPE_STRING,
+						G_TYPE_INT,
+						G_TYPE_BOOLEAN,
+						G_TYPE_INVALID));
+
+	ret = dbus_g_proxy_call (ctx->proxy, "GetKeys", error,
+				 G_TYPE_INVALID,
+				 g_type_ptrarray, &ptrarray,
+				 G_TYPE_INVALID);
+	if (ret == FALSE) {
+		/* abort as the DBUS method failed */
+		trace ("GetPublicKeys failed");
+		return FALSE;
+	}
+
+	trace ("keystore size=%i", ptrarray->len);
+	for (i=0; i< ptrarray->len; i++) {
+		/* allocate new data blob */
+		keyvalue = g_new0 (LibOhmKeyValue, 1); //use g_slice?
+
+		/* unwrap structure */
+		gva = (GValueArray *) g_ptr_array_index (ptrarray, i);
+
+		/* save to structure */
+		gv = g_value_array_get_nth (gva, 0);
+		keyvalue->name = g_strdup (g_value_get_string (gv));
+		g_value_unset (gv);
+		gv = g_value_array_get_nth (gva, 1);
+		keyvalue->value = g_value_get_int (gv);
+		g_value_unset (gv);
+		gv = g_value_array_get_nth (gva, 2);
+		keyvalue->public = g_value_get_boolean (gv);
+		g_value_unset (gv);
+
+		/* add to list */
+		*list = g_slist_prepend (*list, (gpointer) keyvalue);
+		trace ("name=%s, value=%i, public=%i", keyvalue->name, keyvalue->value, keyvalue->public); //add to list?
+		g_value_array_free (gva);
+	}
+	g_ptr_array_free (ptrarray, TRUE);
+	return TRUE;
+}
+
+/**
+ * libohm_keystore_free_keys:
+ *
+ * Frees the keys allocated by libohm_keystore_get_keys()
+ **/
+gboolean
+libohm_keystore_free_keys (LibOhm *ctx,
+			   GSList *list)
+{
+	GSList *l;
+	LibOhmKeyValue *keyvalue;
+
+	g_return_val_if_fail (ctx != NULL, FALSE);
+	
+	/* free the text and the object */
+	for (l=list; l != NULL; l=l->next) {
+		keyvalue = (LibOhmKeyValue *) l->data;
+		g_free (keyvalue->name);
+		g_free (keyvalue);
+	}
+	g_slist_free (list);
+
+	return TRUE;
+}
+
 #if 0
+/**
+ * libohm_keystore_xxxxxxxxx:
+ **/
 void
 libohm_value_changed (LibOhm *ctx, const gchar *key, gint value)
 {

@@ -36,42 +36,45 @@ typedef struct _LibOhmClass LibOhmClass;
 
 struct _LibOhm {
 	GObject object;
-
 	/*< private > */
-
 	gboolean	 is_initialized;
-	gboolean	 is_direct;
 	DBusGProxy      *proxy;
 	DBusGConnection *connection;
-
-	gpointer pad1;
-	guint pad2;
+	gpointer	 pad1;
+	guint		 pad2;
 };
 
 struct _LibOhmClass {
 	GObjectClass parent_class;
-
 	void (*value_changed) (LibOhm *ctx, const gchar *key, gint value);
-
-	GFunc pad1;
-	GFunc pad2;
-	GFunc pad3;
+	GFunc		 pad1;
+	GFunc		 pad2;
+	GFunc		 pad3;
 };
 
-GType libohm_get_type(void);
+typedef struct {
+	gchar		*name;
+	gint		 value;
+	gboolean	 public;
+} LibOhmKeyValue;
 
-LibOhm *libohm_new (void);
-
-gboolean	 libohm_keystore_get_key	(LibOhm	*ctx,
+GType		 libohm_get_type		(void);
+LibOhm		*libohm_new			(void);
+gboolean	 libohm_keystore_get_key	(LibOhm		*ctx,
 						 const gchar	*key,
 						 gint		*value,
 						 GError		**error);
-gboolean	 libohm_keystore_set_key	(LibOhm	*ctx,
+gboolean	 libohm_keystore_set_key	(LibOhm		*ctx,
 						 const gchar	*key,
 						 gint		 value,
 						 GError		**error);
-gboolean	 libohm_keystore_add_notify_key (LibOhm	*ctx,
+gboolean	 libohm_keystore_add_notify_key (LibOhm		*ctx,
 						 const gchar	*key,
 						 GError		**error);
+gboolean	 libohm_keystore_get_keys	(LibOhm		*ctx,
+						 GSList		**list,
+						 GError		**error);
+gboolean	 libohm_keystore_free_keys	(LibOhm		*ctx,
+						 GSList		*list);
 
 #endif /* LIBOHM_H */

@@ -282,86 +282,87 @@ ohm_conf_user_remove (OhmConf     *conf,
 
 /**
  * ohm_conf_compare_func
- * A GCompareFunc for comparing two OhmConfObj objects by key.
+ * A GCompareFunc for comparing two OhmConfKeyValue objects by name.
  **/
 static gint
 ohm_conf_compare_func (gconstpointer a, gconstpointer b)
 {
-	OhmConfObj *entry1 = (OhmConfObj *) a;
-	OhmConfObj *entry2 = (OhmConfObj *) b;
-	gchar *confkey1 = ohm_confobj_get_key (entry1);
-	gchar *confkey2 = ohm_confobj_get_key (entry2);
-	return strcmp (confkey1, confkey2);
+	OhmConfKeyValue *entry1 = (OhmConfKeyValue *) a;
+	OhmConfKeyValue *entry2 = (OhmConfKeyValue *) b;
+	return strcmp (entry1->name, entry2->name);
 }
 
 /**
- * ohm_conf_print_all_iter:
+ * ohm_conf_to_slist_iter:
  **/
 static void
 ohm_conf_to_slist_iter (gpointer    key,
-			OhmConfObj *entry,
+			OhmConfObj *confobj,
 			gpointer   *user_data)
 {
-	GSList **list = (GSList **) user_data;
-	*list = g_slist_insert_sorted (*list, (gpointer) entry, ohm_conf_compare_func);
+	OhmConfKeyValue *keyvalue;
+	GSList **list;
+
+	/* copy key values into the ABI stable struct to export */
+	keyvalue = g_new0 (OhmConfKeyValue, 1);
+	keyvalue->name = ohm_confobj_get_key (confobj);
+	keyvalue->value = ohm_confobj_get_value (confobj);
+	keyvalue->public = ohm_confobj_get_public (confobj);
+
+	/* add to list */
+	list = (GSList **) user_data;
+	*list = g_slist_prepend (*list, (gpointer) keyvalue);
 }
 
 /**
- * ohm_conf_print_all:
- * @conf: This class instance
+ * ohm_conf_get_all:
  *
- * Prints an ordered pretty print of the conf.
- * This is quite slow, so avoid putting in production code.
+ * Gets an ordered list of all the key values in OhmConfKeyValue's.
+ * Free the list with ohm_conf_free_keys().
  **/
 gboolean
-ohm_conf_print_all (OhmConf *conf)
+ohm_conf_get_keys (OhmConf *conf,
+		   GSList **list)
 {
-	GSList *list = NULL;
-	GSList *l;
-	guint max = 0;
-	guint len;
-	gchar *spaces;
-	gchar *confkey;
-	gint confvalue;
-	gboolean confpublic;
-	OhmConfObj *confobj;
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+	g_return_val_if_fail (list != NULL, FALSE);
+	g_return_val_if_fail (*list == NULL, FALSE);
 
-	g_print ("All keys and values in database:\n");
+	ohm_debug ("Get all keys and values in database");
 	if (conf->priv->keys == NULL) {
 		g_warning ("Conf invalid");
 		return FALSE;
 	}
 
-	/* add hash to sorted SList */
-	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_to_slist_iter, &list);
+	/* add hash to unsorted SList */
+	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_to_slist_iter, list);
 
-	/* get max length of keys */
+	/* sort list */
+	*list = g_slist_sort (*list, ohm_conf_compare_func);
+	return TRUE;
+}
+
+/**
+ * ohm_conf_get_all:
+ *
+ * Gets an ordered list of all the key values in OhmConfKeyValue's.
+ * Make sure to delete the list after it's been used with g_slist_free()
+ **/
+gboolean
+ohm_conf_free_keys (OhmConf *conf,
+		    GSList  *list)
+{
+	GSList *l;
+	OhmConfKeyValue *keyvalue;
+
+	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
+	g_return_val_if_fail (list != NULL, FALSE);
+
+	/* free the object only, text is an internal pointer */
 	for (l=list; l != NULL; l=l->next) {
-		confobj = (OhmConfObj *) l->data;
-		confkey = ohm_confobj_get_key (confobj);
-		len = strlen (confkey);
-		if (len > max) {
-			max = len;
-		}
+		keyvalue = (OhmConfKeyValue *) l->data;
+		g_free (keyvalue);
 	}
-
-	/* print the keys */
-	for (l=list; l != NULL; l=l->next) {
-		confobj = (OhmConfObj *) l->data;
-		confkey = ohm_confobj_get_key (confobj);
-		confvalue = ohm_confobj_get_value (confobj);
-		confpublic = ohm_confobj_get_public (confobj);
-		g_print ("%s", confkey);
-		spaces = g_strnfill (max - strlen (confkey), ' ');
-		if (confpublic == TRUE) {
-			g_print ("%s: %i\t(public)\n", spaces, confvalue);
-		} else {
-			g_print ("%s: %i\t(private)\n", spaces, confvalue);
-		}
-		g_free (spaces);
-	}
-
-	/* free the list */
 	g_slist_free (list);
 
 	return TRUE;

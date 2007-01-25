@@ -51,6 +51,13 @@ typedef struct
 							 gint		 value);
 } OhmConfClass;
 
+/* ABI stable representation suitable for consumption by session apps */
+typedef struct {
+	gchar		*name;
+	gint		 value;
+	gboolean	 public;
+} OhmConfKeyValue;
+
 typedef enum
 {
 	 OHM_CONF_ERROR_INVALID,
@@ -65,7 +72,8 @@ GType		 ohm_conf_get_type			(void);
 GQuark		 ohm_conf_error_quark			(void);
 OhmConf 	*ohm_conf_new				(void);
 
-gboolean	 ohm_conf_print_all			(OhmConf	*conf);
+gboolean	 ohm_conf_get_keys			(OhmConf	*conf,
+							 GSList		**list);
 gboolean	 ohm_conf_get_key			(OhmConf	*conf,
 							 const gchar	*key,
 							 gint		*value,

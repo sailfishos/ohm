@@ -4,6 +4,7 @@ SUBDIRS = 				\
 	initscript			\
 	docs				\
 	libohm				\
+	tools				\
 	etc				\
 	plugins
 

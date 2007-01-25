@@ -253,7 +253,6 @@ ohm_manager_init (OhmManager *manager)
 	}
 
 	ohm_conf_user_list (manager->priv->conf);
-	ohm_conf_print_all (manager->priv->conf);
 }
 
 /**

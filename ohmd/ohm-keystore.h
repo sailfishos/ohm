@@ -70,6 +70,9 @@ gboolean	 ohm_keystore_set_key			(OhmKeystore	*keystore,
 gboolean	 ohm_keystore_add_notify_key		(OhmKeystore	*keystore,
 							 const gchar	*key,
 							 GError		**error);
+gboolean	 ohm_keystore_get_keys			(OhmKeystore	*keystore,
+							 GPtrArray	**data,
+							 GError		**error);
 
 G_END_DECLS
 
