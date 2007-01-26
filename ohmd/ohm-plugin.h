@@ -59,7 +59,7 @@ typedef struct {
 	gchar		*description;
 	gchar		*version;
 	gchar		*author;
-	void		(*load)				(OhmPlugin *plugin);
+	gboolean	(*preload)			(OhmPlugin *plugin);
 	void		(*unload)			(OhmPlugin *plugin);
 	void		(*coldplug)			(OhmPlugin *plugin);
 	void		(*conf_notify)			(OhmPlugin *plugin, gint id, gint value);
@@ -70,7 +70,7 @@ typedef struct {
 GType		 ohm_plugin_get_type			(void);
 OhmPlugin 	*ohm_plugin_new				(void);
 
-gboolean	 ohm_plugin_load			(OhmPlugin      *plugin,
+gboolean	 ohm_plugin_preload			(OhmPlugin      *plugin,
 							 const gchar	*name);
 
 gboolean	 ohm_plugin_require			(OhmPlugin	*plugin,

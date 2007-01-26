@@ -37,15 +37,15 @@ typedef struct {
 OhmPluginCacheData data;
 
 /**
- * plugin_load:
+ * plugin_preload:
  * @plugin: This class instance
  *
  * Called before the plugin is coldplg.
  * Define any modules that the plugin depends on, but do not do coldplug here
  * as some of the modules may not have loaded yet.
  */
-static void
-plugin_load (OhmPlugin *plugin)
+static gboolean
+plugin_preload (OhmPlugin *plugin)
 {
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "battery");
@@ -54,6 +54,7 @@ plugin_load (OhmPlugin *plugin)
 	/* tell ohmd what keys we are going to provide so it can create them */
 	ohm_plugin_conf_provide (plugin, "timeremaining.to_charge");
 	ohm_plugin_conf_provide (plugin, "timeremaining.to_discharge");
+	return TRUE;
 }
 
 /**
@@ -115,7 +116,7 @@ static OhmPluginInfo plugin_info = {
 	"OHM timeremaining",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_load,			/* load */
+	plugin_preload,			/* preload */
 	NULL,				/* unload */
 	plugin_coldplug,		/* coldplug */
 	plugin_conf_notify,		/* conf_notify */

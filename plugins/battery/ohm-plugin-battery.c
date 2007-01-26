@@ -34,20 +34,21 @@ OhmPluginCacheData data;
 OhmPlugin *plugin_global; /* ick, needed as there is no userdata with libhal */
 
 /**
- * plugin_load:
+ * plugin_preload:
  * @plugin: This class instance
  *
  * Called before the plugin is coldplg.
  * Define any modules that the plugin depends on, but do not do coldplug here
  * as some of the modules may not have loaded yet.
  */
-static void
-plugin_load (OhmPlugin *plugin)
+static gboolean
+plugin_preload (OhmPlugin *plugin)
 {
 	/* tell ohmd what keys we are going to provide - don't set keys
 	 * unless you provide them */
 	ohm_plugin_conf_provide (plugin, "battery.percentage");
 	plugin_global = plugin;
+	return TRUE;
 }
 
 /**
@@ -122,7 +123,7 @@ static OhmPluginInfo plugin_info = {
 	"OHM HAL Battery",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_load,			/* load */
+	plugin_preload,			/* preload */
 	plugin_unload,			/* unload */
 	plugin_coldplug,		/* coldplug */
 	NULL,				/* conf_notify */

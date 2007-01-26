@@ -257,8 +257,8 @@ ohm_module_add_plugin (OhmModule *module, const gchar *name)
 			  G_CALLBACK (add_suggest_cb), module);
 	g_signal_connect (plugin, "add-prevent",
 			  G_CALLBACK (add_prevent_cb), module);
-	/* try to load plugin, this might fail */
-	ret = ohm_plugin_load (plugin, name);
+	/* try to preload plugin, this might fail */
+	ret = ohm_plugin_preload (plugin, name);
 	if (ret == TRUE) {
 		ohm_debug ("adding %s to module list", name);
 		module->priv->plugins = g_slist_prepend (module->priv->plugins, (gpointer) plugin);

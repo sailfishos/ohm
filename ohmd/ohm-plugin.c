@@ -104,11 +104,12 @@ ohm_plugin_prevent (OhmPlugin   *plugin,
 }
 
 gboolean
-ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
+ohm_plugin_preload (OhmPlugin *plugin, const gchar *name)
 {
 	gchar *path;
 	GModule *handle;
 	gchar *filename;
+	gboolean ret;
 
 	OhmPluginInfo * (*ohm_init_plugin) (OhmPlugin *);
 
@@ -137,11 +138,12 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	plugin->priv->info = ohm_init_plugin (plugin);
 
 	/* do the load */
-	if (plugin->priv->info->load != NULL) {
-		plugin->priv->info->load (plugin);
+	if (plugin->priv->info->preload != NULL) {
+		ret = plugin->priv->info->preload (plugin);
+		/* the plugin preload might fail if we do not have the hardware */
 	}
 
-	return TRUE;
+	return ret;
 }
 
 const gchar *
