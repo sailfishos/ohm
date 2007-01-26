@@ -1,11 +1,14 @@
 SUBDIRS = 				\
 	idle				\
 	battery				\
-	dpms				\
 	acadapter			\
 	timeremaining			\
 	powerstatus			\
 	backlight
+
+if HAVE_DPMS_EXTENSION
+SUBDIRS += dpms
+endif
 
 INCLUDES =							\
 	-I$(top_srcdir)/ohmd					\

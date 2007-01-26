@@ -279,6 +279,7 @@ if test "$with_dpms" = yes; then
     AC_DEFINE(HAVE_DPMS_EXTENSION, 1, [Define if the DPMS extension is available])
     OHM_X11_LIBS="$OHM_X11_LIBS -lXext"
   fi
+  AM_CONDITIONAL(HAVE_DPMS_EXTENSION, test "$have_dpms" = yes, [DPMS extension is available])
 elif test "$with_dpms" != no; then
   echo "error: must be yes or no: --with-dpms-ext=$with_dpms"
   exit 1
