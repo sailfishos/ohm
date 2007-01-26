@@ -130,7 +130,7 @@ ohm_confobj_user_add (OhmConfObj *confobj, guint uid)
 
 	/* check uid is big enough to not clash */
 	if (confobj->priv->store->len > uid) {
-		g_error ("cannot adduser uid %i under total", uid);
+		g_error ("cannot adduser uid %u under total", uid);
 	}
 
 	ohm_debug ("adding data field of %s for uid %i", confobj->priv->key, uid);
@@ -162,10 +162,10 @@ ohm_confobj_user_remove (OhmConfObj *confobj, guint uid)
 
 	/* check uid is big enough to not clash */
 	if (uid > confobj->priv->store->len) {
-		g_error ("cannot remove uid %i under total", uid);
+		g_error ("cannot remove uid %u under total", uid);
 	}
 
-	ohm_debug ("removing %s for uid %i", confobj->priv->key, uid);
+	ohm_debug ("removing %s for uid %u", confobj->priv->key, uid);
 
 	/* get the uid value */
 	intobj = g_ptr_array_index (confobj->priv->store, uid);

@@ -195,7 +195,7 @@ add_interested_cb (OhmPlugin   *plugin,
 		ohm_debug ("key already watched by someting else");
 		*entry = g_slist_prepend (*entry, (gpointer) notif);
 	} else {
-		ohm_debug ("key not already watched by someting else");
+		ohm_debug ("key not already watched by something else");
 		/* create the new SList andd add the new notification to it */
 		l = g_new0 (GSList *, 1);
 		*l = NULL;
@@ -424,10 +424,10 @@ ohm_module_init (OhmModule *module)
 	i = 1;
 	while (module->priv->mod_require != NULL ||
 	       module->priv->mod_suggest != NULL) {
-		ohm_debug ("coldplug iteration #%i", i++);
+		ohm_debug ("module add iteration #%i", i++);
 		ohm_module_add_all_plugins (module);
 		if (i > 10) {
-			g_error ("coldplug too complex, please file a bug");
+			g_error ("module add too complex, please file a bug");
 		}
 	}
 	module->priv->doing_preload = FALSE;
@@ -446,8 +446,6 @@ ohm_module_init (OhmModule *module)
 			g_error ("could not load defaults : %s", error->message);
 			g_error_free (error);
 		}
-
-		ohm_plugin_coldplug (plugin);
 	}
 
 	/* coldplug each plugin */
