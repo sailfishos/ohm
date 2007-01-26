@@ -249,7 +249,7 @@ dnl ---------------------------------------------------------------------------
 
 have_dpms=no
 with_dpms_req=unspecified
-GPM_EXTRA_LIBS="-lresolv"
+OHM_X11_LIBS="-lresolv"
 AC_ARG_WITH(dpms-ext,
 [  --with-dpms-ext         Include support for the DPMS extension.],
   [with_dpms="$withval"; with_dpms_req="$withval"],[with_dpms=yes])
@@ -277,14 +277,14 @@ if test "$with_dpms" = yes; then
   # if that succeeded, then we've really got it.
   if test "$have_dpms" = yes; then
     AC_DEFINE(HAVE_DPMS_EXTENSION, 1, [Define if the DPMS extension is available])
-    GPM_EXTRA_LIBS="$GPM_EXTRA_LIBS -lXext"
+    OHM_X11_LIBS="$OHM_X11_LIBS -lXext"
   fi
 elif test "$with_dpms" != no; then
   echo "error: must be yes or no: --with-dpms-ext=$with_dpms"
   exit 1
 fi
 
-AC_SUBST(GPM_EXTRA_LIBS)
+AC_SUBST(OHM_X11_LIBS)
 
 AC_OUTPUT([
 ohm.pc

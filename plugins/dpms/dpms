@@ -1,0 +1,7 @@
+# dpms preference values
+# method:
+# 0	stagger
+# 1	standby
+# 2	suspend
+# 3	off
+dpms.method 3 public
