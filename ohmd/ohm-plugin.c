@@ -138,6 +138,7 @@ ohm_plugin_preload (OhmPlugin *plugin, const gchar *name)
 	plugin->priv->info = ohm_init_plugin (plugin);
 
 	/* do the load */
+	ret = TRUE;
 	if (plugin->priv->info->preload != NULL) {
 		ret = plugin->priv->info->preload (plugin);
 		/* the plugin preload might fail if we do not have the hardware */
