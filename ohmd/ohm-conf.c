@@ -264,13 +264,13 @@ ohm_conf_user_remove (OhmConf     *conf,
 		return FALSE;
 	}
 
+	/* for each existing key, we need to add a user field for it */
+	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_remove_user_iter, &(confuser->uid));
+
 	/* remove from the userlist */
 	g_ptr_array_remove (conf->priv->users, (gpointer) confuser);
 	g_free (confuser->name);
 	g_free (confuser);
-
-	/* for each existing key, we need to add a user field for it */
-	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_remove_user_iter, &(confuser->uid));
 
 	/* make sure we are not leaving the current user settings dangling */
 	if (conf->priv->current_user == confuser) {
