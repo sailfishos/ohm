@@ -4,6 +4,4 @@ EXTRA_DIST =				\
 Datadir = $(sysconfdir)/ohm
 
 Data_DATA =				\
-	require				\
-	suggest				\
-	prevent
+	modules.ini

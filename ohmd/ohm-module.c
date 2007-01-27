@@ -54,6 +54,7 @@ struct OhmModulePrivate
 	GHashTable		*interested;
 	OhmConf			*conf;
 	gboolean		 doing_preload;
+	gboolean		 do_extra_checks;
 };
 
 /* used as a hash entry type to provide int-passing services to the plugin */
@@ -63,82 +64,6 @@ typedef struct {
 } OhmModuleNofif;
 
 G_DEFINE_TYPE (OhmModule, ohm_module, G_TYPE_OBJECT)
-
-/**
- * ohm_module_process_line:
- **/
-static gboolean
-ohm_module_process_line (OhmModule   *module,
-		         const gchar *line,
-		         GSList     **store,
-		         const gchar *file_name)
-{
-	gint len;
-
-	/* check we have a long enough string */
-	len = strlen (line);
-	if (len < 2) {
-		return TRUE;
-	}
-
-	/* check to see if we are a comment */
-	if (line[0] == '#') {
-		return TRUE;
-	}
-
-	ohm_debug ("processing from %s store : %s", file_name, line);
-	*store = g_slist_prepend (*store, (gpointer) strdup (line));
-	
-	return TRUE;
-}
-
-/**
- * ohm_module_add_initial:
- **/
-gboolean
-ohm_module_add_initial (OhmModule   *module,
-			const gchar *file_name,
-			GSList     **store)
-{
-	gboolean ret;
-	gchar *contents;
-	gsize length;
-	gchar **lines;
-	guint i;
-	gchar *filename;
-	GError *error;
-
-	g_return_val_if_fail (OHM_IS_MODULE (module), FALSE);
-	g_return_val_if_fail (file_name != NULL, FALSE);
-
-	/* generate path for each module */
-	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", file_name, NULL);
-
-	/* load from file */
-	error = NULL;
-	ret = g_file_get_contents (filename, &contents, &length, &error);
-	g_free (filename);
-	if (ret == FALSE) {
-		/* fixme: display and clear error */
-		g_error ("Could not get contents of %s", file_name);
-		return FALSE;
-	}
-
-	/* split into lines and process each one */
-	lines = g_strsplit (contents, "\n", -1);
-	i = 0;
-	while (lines[i] != NULL) {
-		ret = ohm_module_process_line (module, lines[i], store, file_name);
-		if (ret == FALSE) {
-			g_error ("Loading module info from %s failed", file_name);
-		}
-		i++;
-	}
-	g_strfreev (lines);
-	g_free (contents);
-	return TRUE;
-}
-
 
 static void
 key_changed_cb (OhmConf     *conf,
@@ -348,6 +273,84 @@ ohm_module_add_all_plugins (OhmModule *module)
 }
 
 /**
+ * ohm_module_read_defaults:
+ **/
+static void
+ohm_module_read_defaults (OhmModule *module)
+{
+	GKeyFile *keyfile;
+	gchar *filename;
+	gchar **modules;
+	gsize length;
+	guint i;
+	GError *error;
+	gboolean ret;
+
+	/* use g_key_file. It's quick, and portable */
+	keyfile = g_key_file_new ();
+
+	/* generate path for conf file */
+	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "modules.ini", NULL);
+
+	/* we can never save the file back unless we remove G_KEY_FILE_NONE */
+	error = NULL;
+	ret = g_key_file_load_from_file (keyfile, filename, G_KEY_FILE_NONE, &error);
+	if (ret == FALSE) {
+		g_error ("cannot load keyfile %s", filename);
+	}
+	g_free (filename);
+
+	error = NULL;
+	module->priv->do_extra_checks = g_key_file_get_boolean (keyfile, "Modules", "PerformExtraChecks", &error);
+	if (error != NULL) {
+		ohm_debug ("PerformExtraChecks read error: %s", error->message);
+		g_error_free (error);
+	}
+	ohm_debug ("PerformExtraChecks=%i", module->priv->do_extra_checks);
+
+	/* read and process ModulesBanned */
+	error = NULL;
+	modules = g_key_file_get_string_list (keyfile, "Modules", "ModulesBanned", &length, &error);
+	if (error != NULL) {
+		ohm_debug ("ModulesBanned read error: %s", error->message);
+		g_error_free (error);
+	}
+	for (i=0; i<length; i++) {
+		ohm_debug ("ModulesBanned: %s", modules[i]);
+		module->priv->mod_prevent = g_slist_prepend (module->priv->mod_prevent, (gpointer) strdup(modules[i]));
+	}
+	g_strfreev (modules);
+
+	/* read and process ModulesSuggested */
+	error = NULL;
+	modules = g_key_file_get_string_list (keyfile, "Modules", "ModulesSuggested", &length, &error);
+	if (error != NULL) {
+		ohm_debug ("ModulesSuggested read error: %s", error->message);
+		g_error_free (error);
+	}
+	for (i=0; i<length; i++) {
+		ohm_debug ("ModulesSuggested: %s", modules[i]);
+		module->priv->mod_suggest = g_slist_prepend (module->priv->mod_suggest, (gpointer) strdup(modules[i]));
+	}
+	g_strfreev (modules);
+
+	/* read and process ModulesRequired */
+	error = NULL;
+	modules = g_key_file_get_string_list (keyfile, "Modules", "ModulesRequired", &length, &error);
+	if (error != NULL) {
+		ohm_debug ("ModulesRequired read error: %s", error->message);
+		g_error_free (error);
+	}
+	for (i=0; i<length; i++) {
+		ohm_debug ("ModulesRequired: %s", modules[i]);
+		module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) strdup(modules[i]));
+	}
+	g_strfreev (modules);
+
+	g_key_file_free (keyfile);
+}
+
+/**
  * ohm_module_finalize:
  **/
 static void
@@ -412,11 +415,10 @@ ohm_module_init (OhmModule *module)
 	g_signal_connect (module->priv->conf, "key-changed",
 			  G_CALLBACK (key_changed_cb), module);
 
-	/* do the plugin load, with dependencies */
 	module->priv->doing_preload = TRUE;
-	ohm_module_add_initial (module, "require", &(module->priv->mod_require));
-	ohm_module_add_initial (module, "suggest", &(module->priv->mod_suggest));
-	ohm_module_add_initial (module, "prevent", &(module->priv->mod_prevent));
+
+	/* read the defaults in from modules.ini */
+	ohm_module_read_defaults (module);
 
 	/* Keep trying to empty both require and suggested lists.
 	 * We could have done this recursively, but that is really bad for the stack.
