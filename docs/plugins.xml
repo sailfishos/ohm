@@ -7,148 +7,153 @@
   <sect1 id="plugins-introduction">
     <title>Introduction</title>
     <para>
-      Plugins have keys and policy, and also install a default system
-      preferences file.
+      Plugins are external modules that are loaded at runtime.
+      Plugins have preference data and internal state known as keys and policy,
+      and also install a default system preferences file.
     </para>
 
-    <para>
-      We need to set system preferences when there is no user logged in or we
-      are very early in the boot sequence.
-      We do this with each plugin installing a text file with the plugin key
-      name, the value, and optionally the public switch.
-    </para>
-
-    <para>
-      The plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
-      Comments are lines with first character <literal>#</literal> and then the
-      rest of the line is ignored.
-      Files are flat text with the following formal description, 
-      <literal>plugin_prefix.key value type public</literal>
-    </para>
-    <important>
+    <sect2 id="plugins-key-defaults">
+      <title>Plugin Key Defaults</title>
       <para>
-        There is a single space between the values.
-        Line endings have to be UNIX not WIN or MAC.
-        Parsing is very strict, and <literal>ohmd</literal> will exit with an
-        error if the syntax is not perfect. This is by design.
+        We need to set system preferences when there is no user logged in or we
+        are very early in the boot sequence.
+        We do this with each plugin installing a text file with the plugin key
+        name, the value, and if the key is modifiable from the user sesison.
       </para>
-    </important>
-
-    <important>
       <para>
-        Do not set internal state keys with their initial value here.
-        These should be added using <literal>ohm_plugin_conf_provide()</literal>
-        during <literal>load()</literal> and then the values populated in the
-        <literal>coldplug()</literal> method.
-        This ensures the correct ordering of coldplug.
+        The plugin preferences are read from <filename>/etc/ohm/plugins/{name}</filename>
+        Comments are lines with first character <literal>#</literal> and then the
+        rest of the line is ignored.
+        Files are flat text with the following formal description, 
+        <literal>plugin_prefix.key value public</literal>
+        There is a single space between the values, and all values are signed ints.
+        By making a key public, all the session users are allowed to change the
+        preference value, for instance the brightness on AC.
+        If a key is private then the public keyword is omitted, and any attempt
+        to change the key from the session will fail.
       </para>
-    </important>
-
-    <note>
+      <note>
+        <para>
+          The public and private key concept is a way to enforce fine-grained
+          specific system policy on users when using PolicyKit rules for every
+          action would be too great an overhead.
+        </para>
+      </note>
+      <important>
+        <para>
+          Do not set internal state keys with their initial value here.
+          These should be added using <literal>ohm_plugin_conf_provide()</literal>
+          during <literal>load()</literal> and then the values populated in the
+          <literal>coldplug()</literal> method.
+          This ensures the correct ordering of coldplug.
+        </para>
+      </important>
+    </sect2>
+  
+    <sect2 id="plugins-system-start">
+      <title>System Start</title>
       <para>
-        Public is only set if the key can be changed by the session, and if the
-        key is tried to be set, the set method will fail.
-        This is a way to enforce fine-grained rules on users when writing
-        PolicyKit rules for every action would be too great an overhead.
+        The file <filename>/etc/ohm/modules.ini</filename> allows the system
+        builder to set the modules to be loaded at startup.
+        For instance, on a fast PC we may want to suggest different modules
+        to a embedded ARM.
       </para>
-    </note>
+    </sect2>
+  
+    <sect2 id="plugins-other-plugins">
+      <title>Plugin Dependencies</title>
+      <para>
+        Plugins can tell <literal>ohmd</literal> that other plugins are required
+        for certain functionality, for instance, the backlight unit on a mobile
+        phone may require the temperature module to be present, so it can do the
+        temperature shutdown checks.
+        This is done with <literal>ohm_plugin_require()</literal>.
+        <literal>ohmd</literal> daemon will fail to load if any required plugin
+        is not present after the plugins have finished initializing.
+      </para>
+      <para>
+        Plugins can also tell <literal>ohmd</literal> that other plugins are suggested for certain
+        functionality, for instance, the backlight unit may work best when the
+        battery plugin is loaded so we can dim when we are low on power.
+        This is done with <literal>ohm_plugin_suggest()</literal>.
+        <literal>ohmd</literal> daemon will print a message to the console if any
+        suggested plugin is not present.
+      </para>
+      <para>
+        Plugins can also tell <literal>ohmd</literal> that other plugins are
+        banned, for instance, a proprietary battery discharge plugin maybe
+        incompatible with the standard battery plugin.
+        This is done with <literal>ohm_plugin_prevent()</literal>.
+        <literal>ohmd</literal> will fail to load if any prevented plugin is
+        manually loaded or loaded through a dependency of another plugin.
+      </para>
+      <para>
+        Plugins must also tell OHM that they will provide certain keys.
+        This is done using <literal>ohm_plugin_conf_provide()</literal> and
+        then OHM can check to see if the plugin is trying to provide keys
+        that are managed by another plugin.
+        This will stop the system doing odd things when two plugins try to write
+        to one key and is a good check when building policy.
+        In production code this check should be turned off using the command
+        line argument <literal>--no-checks</literal> as this speeds up the
+        initial coldplug considerably.
+      </para>
+    </sect2>
+  
+    <sect2 id="plugins-acccess-to-keys">
+      <title>Plugin access to keys</title>
+      <para>
+        To get key values from the global keystore, a plugin must use
+        <literal>ohm_plugin_conf_get_key()</literal> which will return false
+        if the key is not available.
+        Keys can be set using <literal>ohm_plugin_conf_set_key</literal>.
+      </para>
+      <para>
+        A plugin may want to be notified when a key changes.
+        In typical code, the key and the value would be passed to the plugin
+        and then the key name compared against a fixed list.
+        This is too slow for the plugin system in OHM, as many plugins may
+        have to be chained together for a policy action.
+        It was found that repeated <literal>strcmp()</literal>'s on all the
+        changed value keys was causing high load on embedded machines.
+      </para>
+      <para>
+        To register interest in a key change, a plugin must call
+        <literal>ohm_plugin_conf_interested()</literal> along with an integer ID
+        unique to the plugin.
+        The integer ID does not have to be unique among the other plugins.
+        When the key is changed in OHM by another plugin of the session user,
+        this is matched against a hash table for O(1) complexity, and then
+        a list iterated over sending the indervidual ID's to the plugins.
+        Matching integer ID's in plugins is much faster than matching strings,
+        for a small coldplug overhead.
+        See the example plugin code for more details.
+      </para>
+    </sect2>
+  
+    <sect2 id="plugins-session-access">
+      <title>Session Access to keys</title>
+      <para>
+        Plugins have direct access to the keystore and can read and write any key
+        even if private.
+        The DBUS interface to the keystore is however limited to only setting
+        public keys to enforce security policy.
+        The DBUS interface should only be used to set preferences, it should
+        never be used to set or change policy - this is the job for the plugin.
+      </para>
+      <mediaobject id="plugins-dbus">
+        <imageobject>
+          <imagedata format="PNG" fileref="ohm-dbus-access.png" align="center"/>
+        </imageobject>
+      </mediaobject>
+      <para>
+        The DBUS interface is protected from setting or creating keys to prevent
+        malicious users overwriting system prefrences that are not to be changed.
+        Session software can not load or unload plugins, as this would be a
+        system and security risk.
+      </para>
+    </sect2>
 
-    <mediaobject id="plugins-dbus">
-      <imageobject>
-        <imagedata format="PNG" fileref="ohm-dbus-access.png" align="center"/>
-      </imageobject>
-    </mediaobject>
-
-    <para>
-      Plugins have direct access to the keystore and can read and write any key
-      even if private.
-      The DBUS interface to the keystore is however limited to only setting
-      public keys to enforce security policy.
-      The DBUS interface should only be used to set preferences, it should
-      never be used to set or change policy - this is the job for the plugin.
-    </para>
-
-    <para>
-      Plugins can tell <literal>ohmd</literal> that other plugins are required
-      for certain functionality, for instance, the backlight unit on a mobile
-      phone may require the temperature module to be present, so it can do the
-      temperature shutdown checks.
-      This is done with <literal>ohm_plugin_require()</literal>.
-      <literal>ohmd</literal> daemon will fail to load if any required plugin
-      is not present after the plugins have finished initializing.
-    </para>
-
-    <para>
-      Plugins can also tell <literal>ohmd</literal> that other plugins are suggested for certain
-      functionality, for instance, the backlight unit may work best when the
-      battery plugin is loaded so we can dim when we are low on power.
-      This is done with <literal>ohm_plugin_suggest()</literal>.
-      <literal>ohmd</literal> daemon will print a message to the console if any
-      suggested plugin is not present.
-    </para>
-
-    <para>
-      Plugins can also tell <literal>ohmd</literal> that other plugins are
-      banned, for instance, a proprietary battery discharge plugin maybe
-      incompatible with the standard battery plugin.
-      This is done with <literal>ohm_plugin_prevent()</literal>.
-      <literal>ohmd</literal> will fail to load if any prevented plugin is
-      manually loaded or loaded through a dependency of another plugin.
-    </para>
-
-    <para>
-      The files <filename>/etc/ohm/require</filename>,
-      <filename>/etc/ohm/suggest</filename> and
-      <filename>/etc/ohm/prevent</filename> allow the system builder to set
-      the modules at startup.
-      For instance, on a fast PC we may want to suggest
-      <literal>libcpufreq.so</literal>, but we may not want this for embedded
-      ARM.
-      Comments are lines with first character <literal>#</literal> and then the
-      rest of the line is ignored.
-    </para>
-
-    <para>
-      Plugins must also tell OHM that they will provide certain keys.
-      This is done using <literal>ohm_plugin_conf_provide()</literal> and
-      then OHM can check to see if the plugin is trying to provide keys
-      that are managed by another plugin.
-      This will stop the system doing odd things when two plugins try to write
-      to one key and is a good check when building policy.
-      In production code this check should be turned off using the command
-      line argument <literal>--no-checks</literal> as this speeds up the
-      initial coldplug considerably.
-    </para>
-
-    <para>
-      To get key values from the global keystore, a plugin must use
-      <literal>ohm_plugin_conf_get_key()</literal> which will return false
-      if the key is not available.
-      Keys can be set using <literal>ohm_plugin_conf_set_key</literal>.
-    </para>
-
-    <para>
-      A plugin may want to be notified when a key changes.
-      In typical code, the key and the value would be passed to the plugin
-      and then the key name compared against a fixed list.
-      This is too slow for the plugin system in OHM, as many plugins may
-      have to be chained together for a policy action.
-      It was found that repeated <literal>strcmp()</literal>'s on all the
-      changed value keys was causing high load on embedded machines.
-    </para>
-
-    <para>
-      To register interest in a key change, a plugin must call
-      <literal>ohm_plugin_conf_interested()</literal> along with an integer ID
-      unique to the plugin.
-      The integer ID does not have to be unique among the other plugins.
-      When the key is changed in OHM by another plugin of the session user,
-      this is matched against a hash table for O(1) complexity, and then
-      a list iterated over sending the indervidual ID's to the plugins.
-      Matching integer ID's in plugins is much faster than matching strings,
-      for a small coldplug overhead.
-      See the example plugin code for more details.
-    </para>
   </sect1>
 
   <sect1 id="plugins-defaults">
@@ -165,20 +170,6 @@
         the backlight.
       </para>
 
-      <informaltable>
-        <tgroup cols="2">
-          <tbody>
-            <row>
-              <entry>DBUS Object Path:</entry>
-              <entry><literal>/org/freedesktop/ohm/Backlight</literal></entry>
-            </row>
-            <row>
-              <entry>DBUS Interface:</entry>
-              <entry><literal>org.freedesktop.ohm.Backlight</literal></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </informaltable>
       <sect3 id="plugins-backlight-keys">
         <title>
           <literal>Exported keys</literal>

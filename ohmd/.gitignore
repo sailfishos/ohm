@@ -3,6 +3,7 @@
 Makefile
 Makefile.in
 ohmd
+ohmd-test
 ohm-marshal.c
 ohm-marshal.h
 ohm-dbus-*.h

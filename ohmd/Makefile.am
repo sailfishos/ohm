@@ -14,6 +14,16 @@ ohmpluginincludedir=$(includedir)/ohm
 ohmplugininclude_HEADERS =					\
 	ohm-plugin.h
 
+noinst_PROGRAMS = ohmd-test
+
+ohmd_test_SOURCES = 						\
+	ohm-debug.c						\
+	ohm-debug.h						\
+	ohm-confobj.c						\
+	ohm-confobj.h						\
+	ohm-test.c
+ohmd_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
+
 sbin_PROGRAMS = ohmd
 
 ohmd_SOURCES = 							\

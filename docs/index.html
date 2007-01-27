@@ -24,7 +24,7 @@
         a small team of developers.
       </p><p>
         OHM : <span class="emphasis"><em>"Resistance is futile"</em></span>
-      </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#introduction">1. Open Hardware Manager Introduction</a></span></dt><dd><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></dd><dt><span class="chapter"><a href="#plugins">2. Plugins</a></span></dt><dd><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt><dt><span class="sect1"><a href="#plugins-defaults">Default plugins</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-backlight">Backlight Adjustment</a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#dbus-interface">3. DBUS Interface</a></span></dt><dd><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
+      </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#introduction">1. Open Hardware Manager Introduction</a></span></dt><dd><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-usecases">Use Cases</a></span></dt><dd><dl><dt><span class="sect2"><a href="#introduction-usecases-embedded">Embedded use cases</a></span></dt><dt><span class="sect2"><a href="#introduction-usecases-pc">Desktop or laptop use cases</a></span></dt></dl></dd><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></dd><dt><span class="chapter"><a href="#plugins">2. Plugins</a></span></dt><dd><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-key-defaults">Plugin Key Defaults</a></span></dt><dt><span class="sect2"><a href="#plugins-system-start">System Start</a></span></dt><dt><span class="sect2"><a href="#plugins-other-plugins">Plugin Dependencies</a></span></dt><dt><span class="sect2"><a href="#plugins-acccess-to-keys">Plugin access to keys</a></span></dt><dt><span class="sect2"><a href="#plugins-session-access">Session Access to keys</a></span></dt></dl></dd><dt><span class="sect1"><a href="#plugins-defaults">Default plugins</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-backlight">Backlight Adjustment</a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#dbus-interface">3. DBUS Interface</a></span></dt><dd><dl><dt><span class="sect1"><a href="#pm-intro">Introduction</a></span></dt><dt><span class="sect1"><a href="#pm-manager">Manager functionality</a></span></dt><dd><dl><dt><span class="sect2"><a href="#pm-manager-keys">
         <code class="literal">Exported keys</code>
       </a></span></dt><dt><span class="sect2"><a href="#pm-manager-GetVersion">
         <code class="literal">GetVersion()</code>
@@ -60,7 +60,7 @@
       <code class="literal">hald</code>?
     </a></span></dt><dt><span class="sect1"><a href="#faq-shellscripts">
       Can I execute shell scripts from OHM on an event?
-    </a></span></dt></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="introduction"></a>Chapter 1. Open Hardware Manager Introduction</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-description"></a>Overall Description</h2></div></div></div><p>
+    </a></span></dt></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="introduction"></a>Chapter 1. Open Hardware Manager Introduction</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#introduction-description">Overall Description</a></span></dt><dt><span class="sect1"><a href="#introduction-usecases">Use Cases</a></span></dt><dd><dl><dt><span class="sect2"><a href="#introduction-usecases-embedded">Embedded use cases</a></span></dt><dt><span class="sect2"><a href="#introduction-usecases-pc">Desktop or laptop use cases</a></span></dt></dl></dd><dt><span class="sect1"><a href="#introduction-deps">Dependencies</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-description"></a>Overall Description</h2></div></div></div><p>
       OHM is a small open source systems daemon which sits above HAL and
       abstracts out common hardware management tasks such as:
     </p><div class="itemizedlist"><ul type="disc"><li><p>
@@ -159,7 +159,37 @@
           each user.
         </p></li><li><p>
           We need to apply policy at boot-up or before X starts.
-        </p></li></ul></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-deps"></a>Dependencies</h2></div></div></div><p>
+        </p></li></ul></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-usecases"></a>Use Cases</h2></div></div></div><p>
+      Use cases should aim to be small specific problems that OHM should solve.
+    </p><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="introduction-usecases-embedded"></a>Embedded use cases</h3></div></div></div><p>
+        A video player is started and requests processor core low latancy
+        behaviour from the OHM CPU plugin.
+        The CPU plugin approves an increase in CPU speed as battery level is
+        not low.
+        The heat management plugin reads that processor core is nearly out of
+        operating temperature range, and denies the request.
+      </p><p>
+        In the lastest temperature probe readings, the heat management plugin
+        notices that the board temperature over the battery is getting too hot,
+        so requests a overal drop in power consumption from the other plugins.
+      </p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="introduction-usecases-pc"></a>Desktop or laptop use cases</h3></div></div></div><p>
+        Alice is logged in and starts a distribution upgrade and walks away,
+        and the screen saver starts.
+        Bob fast-user-switches to his account, does some work and clicks shutdown.
+        At the moment the machine will suspend in middle of distribution upgrade.
+        The desired behaviour would be for the managament system to inhibit the
+        suspend until it is finished.
+        When Bob tries to suspend, he should be informed that the dist-upgrade
+        (by Alice) is in process and the suspend could not be done at this time
+        and possibly be offered the option to suspend when it has.
+      </p><p>
+        Bob is logged in and starts a large download, the browser makes request
+        to OHM that the machine is not shutdown for the duration of the download.
+        Alice fast-user-switches to her account, does some stuff and clicks shutdown.
+        Alice is informed that Bob is in the process of a large download, howver
+        as she has admin rights she can override Bob's request and shut the
+        machine down.
+      </p></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction-deps"></a>Dependencies</h2></div></div></div><p>
       OHM is lightweight.
     </p><div class="itemizedlist"><ul type="disc"><li><p>
           GLib 2.10.0 (required)
@@ -171,116 +201,116 @@
           PolicyKit (optional)
         </p></li><li><p>
           ConsoleKit (optional)
-        </p></li></ul></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="plugins"></a>Chapter 2. Plugins</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt><dt><span class="sect1"><a href="#plugins-defaults">Default plugins</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-backlight">Backlight Adjustment</a></span></dt></dl></dd></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-introduction"></a>Introduction</h2></div></div></div><p>
-      Plugins have keys and policy, and also install a default system
-      preferences file.
-    </p><p>
-      We need to set system preferences when there is no user logged in or we
-      are very early in the boot sequence.
-      We do this with each plugin installing a text file with the plugin key
-      name, the value, and optionally the public switch.
-    </p><p>
-      The plugin preferences are read from <code class="filename">/etc/ohm/plugins/{name}</code>
-      Comments are lines with first character <code class="literal">#</code> and then the
-      rest of the line is ignored.
-      Files are flat text with the following formal description, 
-      <code class="literal">plugin_prefix.key value type public</code>
-    </p><div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Important</h3><p>
-        There is a single space between the values.
-        Line endings have to be UNIX not WIN or MAC.
-        Parsing is very strict, and <code class="literal">ohmd</code> will exit with an
-        error if the syntax is not perfect. This is by design.
-      </p></div><div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Important</h3><p>
-        Do not set internal state keys with their initial value here.
-        These should be added using <code class="literal">ohm_plugin_conf_provide()</code>
-        during <code class="literal">load()</code> and then the values populated in the
-        <code class="literal">coldplug()</code> method.
-        This ensures the correct ordering of coldplug.
-      </p></div><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
-        Public is only set if the key can be changed by the session, and if the
-        key is tried to be set, the set method will fail.
-        This is a way to enforce fine-grained rules on users when writing
-        PolicyKit rules for every action would be too great an overhead.
-      </p></div><div class="mediaobject" align="center"><a name="plugins-dbus"></a><img src="ohm-dbus-access.png" align="middle"></div><p>
-      Plugins have direct access to the keystore and can read and write any key
-      even if private.
-      The DBUS interface to the keystore is however limited to only setting
-      public keys to enforce security policy.
-      The DBUS interface should only be used to set preferences, it should
-      never be used to set or change policy - this is the job for the plugin.
-    </p><p>
-      Plugins can tell <code class="literal">ohmd</code> that other plugins are required
-      for certain functionality, for instance, the backlight unit on a mobile
-      phone may require the temperature module to be present, so it can do the
-      temperature shutdown checks.
-      This is done with <code class="literal">ohm_plugin_require()</code>.
-      <code class="literal">ohmd</code> daemon will fail to load if any required plugin
-      is not present after the plugins have finished initializing.
-    </p><p>
-      Plugins can also tell <code class="literal">ohmd</code> that other plugins are suggested for certain
-      functionality, for instance, the backlight unit may work best when the
-      battery plugin is loaded so we can dim when we are low on power.
-      This is done with <code class="literal">ohm_plugin_suggest()</code>.
-      <code class="literal">ohmd</code> daemon will print a message to the console if any
-      suggested plugin is not present.
-    </p><p>
-      Plugins can also tell <code class="literal">ohmd</code> that other plugins are
-      banned, for instance, a proprietary battery discharge plugin maybe
-      incompatible with the standard battery plugin.
-      This is done with <code class="literal">ohm_plugin_prevent()</code>.
-      <code class="literal">ohmd</code> will fail to load if any prevented plugin is
-      manually loaded or loaded through a dependency of another plugin.
-    </p><p>
-      The files <code class="filename">/etc/ohm/require</code>,
-      <code class="filename">/etc/ohm/suggest</code> and
-      <code class="filename">/etc/ohm/prevent</code> allow the system builder to set
-      the modules at startup.
-      For instance, on a fast PC we may want to suggest
-      <code class="literal">libcpufreq.so</code>, but we may not want this for embedded
-      ARM.
-      Comments are lines with first character <code class="literal">#</code> and then the
-      rest of the line is ignored.
-    </p><p>
-      Plugins must also tell OHM that they will provide certain keys.
-      This is done using <code class="literal">ohm_plugin_conf_provide()</code> and
-      then OHM can check to see if the plugin is trying to provide keys
-      that are managed by another plugin.
-      This will stop the system doing odd things when two plugins try to write
-      to one key and is a good check when building policy.
-      In production code this check should be turned off using the command
-      line argument <code class="literal">--no-checks</code> as this speeds up the
-      initial coldplug considerably.
-    </p><p>
-      To get key values from the global keystore, a plugin must use
-      <code class="literal">ohm_plugin_conf_get_key()</code> which will return false
-      if the key is not available.
-      Keys can be set using <code class="literal">ohm_plugin_conf_set_key</code>.
-    </p><p>
-      A plugin may want to be notified when a key changes.
-      In typical code, the key and the value would be passed to the plugin
-      and then the key name compared against a fixed list.
-      This is too slow for the plugin system in OHM, as many plugins may
-      have to be chained together for a policy action.
-      It was found that repeated <code class="literal">strcmp()</code>'s on all the
-      changed value keys was causing high load on embedded machines.
-    </p><p>
-      To register interest in a key change, a plugin must call
-      <code class="literal">ohm_plugin_conf_interested()</code> along with an integer ID
-      unique to the plugin.
-      The integer ID does not have to be unique among the other plugins.
-      When the key is changed in OHM by another plugin of the session user,
-      this is matched against a hash table for O(1) complexity, and then
-      a list iterated over sending the indervidual ID's to the plugins.
-      Matching integer ID's in plugins is much faster than matching strings,
-      for a small coldplug overhead.
-      See the example plugin code for more details.
-    </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-defaults"></a>Default plugins</h2></div></div></div><p>
+        </p></li></ul></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="plugins"></a>Chapter 2. Plugins</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#plugins-introduction">Introduction</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-key-defaults">Plugin Key Defaults</a></span></dt><dt><span class="sect2"><a href="#plugins-system-start">System Start</a></span></dt><dt><span class="sect2"><a href="#plugins-other-plugins">Plugin Dependencies</a></span></dt><dt><span class="sect2"><a href="#plugins-acccess-to-keys">Plugin access to keys</a></span></dt><dt><span class="sect2"><a href="#plugins-session-access">Session Access to keys</a></span></dt></dl></dd><dt><span class="sect1"><a href="#plugins-defaults">Default plugins</a></span></dt><dd><dl><dt><span class="sect2"><a href="#plugins-backlight">Backlight Adjustment</a></span></dt></dl></dd></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-introduction"></a>Introduction</h2></div></div></div><p>
+      Plugins are external modules that are loaded at runtime.
+      Plugins have preference data and internal state known as keys and policy,
+      and also install a default system preferences file.
+    </p><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-key-defaults"></a>Plugin Key Defaults</h3></div></div></div><p>
+        We need to set system preferences when there is no user logged in or we
+        are very early in the boot sequence.
+        We do this with each plugin installing a text file with the plugin key
+        name, the value, and if the key is modifiable from the user sesison.
+      </p><p>
+        The plugin preferences are read from <code class="filename">/etc/ohm/plugins/{name}</code>
+        Comments are lines with first character <code class="literal">#</code> and then the
+        rest of the line is ignored.
+        Files are flat text with the following formal description, 
+        <code class="literal">plugin_prefix.key value public</code>
+        There is a single space between the values, and all values are signed ints.
+        By making a key public, all the session users are allowed to change the
+        preference value, for instance the brightness on AC.
+        If a key is private then the public keyword is omitted, and any attempt
+        to change the key from the session will fail.
+      </p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Note</h3><p>
+          The public and private key concept is a way to enforce fine-grained
+          specific system policy on users when using PolicyKit rules for every
+          action would be too great an overhead.
+        </p></div><div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Important</h3><p>
+          Do not set internal state keys with their initial value here.
+          These should be added using <code class="literal">ohm_plugin_conf_provide()</code>
+          during <code class="literal">load()</code> and then the values populated in the
+          <code class="literal">coldplug()</code> method.
+          This ensures the correct ordering of coldplug.
+        </p></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-system-start"></a>System Start</h3></div></div></div><p>
+        The file <code class="filename">/etc/ohm/modules.ini</code> allows the system
+        builder to set the modules to be loaded at startup.
+        For instance, on a fast PC we may want to suggest different modules
+        to a embedded ARM.
+      </p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-other-plugins"></a>Plugin Dependencies</h3></div></div></div><p>
+        Plugins can tell <code class="literal">ohmd</code> that other plugins are required
+        for certain functionality, for instance, the backlight unit on a mobile
+        phone may require the temperature module to be present, so it can do the
+        temperature shutdown checks.
+        This is done with <code class="literal">ohm_plugin_require()</code>.
+        <code class="literal">ohmd</code> daemon will fail to load if any required plugin
+        is not present after the plugins have finished initializing.
+      </p><p>
+        Plugins can also tell <code class="literal">ohmd</code> that other plugins are suggested for certain
+        functionality, for instance, the backlight unit may work best when the
+        battery plugin is loaded so we can dim when we are low on power.
+        This is done with <code class="literal">ohm_plugin_suggest()</code>.
+        <code class="literal">ohmd</code> daemon will print a message to the console if any
+        suggested plugin is not present.
+      </p><p>
+        Plugins can also tell <code class="literal">ohmd</code> that other plugins are
+        banned, for instance, a proprietary battery discharge plugin maybe
+        incompatible with the standard battery plugin.
+        This is done with <code class="literal">ohm_plugin_prevent()</code>.
+        <code class="literal">ohmd</code> will fail to load if any prevented plugin is
+        manually loaded or loaded through a dependency of another plugin.
+      </p><p>
+        Plugins must also tell OHM that they will provide certain keys.
+        This is done using <code class="literal">ohm_plugin_conf_provide()</code> and
+        then OHM can check to see if the plugin is trying to provide keys
+        that are managed by another plugin.
+        This will stop the system doing odd things when two plugins try to write
+        to one key and is a good check when building policy.
+        In production code this check should be turned off using the command
+        line argument <code class="literal">--no-checks</code> as this speeds up the
+        initial coldplug considerably.
+      </p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-acccess-to-keys"></a>Plugin access to keys</h3></div></div></div><p>
+        To get key values from the global keystore, a plugin must use
+        <code class="literal">ohm_plugin_conf_get_key()</code> which will return false
+        if the key is not available.
+        Keys can be set using <code class="literal">ohm_plugin_conf_set_key</code>.
+      </p><p>
+        A plugin may want to be notified when a key changes.
+        In typical code, the key and the value would be passed to the plugin
+        and then the key name compared against a fixed list.
+        This is too slow for the plugin system in OHM, as many plugins may
+        have to be chained together for a policy action.
+        It was found that repeated <code class="literal">strcmp()</code>'s on all the
+        changed value keys was causing high load on embedded machines.
+      </p><p>
+        To register interest in a key change, a plugin must call
+        <code class="literal">ohm_plugin_conf_interested()</code> along with an integer ID
+        unique to the plugin.
+        The integer ID does not have to be unique among the other plugins.
+        When the key is changed in OHM by another plugin of the session user,
+        this is matched against a hash table for O(1) complexity, and then
+        a list iterated over sending the indervidual ID's to the plugins.
+        Matching integer ID's in plugins is much faster than matching strings,
+        for a small coldplug overhead.
+        See the example plugin code for more details.
+      </p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-session-access"></a>Session Access to keys</h3></div></div></div><p>
+        Plugins have direct access to the keystore and can read and write any key
+        even if private.
+        The DBUS interface to the keystore is however limited to only setting
+        public keys to enforce security policy.
+        The DBUS interface should only be used to set preferences, it should
+        never be used to set or change policy - this is the job for the plugin.
+      </p><div class="mediaobject" align="center"><a name="plugins-dbus"></a><img src="ohm-dbus-access.png" align="middle"></div><p>
+        The DBUS interface is protected from setting or creating keys to prevent
+        malicious users overwriting system prefrences that are not to be changed.
+        Session software can not load or unload plugins, as this would be a
+        system and security risk.
+      </p></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="plugins-defaults"></a>Default plugins</h2></div></div></div><p>
       Some plugins are shipped by default and provide typical use cases.
     </p><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="plugins-backlight"></a>Backlight Adjustment</h3></div></div></div><p>
         Backlight brightness and state can be changed on most backlight hardware.
         These are the optional DBUS methods for controlling the brightness of
         the backlight.
-      </p><div class="informaltable"><table border="1"><colgroup><col><col></colgroup><tbody><tr><td>DBUS Object Path:</td><td><code class="literal">/org/freedesktop/ohm/Backlight</code></td></tr><tr><td>DBUS Interface:</td><td><code class="literal">org.freedesktop.ohm.Backlight</code></td></tr></tbody></table></div><div class="sect3" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="plugins-backlight-keys"></a>
+      </p><div class="sect3" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="plugins-backlight-keys"></a>
           <code class="literal">Exported keys</code>
         </h4></div></div></div><p>
           Keys exported by this plugin:

@@ -200,6 +200,51 @@
     </itemizedlist>
   </sect1>
 
+  <sect1 id="introduction-usecases">
+    <title>Use Cases</title>
+    <para>
+      Use cases should aim to be small specific problems that OHM should solve.
+    </para>
+    <sect2 id="introduction-usecases-embedded">
+      <title>Embedded use cases</title>
+      <para>
+        A video player is started and requests processor core low latancy
+        behaviour from the OHM CPU plugin.
+        The CPU plugin approves an increase in CPU speed as battery level is
+        not low.
+        The heat management plugin reads that processor core is nearly out of
+        operating temperature range, and denies the request.
+      </para>
+      <para>
+        In the lastest temperature probe readings, the heat management plugin
+        notices that the board temperature over the battery is getting too hot,
+        so requests a overal drop in power consumption from the other plugins.
+      </para>
+    </sect2>
+    <sect2 id="introduction-usecases-pc">
+      <title>Desktop or laptop use cases</title>
+      <para>
+        Alice is logged in and starts a distribution upgrade and walks away,
+        and the screen saver starts.
+        Bob fast-user-switches to his account, does some work and clicks shutdown.
+        At the moment the machine will suspend in middle of distribution upgrade.
+        The desired behaviour would be for the managament system to inhibit the
+        suspend until it is finished.
+        When Bob tries to suspend, he should be informed that the dist-upgrade
+        (by Alice) is in process and the suspend could not be done at this time
+        and possibly be offered the option to suspend when it has.
+      </para>
+      <para>
+        Bob is logged in and starts a large download, the browser makes request
+        to OHM that the machine is not shutdown for the duration of the download.
+        Alice fast-user-switches to her account, does some stuff and clicks shutdown.
+        Alice is informed that Bob is in the process of a large download, howver
+        as she has admin rights she can override Bob's request and shut the
+        machine down.
+      </para>
+    </sect2>
+  </sect1>
+
   <sect1 id="introduction-deps">
     <title>Dependencies</title>
     <para>
