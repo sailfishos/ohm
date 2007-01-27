@@ -60,11 +60,11 @@ GQuark		 ohm_manager_error_quark		(void);
 GType		 ohm_manager_get_type		  	(void);
 OhmManager	*ohm_manager_new			(void);
 
-gboolean	 ohm_manager_get_on_ac			(OhmManager	*manager,
-							 gboolean	*retval,
+gboolean	 ohm_manager_get_version		(OhmManager	*manager,
+							 gchar		**version,
 							 GError		**error);
-gboolean	 ohm_manager_get_low_power_mode		(OhmManager	*manager,
-							 gboolean	*retval,
+gboolean	 ohm_manager_get_plugins		(OhmManager	*manager,
+							 gchar		***retval,
 							 GError		**error);
 
 G_END_DECLS

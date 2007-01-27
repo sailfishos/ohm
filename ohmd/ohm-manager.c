@@ -83,43 +83,39 @@ ohm_manager_error_quark (void)
 }
 
 /**
- * ohm_manager_get_on_ac:
- * @manager: This class instance
- * @retval: TRUE if we are on AC power
+ * ohm_manager_get_version:
  **/
 gboolean
-ohm_manager_get_on_ac (OhmManager  *manager,
-		       gboolean   *retval,
-		       GError    **error)
+ohm_manager_get_version (OhmManager *manager,
+		         gchar     **version,
+		         GError    **error)
 {
 	g_return_val_if_fail (OHM_IS_MANAGER (manager), FALSE);
 
-	if (retval == NULL) {
+	if (version == NULL) {
 		return FALSE;
 	}
 
-	*retval = TRUE;
+	*version = "hello";
 
 	return TRUE;
 }
 
 /**
- * ohm_manager_get_low_power_mode:
- * @manager: This class instance
- * @retval: TRUE if we are on low power mode
+ * ohm_manager_get_plugins:
  **/
 gboolean
-ohm_manager_get_low_power_mode (OhmManager  *manager,
-				gboolean    *retval,
-				GError     **error)
+ohm_manager_get_plugins (OhmManager  *manager,
+			 gchar     ***plugins,
+			 GError     **error)
 {
 	g_return_val_if_fail (OHM_IS_MANAGER (manager), FALSE);
 
-	if (retval == NULL) {
+	if (plugins == NULL) {
 		return FALSE;
 	}
 
-	*retval = TRUE;
+	*plugins = NULL;
 
 	return TRUE;
 }
@@ -151,7 +147,6 @@ ohm_manager_class_init (OhmManagerClass *klass)
 
 /**
  * ohm_manager_init:
- * @manager: This class instance
  **/
 static void
 ohm_manager_init (OhmManager *manager)
