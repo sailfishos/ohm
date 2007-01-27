@@ -21,6 +21,10 @@ ohmd_test_SOURCES = 						\
 	ohm-debug.h						\
 	ohm-confobj.c						\
 	ohm-confobj.h						\
+	ohm-conf.c						\
+	ohm-conf.h						\
+	ohm-marshal.h						\
+	ohm-marshal.c						\
 	ohm-test.c
 ohmd_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 
@@ -30,18 +34,18 @@ ohmd_SOURCES = 							\
 	ohm-common.h						\
 	ohm-debug.c						\
 	ohm-debug.h						\
+	ohm-confobj.c						\
+	ohm-confobj.h						\
+	ohm-conf.c						\
+	ohm-conf.h						\
+	ohm-marshal.h						\
+	ohm-marshal.c						\
+	ohm-keystore.c						\
+	ohm-keystore.h						\
 	ohm-module.c						\
 	ohm-module.h						\
 	ohm-plugin.c						\
 	ohm-plugin.h						\
-	ohm-keystore.c						\
-	ohm-keystore.h						\
-	ohm-conf.c						\
-	ohm-conf.h						\
-	ohm-confobj.c						\
-	ohm-confobj.h						\
-	ohm-marshal.h						\
-	ohm-marshal.c						\
 	ohm-manager.c						\
 	ohm-manager.h						\
 	ohm-main.c
