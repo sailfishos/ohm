@@ -96,7 +96,8 @@ ohm_manager_get_version (OhmManager *manager,
 		return FALSE;
 	}
 
-	*version = "hello";
+	/* return a x.y.z version string */
+	*version = g_strdup_printf ("%i.%i.%i", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
 
 	return TRUE;
 }
@@ -171,9 +172,9 @@ ohm_manager_init (OhmManager *manager)
 	dbus_g_connection_register_g_object (connection, OHM_DBUS_PATH_KEYSTORE, G_OBJECT (manager->priv->keystore));
 
 	/* set some predefined keys */
-	ohm_conf_add_key (manager->priv->conf, "manager.version.major", 0, FALSE, &error);
-	ohm_conf_add_key (manager->priv->conf, "manager.version.minor", 0, FALSE, &error);
-	ohm_conf_add_key (manager->priv->conf, "manager.version.patch", 1, FALSE, &error);
+	ohm_conf_add_key (manager->priv->conf, "manager.version.major", VERSION_MAJOR, FALSE, &error);
+	ohm_conf_add_key (manager->priv->conf, "manager.version.minor", VERSION_MINOR, FALSE, &error);
+	ohm_conf_add_key (manager->priv->conf, "manager.version.patch", VERSION_PATCH, FALSE, &error);
 
 	/* list the users, should only be root at startup */
 	ohm_conf_user_list (manager->priv->conf);

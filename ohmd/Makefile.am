@@ -3,6 +3,9 @@ INCLUDES =							\
 	$(DBUS_CFLAGS)						\
 	$(GTHREAD_CFLAGS)					\
 	-DDBUS_API_SUBJECT_TO_CHANGE				\
+	-DVERSION_MAJOR=$(VERSION_MAJOR)			\
+	-DVERSION_MINOR=$(VERSION_MINOR)			\
+	-DVERSION_PATCH=$(VERSION_PATCH)			\
 	-DBINDIR=\"$(bindir)\"					\
 	-DLIBDIR=\"$(libdir)\"					\
 	-DSBINDIR=\"$(sbindir)\"				\
