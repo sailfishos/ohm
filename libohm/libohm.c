@@ -59,6 +59,19 @@ static void libohm_finalize (GObject *object);
 static gpointer parent_class = NULL;
 static guint signals[LAST_SIGNAL] = { 0 };
 
+/**
+ * libohm_error_quark:
+ **/
+GQuark
+libohm_error_quark (void)
+{
+	static GQuark quark = 0;
+	if (!quark) {
+		quark = g_quark_from_static_string ("libohm_error");
+	}
+	return quark;
+}
+
 GType
 libohm_get_type (void)
 {
@@ -109,33 +122,77 @@ libohm_class_init (LibOhmClass * class)
 /**
  * libohm_init:
  *
- * Sets up the proxy connection to libohm
+ * Sets up the libohm ctx
  **/
 static void
 libohm_init (LibOhm *ctx)
 {
-	GError *error = NULL;
+	ctx->is_initialized = FALSE;
+	ctx->connection = NULL;
+	ctx->keyproxy = NULL;
+	ctx->managerproxy = NULL;
+}
+
+/**
+ * libohm_connects:
+ *
+ * Sets up the proxy connection to libohm
+ **/
+gboolean
+libohm_connect (LibOhm *ctx, GError **error)
+{
+	g_return_val_if_fail (ctx != NULL, FALSE);
+	g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+	if (ctx->is_initialized == TRUE) {
+		if (error) {
+			*error = g_error_new (libohm_error_quark (),
+					      LIBOHM_ERROR_ALREADY_CONNECTED,
+					      "Already connected!");
+		}
+		return FALSE;
+	}
+
+	/* get the DBUS system connection */
+	ctx->connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, NULL);
+	if (ctx->connection == NULL) {
+		if (error) {
+			*error = g_error_new (libohm_error_quark (),
+					      LIBOHM_ERROR_UNABLE_TO_CONNECT,
+					      "Unable to get connection to system bus");
+		}
+		return FALSE;
+	}
+
+	/* get the proxies */
+	ctx->keyproxy = dbus_g_proxy_new_for_name (ctx->connection,
+						   OHM_DBUS_SERVICE,
+						   OHM_DBUS_PATH_KEYSTORE,
+						   OHM_DBUS_INTERFACE_KEYSTORE);
+	if (ctx->keyproxy == NULL) {
+		if (error) {
+			*error = g_error_new (libohm_error_quark (),
+					      LIBOHM_ERROR_UNABLE_TO_CONNECT,
+					      "Unable to get proxy %s", OHM_DBUS_INTERFACE_KEYSTORE);
+		}
+		return FALSE;
+	}
+	ctx->managerproxy = dbus_g_proxy_new_for_name (ctx->connection,
+						       OHM_DBUS_SERVICE,
+						       OHM_DBUS_PATH_MANAGER,
+						       OHM_DBUS_INTERFACE_MANAGER);
+	if (ctx->keyproxy == NULL) {
+		if (error) {
+			*error = g_error_new (libohm_error_quark (),
+					      LIBOHM_ERROR_UNABLE_TO_CONNECT,
+					      "Unable to get proxy %s", OHM_DBUS_INTERFACE_MANAGER);
+		}
+		return FALSE;
+	}
 
 	ctx->is_initialized = TRUE;
 
-	/* get the DBUS system connection */
-	ctx->connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
-	if (error != NULL) {
-		g_warning ("Unable to get connection : %s", error->message);
-		g_error_free (error);
-		return;
-	}
-
-	/* get the proxy with g-p-m */
-	ctx->proxy = dbus_g_proxy_new_for_name (ctx->connection,
-					   OHM_DBUS_SERVICE,
-					   OHM_DBUS_PATH_KEYSTORE,
-					   OHM_DBUS_INTERFACE_KEYSTORE);
-	if (ctx->proxy == NULL) {
-		g_warning ("Unable to get proxy : %s", OHM_DBUS_INTERFACE_KEYSTORE);
-		return;
-	}
-	trace ("ctx created okay");
+	return TRUE;
 }
 
 /**
@@ -148,7 +205,7 @@ libohm_finalize (GObject *object)
 {
 	LibOhm *ctx = LIBOHM_CTX (object);
 
-	g_object_unref (G_OBJECT (ctx->proxy));
+	g_object_unref (G_OBJECT (ctx->keyproxy));
 	ctx->is_initialized = FALSE;
 
 	if (G_OBJECT_CLASS(parent_class)->finalize)
@@ -165,6 +222,56 @@ libohm_new (void)
 }
 
 /**
+ * libohm_server_get_version:
+ **/
+gboolean
+libohm_server_get_version (LibOhm *ctx,
+			   gchar  **version,
+			   GError **error)
+{
+	gboolean ret;
+
+	g_return_val_if_fail (ctx != NULL, FALSE);
+	g_return_val_if_fail (ctx->is_initialized, FALSE);
+	g_return_val_if_fail (version != NULL, FALSE);
+
+	ret = dbus_g_proxy_call (ctx->managerproxy,
+				 "GetVersion", error,
+				 G_TYPE_INVALID,
+				 G_TYPE_STRING, version,
+				 G_TYPE_INVALID);
+	if (ret == FALSE) {
+		*version = NULL;
+	}
+	return ret;
+}
+
+/**
+ * libohm_server_get_plugins:
+ **/
+gboolean
+libohm_server_get_plugins (LibOhm   *ctx,
+			   gchar  ***plugins,
+			   GError  **error)
+{
+	gboolean ret;
+
+	g_return_val_if_fail (ctx != NULL, FALSE);
+	g_return_val_if_fail (ctx->is_initialized, FALSE);
+	g_return_val_if_fail (plugins != NULL, FALSE);
+
+	ret = dbus_g_proxy_call (ctx->managerproxy,
+				 "GetPlugins", error,
+				 G_TYPE_INVALID,
+				 G_TYPE_STRING, plugins,
+				 G_TYPE_INVALID);
+	if (ret == FALSE) {
+		*plugins = NULL;
+	}
+	return ret;
+}
+
+/**
  * libohm_keystore_get_key:
  **/
 gboolean
@@ -178,7 +285,7 @@ libohm_keystore_get_key (LibOhm		*ctx,
 	g_return_val_if_fail (ctx != NULL, FALSE);
 	g_return_val_if_fail (ctx->is_initialized, FALSE);
 
-	ret = dbus_g_proxy_call (ctx->proxy,
+	ret = dbus_g_proxy_call (ctx->keyproxy,
 				 "GetKey", error,
 				 G_TYPE_STRING, key,
 				 G_TYPE_INVALID,
@@ -204,7 +311,7 @@ libohm_keystore_set_key (LibOhm		*ctx,
 	g_return_val_if_fail (ctx != NULL, FALSE);
 	g_return_val_if_fail (ctx->is_initialized, FALSE);
 
-	ret = dbus_g_proxy_call (ctx->proxy,
+	ret = dbus_g_proxy_call (ctx->keyproxy,
 				 "SetKey", error,
 				 G_TYPE_STRING, key,
 				 G_TYPE_INT, value,
@@ -226,7 +333,7 @@ libohm_keystore_add_notify_key (LibOhm		*ctx,
 	g_return_val_if_fail (ctx != NULL, FALSE);
 	g_return_val_if_fail (ctx->is_initialized, FALSE);
 
-	ret = dbus_g_proxy_call (ctx->proxy,
+	ret = dbus_g_proxy_call (ctx->keyproxy,
 				 "AddNotifyKey", error,
 				 G_TYPE_STRING, key,
 				 G_TYPE_INVALID,
@@ -259,7 +366,7 @@ libohm_keystore_get_keys (LibOhm  *ctx,
 						G_TYPE_BOOLEAN,
 						G_TYPE_INVALID));
 
-	ret = dbus_g_proxy_call (ctx->proxy, "GetKeys", error,
+	ret = dbus_g_proxy_call (ctx->keyproxy, "GetKeys", error,
 				 G_TYPE_INVALID,
 				 g_type_ptrarray, &ptrarray,
 				 G_TYPE_INVALID);

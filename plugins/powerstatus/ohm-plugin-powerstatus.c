@@ -36,7 +36,7 @@ typedef struct {
 	gint percentage_critical;
 } OhmPluginCacheData;
 
-OhmPluginCacheData data;
+static OhmPluginCacheData data;
 
 /**
  * plugin_preload:

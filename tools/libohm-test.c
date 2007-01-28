@@ -33,11 +33,24 @@ main (int argc, char *argv[])
 	LibOhm *ctx;
 	gboolean ret;
 	gint value;
+	gchar *version = NULL;
+	GError *error;
 
 	g_type_init ();
 
 	g_debug ("Creating ctx");
 	ctx = libohm_new ();
+	error = NULL;
+	ret = libohm_connect (ctx, &error);
+	if (ret == FALSE) {
+		g_error ("failed to connect: %s", error->message);
+		g_error_free (error);
+	}
+
+	ret = libohm_server_get_version (ctx, &version, NULL);
+	g_debug ("version=%s", version);
+	g_free (version);
+	g_debug ("ret=%i", ret);
 
 	ret = libohm_keystore_set_key (ctx, "backlight.value_idle", 999, NULL);
 	g_debug ("ret=%i", ret);

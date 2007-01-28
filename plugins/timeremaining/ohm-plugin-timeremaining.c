@@ -34,7 +34,7 @@ typedef struct {
 	gint ac_state;
 } OhmPluginCacheData;
 
-OhmPluginCacheData data;
+static OhmPluginCacheData data;
 
 /**
  * plugin_preload:

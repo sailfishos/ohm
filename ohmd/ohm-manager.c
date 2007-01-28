@@ -96,6 +96,8 @@ ohm_manager_get_version (OhmManager *manager,
 		return FALSE;
 	}
 
+	ohm_debug ("creating version string");
+
 	/* return a x.y.z version string */
 	*version = g_strdup_printf ("%i.%i.%i", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
 

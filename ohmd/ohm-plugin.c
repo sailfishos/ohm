@@ -267,11 +267,13 @@ ohm_plugin_finalize (GObject *object)
 			plugin->priv->info->unload (plugin);
 		}
 	}
-	if (plugin->priv->handle != NULL)
+	if (plugin->priv->handle != NULL) {
 		g_module_close (plugin->priv->handle);
+	}
 
-	if (plugin->priv->name != NULL)
+	if (plugin->priv->name != NULL) {
 		g_free (plugin->priv->name);
+	}
 
 	g_return_if_fail (plugin->priv != NULL);
 	G_OBJECT_CLASS (ohm_plugin_parent_class)->finalize (object);

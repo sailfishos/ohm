@@ -50,7 +50,7 @@ typedef struct {
 	Display *dpy;
 } OhmPluginCacheData;
 
-OhmPluginCacheData data;
+static OhmPluginCacheData data;
 
 /**
  * plugin_preload:

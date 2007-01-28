@@ -38,7 +38,8 @@ struct _LibOhm {
 	GObject object;
 	/*< private > */
 	gboolean	 is_initialized;
-	DBusGProxy      *proxy;
+	DBusGProxy      *keyproxy;
+	DBusGProxy      *managerproxy;
 	DBusGConnection *connection;
 	gpointer	 pad1;
 	guint		 pad2;
@@ -58,8 +59,18 @@ typedef struct {
 	gboolean	 public;
 } LibOhmKeyValue;
 
+typedef enum
+{
+	 LIBOHM_ERROR_ALREADY_CONNECTED,
+	 LIBOHM_ERROR_UNABLE_TO_CONNECT,
+	 LIBOHM_ERROR_LAST
+} LibOhmError;
+
 GType		 libohm_get_type		(void);
 LibOhm		*libohm_new			(void);
+GQuark		 libohm_error_quark		(void);
+gboolean	 libohm_connect			(LibOhm		*ctx,
+						 GError		**error);
 gboolean	 libohm_keystore_get_key	(LibOhm		*ctx,
 						 const gchar	*key,
 						 gint		*value,
@@ -76,5 +87,11 @@ gboolean	 libohm_keystore_get_keys	(LibOhm		*ctx,
 						 GError		**error);
 gboolean	 libohm_keystore_free_keys	(LibOhm		*ctx,
 						 GSList		*list);
+gboolean	 libohm_server_get_version	(LibOhm		*ctx,
+						 gchar		**version,
+						 GError		**error);
+gboolean	 libohm_server_get_plugins	(LibOhm		*ctx,
+						 gchar		***plugins,
+						 GError		**error);
 
 #endif /* LIBOHM_H */

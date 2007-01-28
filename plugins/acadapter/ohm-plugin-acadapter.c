@@ -30,8 +30,8 @@ typedef struct {
 	gchar *udi;
 } OhmPluginCacheData;
 
-OhmPluginCacheData data;
-OhmPlugin *plugin_global; /* ick, needed as there is no userdata with libhal */
+static OhmPluginCacheData data;
+static OhmPlugin *plugin_global; /* ick, needed as there is no userdata with libhal */
 
 /**
  * plugin_preload:

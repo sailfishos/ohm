@@ -90,21 +90,6 @@ ohm_object_register (DBusGConnection *connection,
 }
 
 /**
- * timed_exit_cb:
- * @loop: The main loop
- *
- * Exits the main loop, which is helpful for valgrinding g-p-m.
- *
- * Return value: FALSE, as we don't want to repeat this action.
- **/
-static gboolean
-timed_exit_cb (GMainLoop *loop)
-{
-	g_main_loop_quit (loop);
-	return FALSE;
-}
-
-/**
  * main:
  **/
 int
@@ -169,11 +154,11 @@ main (int argc, char *argv[])
 
 	/* Only timeout and close the mainloop if we have specified it
 	 * on the command line */
-	if (timed_exit) {
-		g_timeout_add (1000 * 2, (GSourceFunc) timed_exit_cb, loop);
+	if (timed_exit == FALSE) {
+		g_main_loop_run (loop);
 	}
 
-	g_main_loop_run (loop);
+	g_main_loop_quit (loop);
 	g_object_unref (manager);
 	dbus_g_connection_unref (connection);
 	g_option_context_free (context);

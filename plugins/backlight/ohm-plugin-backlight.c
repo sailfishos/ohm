@@ -52,7 +52,7 @@ typedef struct {
 	gint time_off;
 } OhmPluginCacheData;
 
-OhmPluginCacheData data;
+static OhmPluginCacheData data;
 
 /**
  * plugin_preload:
