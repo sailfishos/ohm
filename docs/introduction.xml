@@ -245,6 +245,80 @@
     </sect2>
   </sect1>
 
+  <sect1 id="introduction-core">
+    <title>OHM Core Values</title>
+    <para>
+      The OHM daemon with all management modules suitable for the platform loaded should:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          not have a binary size of over 200k in size
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          start in less than 200ms on 100MHz ARM
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          use less than 200k of private memory
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be platform neutral, i.e. use HAL wherever possible
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be plug-able so proprietary code can be used where required.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be simple to change preferences for the session
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be secure so system policy cannot be changed
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be session-aware so that multiple users can be active
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          not rely on any odd toolkits or high level programming frameworks
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be efficient enough to do complex rule processing with minimum CPU load
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be bug free and have no memory leaks so the daemon will never crash
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          be an open and supported project, rather than a quick custom hack
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          integrate well with modern desktops like GNOME where required
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect1>
+
   <sect1 id="introduction-deps">
     <title>Dependencies</title>
     <para>
