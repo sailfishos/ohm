@@ -3,6 +3,7 @@ SUBDIRS = 				\
 	po				\
 	initscript			\
 	docs				\
+	session				\
 	libohm				\
 	tools				\
 	etc				\

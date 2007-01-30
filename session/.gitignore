@@ -1,0 +1,9 @@
+.deps
+.libs
+Makefile
+Makefile.in
+session-daemon
+*.la
+*.lo
+*.o
+*~
