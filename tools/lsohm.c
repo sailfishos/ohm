@@ -68,13 +68,6 @@ main (int argc, char *argv[])
 	g_type_init ();
 	ctx = libohm_new ();
 
-	error = NULL;
-	ret = libohm_connect (ctx, &error);
-	if (ret == FALSE) {
-		g_error ("failed to connect: %s", error->message);
-		g_error_free (error);
-	}
-
 	/* returns list of all the LibOhmKeyValue on the system */
 	error = NULL;
 	ret = libohm_keystore_get_keys (ctx, &list, &error);

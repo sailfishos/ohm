@@ -312,7 +312,6 @@ docs/Makefile
 docs/index.xml
 libohm/Makefile
 tools/Makefile
-session/Makefile
 initscript/Makefile
 initscript/RedHat/Makefile
 initscript/Gentoo/Makefile
