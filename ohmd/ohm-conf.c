@@ -43,16 +43,9 @@
 
 #define OHM_CONF_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_CONF, OhmConfPrivate))
 
-typedef struct {
-	gchar			*name;
-	guint			 uid;
-} OhmConfUser;
-
 struct OhmConfPrivate
 {
 	GHashTable		*keys;
-	GPtrArray		*users;
-	OhmConfUser		*current_user;
 };
 
 enum {
@@ -77,207 +70,6 @@ ohm_conf_error_quark (void)
 		quark = g_quark_from_static_string ("ohm_conf_error");
 	}
 	return quark;
-}
-
-/**
- * ohm_conf_user_list:
- **/
-gboolean
-ohm_conf_user_list (OhmConf *conf)
-{
-	gint i;
-	OhmConfUser *confuser;
-
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-
-	g_print ("Printing user list:\n");
-	for (i=0; i < conf->priv->users->len; i++) {
-		confuser = (OhmConfUser *) g_ptr_array_index (conf->priv->users, i);
-		g_print ("number:%i\tuid:%i\t%s\n", i, confuser->uid, confuser->name);
-	}
-
-	return TRUE;
-}
-
-/**
- * ohm_conf_user_obj_from_name:
- *
- * returns NULL if not found
- **/
-static OhmConfUser *
-ohm_conf_user_obj_from_name (OhmConf     *conf,
-		             const gchar *user)
-{
-	gint i;
-	OhmConfUser *confuser;
-
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-
-	for (i=0; i < conf->priv->users->len; i++) {
-		confuser = (OhmConfUser *) g_ptr_array_index (conf->priv->users, i);
-		if (strcmp (confuser->name, user) == 0) {
-			return confuser;
-		}
-	}
-
-	return NULL;
-}
-
-/**
- * ohm_conf_switch_user_iter:
- **/
-static void
-ohm_conf_switch_user_iter (gpointer    key,
-			OhmConfObj *entry,
-			gpointer   *user_data)
-{
-	guint *uid = (guint *) user_data;
-	ohm_confobj_user_switch (entry, *uid);
-}
-
-/**
- * ohm_conf_user_switch:
- *
- * user "root" for default
- **/
-gboolean
-ohm_conf_user_switch (OhmConf     *conf,
-		      const gchar *user,
-		      GError     **error)
-{
-	OhmConfUser *confuser;
-
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-	g_return_val_if_fail (user != NULL, FALSE);
-
-	ohm_debug ("Trying to switch user to %s", user);
-	confuser = ohm_conf_user_obj_from_name (conf, user);
-
-	/* cannot find the user */
-	if (confuser == NULL) {
-		ohm_debug ("Cannot find user '%s'", user);
-		*error = g_error_new (ohm_conf_error_quark (),
-				      OHM_CONF_ERROR_USER_INVALID,
-				      "user not found");
-		return FALSE;
-	}
-
-	/* switch the current pointers to this uid */
-	ohm_debug ("switching to uid %i, name %s", confuser->uid, confuser->name);
-	conf->priv->current_user = confuser;
-
-	/* for each existing key, we need to switch the current pointers for it */
-	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_switch_user_iter, &(confuser->uid));
-
-	return TRUE;
-}
-
-/**
- * ohm_conf_add_user_iter:
- **/
-static void
-ohm_conf_add_user_iter (gpointer    key,
-			OhmConfObj *entry,
-			gpointer   *user_data)
-{
-	guint *uid = (guint *) user_data;
-	ohm_confobj_user_add (entry, *uid);
-}
-
-/**
- * ohm_conf_user_add:
- *
- * Does not switch to the new user, use ohm_conf_user_switch() for this
- **/
-gboolean
-ohm_conf_user_add (OhmConf     *conf,
-		   const gchar *user,
-		   GError     **error)
-{
-	OhmConfUser *confuser;
-	static gint uid_global = 0;
-
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-	g_return_val_if_fail (user != NULL, FALSE);
-
-	ohm_debug ("Trying to add user %s.", user);
-
-	/* search for existing user */
-	confuser = ohm_conf_user_obj_from_name (conf, user);
-	if (confuser != NULL) {
-		/* we found the user in the list */
-		ohm_debug ("Cannot add user '%s' as already in database.", user);
-		*error = g_error_new (ohm_conf_error_quark (),
-				      OHM_CONF_ERROR_USER_INVALID,
-				      "user already added");
-		return FALSE;
-	}
-
-	/* allocate a new user with a unique uid */
-	confuser = g_new (OhmConfUser, 1);
-	confuser->uid = uid_global++;
-	confuser->name = g_strdup (user);
-
-	/* add the user */
-	g_ptr_array_add (conf->priv->users, (gpointer) confuser);
-
-	/* for each existing key, we need to add a user field for it */
-	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_add_user_iter, &(confuser->uid));
-
-	return TRUE;
-}
-
-/**
- * ohm_conf_remove_user_iter:
- **/
-static void
-ohm_conf_remove_user_iter (gpointer    key,
-			   OhmConfObj *entry,
-			   gpointer   *user_data)
-{
-	guint *uid = (guint *) user_data;
-	ohm_confobj_user_remove (entry, *uid);
-}
-
-
-/**
- * ohm_conf_user_remove:
- **/
-gboolean
-ohm_conf_user_remove (OhmConf     *conf,
-		      const gchar *user,
-		      GError     **error)
-{
-	OhmConfUser *confuser;
-
-	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
-	g_return_val_if_fail (user != NULL, FALSE);
-
-	ohm_debug ("Trying to remove user %s.", user);
-
-	confuser = ohm_conf_user_obj_from_name (conf, user);
-	if (confuser == NULL) {
-		ohm_debug ("Cannot remove user '%s' as does not exist in database", user);
-		*error = g_error_new (ohm_conf_error_quark (),
-				      OHM_CONF_ERROR_USER_INVALID,
-				      "user not found");
-		return FALSE;
-	}
-
-	/* for each existing key, we need to add a user field for it */
-	g_hash_table_foreach (conf->priv->keys, (GHFunc) ohm_conf_remove_user_iter, &(confuser->uid));
-
-	/* remove from the userlist */
-	g_ptr_array_remove (conf->priv->users, (gpointer) confuser);
-	g_free (confuser->name);
-	g_free (confuser);
-
-	/* make sure we are not leaving the current user settings dangling */
-	if (conf->priv->current_user == confuser) {
-		ohm_conf_user_switch (conf, "root", NULL);
-	}
-
-	return TRUE;
 }
 
 /**
@@ -730,10 +522,6 @@ ohm_conf_init (OhmConf *conf)
 {
 	conf->priv = OHM_CONF_GET_PRIVATE (conf);
 	conf->priv->keys = g_hash_table_new (g_str_hash, g_str_equal);
-	conf->priv->users = g_ptr_array_new ();
-	conf->priv->current_user = NULL;
-	/* add root user */
-	ohm_conf_user_add (conf, "root", NULL);
 }
 
 /**

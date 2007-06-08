@@ -177,9 +177,6 @@ ohm_manager_init (OhmManager *manager)
 	ohm_conf_add_key (manager->priv->conf, "manager.version.major", VERSION_MAJOR, FALSE, &error);
 	ohm_conf_add_key (manager->priv->conf, "manager.version.minor", VERSION_MINOR, FALSE, &error);
 	ohm_conf_add_key (manager->priv->conf, "manager.version.patch", VERSION_PATCH, FALSE, &error);
-
-	/* list the users, should only be root at startup */
-	ohm_conf_user_list (manager->priv->conf);
 }
 
 /**

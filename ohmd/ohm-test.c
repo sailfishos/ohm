@@ -42,6 +42,7 @@ main (int argc, char *argv[])
 	OhmConfObj *confobj = NULL;
 	gboolean ret;
 	GError *error;
+	gint value;
 
 	g_type_init ();
 
@@ -59,35 +60,6 @@ main (int argc, char *argv[])
 	ret = ohm_conf_add_key (conf, "backlight.time_off", 101, TRUE, &error);
 	if (ret == FALSE) {
 		g_error ("add: %s", error->message);
-	}
-
-	/* test the multi-user conf stuff */
-	error = NULL;
-	ret = ohm_conf_user_add (conf, "hughsie", &error);
-	if (ret == FALSE) {
-		g_error ("add: %s", error->message);
-	}
-
-	ohm_debug ("set 999 for root");
-	error = NULL;
-	ret = ohm_conf_set_key_internal (conf, "backlight.time_off", 999, TRUE, &error);
-	if (ret == FALSE) {
-		g_error ("set: %s", error->message);
-	}
-
-	gint value;
-	error = NULL;
-	ret = ohm_conf_get_key (conf, "backlight.time_off", &value, &error);
-	if (ret == FALSE) {
-		g_error ("get: %s", error->message);
-	}
-	ohm_debug ("got for root %i (should be 999)", value);
-
-	ohm_debug ("switch to hughsie");
-	error = NULL;
-	ret = ohm_conf_user_switch (conf, "hughsie", &error);
-	if (ret == FALSE) {
-		ohm_debug ("switch: %s", error->message);
 	}
 
 	error = NULL;
@@ -110,29 +82,6 @@ main (int argc, char *argv[])
 		g_error ("get: %s", error->message);
 	}
 	ohm_debug ("got for hughsie %i (should be 101)", value);
-
-	ohm_debug ("switch to root");
-	error = NULL;
-	ret = ohm_conf_user_switch (conf, "root", &error);
-	if (ret == FALSE) {
-		ohm_debug ("switch: %s", error->message);
-	}
-
-	error = NULL;
-	ret = ohm_conf_get_key (conf, "backlight.time_off", &value, &error);
-	if (ret == FALSE) {
-		g_error ("get: %s", error->message);
-	}
-	ohm_debug ("got for root %i (should be 999)", value);
-
-	ohm_debug ("remove hughsie");
-	error = NULL;
-	ret = ohm_conf_user_remove (conf, "hughsie", &error);
-	if (ret == FALSE) {
-		ohm_debug ("remove: %s", error->message);
-	}
-
-	ohm_conf_user_list (conf);
 
 	g_object_unref (conf);
 

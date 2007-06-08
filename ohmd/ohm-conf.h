@@ -91,17 +91,6 @@ gboolean	 ohm_conf_add_key			(OhmConf	*conf,
 gboolean	 ohm_conf_load_defaults			(OhmConf	*conf,
 							 const gchar	*pluginname,
 							 GError		**error);
-gboolean	 ohm_conf_user_switch			(OhmConf	*conf,
-							 const gchar	*user,
-							 GError		**error);
-gboolean	 ohm_conf_user_add			(OhmConf	*conf,
-							 const gchar	*user,
-							 GError		**error);
-gboolean	 ohm_conf_user_remove			(OhmConf	*conf,
-							 const gchar	*user,
-							 GError		**error);
-gboolean	 ohm_conf_user_list			(OhmConf	*conf);
-
 G_END_DECLS
 
 #endif /* __OHM_CONF_H */
