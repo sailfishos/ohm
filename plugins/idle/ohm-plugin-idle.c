@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2007 Richard Hughes <richard@hughsie.com>
  *
- * Licensed under the GNU General Public License Version 2
+ * Licensed under the GNU Lesser General Public License Version 2
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
