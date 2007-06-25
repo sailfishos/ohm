@@ -353,6 +353,13 @@ ohm_plugin_hal_get_int (OhmPlugin   *plugin,
 	return TRUE;
 }
 
+/* have to free */
+G_MODULE_EXPORT gchar *
+ohm_plugin_hal_get_udi (OhmPlugin*plugin)
+{
+	return g_strdup (plugin->priv->hal_udi);
+}
+
 G_MODULE_EXPORT gboolean
 ohm_plugin_conf_interested (OhmPlugin   *plugin,
 			    const gchar	*key,

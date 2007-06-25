@@ -110,6 +110,7 @@ gboolean	 ohm_plugin_hal_get_bool		(OhmPlugin	*plugin,
 gboolean	 ohm_plugin_hal_get_int			(OhmPlugin	*plugin,
 							 const gchar	*key,
 							 gint		*state);
+gchar		*ohm_plugin_hal_get_udi			(OhmPlugin	*plugin);
 gboolean	 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 							 const gchar	*capability);
 

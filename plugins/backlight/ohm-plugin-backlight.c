@@ -28,6 +28,10 @@
 #include <glib.h>
 
 #include <ohm-plugin.h>
+#include <dbus/dbus-glib.h>
+
+#define	HAL_DBUS_SERVICE		 	"org.freedesktop.Hal"
+#define	HAL_DBUS_INTERFACE_LAPTOP_PANEL	 	"org.freedesktop.Hal.Device.LaptopPanel"
 
 enum {
 	CONF_AC_STATE_CHANGED,
@@ -50,9 +54,76 @@ typedef struct {
 	gint brightness_idle;
 	gint time_idle;
 	gint time_off;
+	gint levels;
 } OhmPluginCacheData;
 
 static OhmPluginCacheData data;
+
+static gboolean
+backlight_set_brightness (OhmPlugin *plugin, guint brightness)
+{
+	DBusGConnection *connection;
+	DBusGProxy *proxy;
+	GError *error;
+	gboolean ret;
+	gint retval;
+	gchar *udi;
+
+	/* get udi and connection, assume connected */
+	udi = ohm_plugin_hal_get_udi (plugin);
+	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, NULL);
+
+	/* reuse the connection from HAL */
+	proxy = dbus_g_proxy_new_for_name (connection,
+					   HAL_DBUS_SERVICE, udi,
+					   HAL_DBUS_INTERFACE_LAPTOP_PANEL);
+
+	/* get the brightness from HAL */
+	error = NULL;
+	ret = dbus_g_proxy_call (proxy, "SetBrightness", &error,
+				 G_TYPE_INT, (int)brightness,
+				 G_TYPE_INVALID,
+				 G_TYPE_UINT, &retval,
+				 G_TYPE_INVALID);
+	if (ret == FALSE) {
+		g_printerr ("Error: %s\n", error->message);
+		g_error_free (error);
+	}
+	g_object_unref (proxy);
+	g_free (udi);
+	return ret;
+}
+
+#if 0
+static gboolean
+backlight_get_brightness (OhmPlugin *plugin, guint *brightness)
+{
+	DBusConnection *connection;
+	DBusGProxy *proxy;
+	GError *error;
+	gboolean ret;
+	int level = 0;
+
+	/* reuse the connection from HAL */
+	connection = libhal_ctx_get_dbus_connection (ctx);
+	proxy = dbus_g_proxy_new_for_name (connection, HAL_DBUS_SERVICE, udi, HAL_DBUS_INTERFACE_LAPTOP_PANEL);
+
+	/* get the brightness from HAL */
+	error = NULL;
+	ret = dbus_g_proxy_call (proxy, "GetBrightness", &error,
+				 G_TYPE_INVALID,
+				 G_TYPE_UINT, &level,
+				 G_TYPE_INVALID);
+	if (ret == FALSE) {
+		g_printerr ("Error: %s\n", error->message);
+		g_error_free (error);
+		level = 0;
+	}
+	*brightness = level;
+	g_object_unref (proxy);
+	return ret;
+}
+#endif
 
 /**
  * plugin_preload:
@@ -76,6 +147,21 @@ plugin_preload (OhmPlugin *plugin)
 	return TRUE;
 }
 
+static guint
+percent_to_discrete (guint percentage,
+		     guint levels)
+{
+	/* check we are in range */
+	if (percentage > 100) {
+		return levels;
+	}
+	if (levels == 0) {
+		g_warning ("levels is 0!");
+		return 0;
+	}
+	return ((gfloat) percentage * (gfloat) (levels - 1)) / 100.0f;
+}
+
 /**
  * check_system_idle_state:
  * @plugin: This class instance
@@ -85,6 +171,8 @@ plugin_preload (OhmPlugin *plugin)
 static void
 check_system_backlight_state (OhmPlugin *plugin)
 {
+	guint hw;
+
 	if (data.system_idle > data.time_off) {
 		/* turn off screen after 20 seconds */
 		data.state = 0;
@@ -104,7 +192,13 @@ check_system_backlight_state (OhmPlugin *plugin)
 	}
 	ohm_plugin_conf_set_key (plugin, "backlight.state", data.state);
 	ohm_plugin_conf_set_key (plugin, "backlight.brightness", data.brightness);
-//	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
+	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
+	if (data.levels == 0) {
+		g_warning ("levels zero");
+		return;
+	}
+	hw = percent_to_discrete (data.brightness, data.levels);
+	backlight_set_brightness (plugin, hw);
 }
 
 /**
@@ -118,6 +212,8 @@ check_system_backlight_state (OhmPlugin *plugin)
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
+	gboolean ret;
+
 	/* interested keys */
 	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "idle.system_idle", CONF_SYSTEM_IDLE_CHANGED);
@@ -135,6 +231,21 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_conf_get_key (plugin, "backlight.value_idle", &(data.brightness_idle));
 	ohm_plugin_conf_get_key (plugin, "backlight.time_idle", &(data.time_idle));
 	ohm_plugin_conf_get_key (plugin, "backlight.time_off", &(data.time_off));
+
+	/* initialise HAL */
+	ohm_plugin_hal_init (plugin);
+
+	/* get the only device with capability and watch it */
+	ret = ohm_plugin_hal_add_device_capability (plugin, "laptop_panel");
+	if (ret == TRUE) {
+		ohm_plugin_hal_get_int (plugin, "laptop_panel.num_levels", &data.levels);
+		g_debug ("Laptop panel levels: %i", data.levels);
+	} else {
+		g_warning ("not tested with not one laptop_panel");
+	}
+
+	/* get levels that the adapter supports -- this does not change ever */
+	ohm_plugin_hal_get_int (plugin, "laptop_panel.num_levels", &data.levels);
 
 	check_system_backlight_state (plugin);
 }
