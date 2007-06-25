@@ -38,6 +38,7 @@
 
 #include <glib/gi18n.h>
 #include <gmodule.h>
+#include <libhal.h>
 
 #include "ohm-debug.h"
 #include "ohm-plugin.h"
@@ -52,6 +53,10 @@ struct OhmPluginPrivate
 	OhmPluginInfo		*info;
 	GModule			*handle;
 	gchar			*name;
+	/* not assigned unless a plugin uses hal */
+	LibHalContext		*hal_ctx;
+	gchar			*hal_udi; /* we only support one device */
+	OhmPluginHalPropMod	 hal_property_changed_cb;
 };
 
 enum {
@@ -239,6 +244,115 @@ ohm_plugin_coldplug (OhmPlugin   *plugin)
 	return TRUE;
 }
 
+/* only use this when required */
+G_MODULE_EXPORT gboolean
+ohm_plugin_hal_init (OhmPlugin   *plugin)
+{
+	DBusConnection *conn;
+
+	if (plugin->priv->hal_ctx != NULL) {
+		g_warning ("already initialised HAL from this plugin");
+		return FALSE;
+	}
+
+	/* open a new ctx */
+	plugin->priv->hal_ctx = libhal_ctx_new ();
+	plugin->priv->hal_property_changed_cb = NULL;
+
+	/* set the bus connection */
+	conn = dbus_bus_get (DBUS_BUS_SYSTEM, NULL);
+	libhal_ctx_set_dbus_connection (plugin->priv->hal_ctx, conn);
+	libhal_ctx_set_user_data (plugin->priv->hal_ctx, plugin);
+
+	/* connect */
+	libhal_ctx_init (plugin->priv->hal_ctx, NULL);
+
+	return TRUE;
+}
+
+/* do something sane and run a function */
+static void
+hal_property_changed_cb (LibHalContext *ctx,
+			 const char *udi,
+			 const char *key,
+			 dbus_bool_t is_removed,
+			 dbus_bool_t is_added)
+{
+	OhmPlugin *plugin;
+	plugin = (OhmPlugin*) libhal_ctx_get_user_data (ctx);
+	plugin->priv->hal_property_changed_cb (plugin, key);
+}
+
+G_MODULE_EXPORT gboolean
+ohm_plugin_hal_use_property_modified (OhmPlugin	         *plugin,
+				      OhmPluginHalPropMod func)
+{
+	libhal_ctx_set_device_property_modified (plugin->priv->hal_ctx, hal_property_changed_cb);
+	plugin->priv->hal_property_changed_cb = func;
+	return TRUE;
+}
+
+G_MODULE_EXPORT gboolean
+ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
+				      const gchar *capability)
+{
+	gchar **devices;
+	gint num_devices;
+	gboolean ret = FALSE;
+
+	if (plugin->priv->hal_ctx == NULL) {
+		g_warning ("HAL not already initialised from this plugin!");
+		return FALSE;
+	}
+
+	devices = libhal_find_device_by_capability (plugin->priv->hal_ctx,
+						    capability,
+						    &num_devices, NULL);
+	/* we only support one device with this function */
+	if (num_devices == 1) {
+		plugin->priv->hal_udi = g_strdup (devices[0]);
+		if (plugin->priv->hal_property_changed_cb != NULL) {
+			libhal_device_add_property_watch (plugin->priv->hal_ctx,
+							  plugin->priv->hal_udi, NULL);
+		}
+		ret = TRUE;
+	} else {
+		g_warning ("found %i devices with capability %s", num_devices, capability);
+	}
+	libhal_free_string_array (devices);
+	return ret;
+}
+
+G_MODULE_EXPORT gboolean
+ohm_plugin_hal_get_bool (OhmPlugin   *plugin,
+			 const gchar *key,
+			 gboolean    *state)
+{
+	if (plugin->priv->hal_ctx == NULL) {
+		g_warning ("HAL not already initialised from this plugin!");
+		return FALSE;
+	}
+	*state = libhal_device_get_property_bool (plugin->priv->hal_ctx,
+						  plugin->priv->hal_udi,
+						  key, NULL);
+	return TRUE;
+}
+
+G_MODULE_EXPORT gboolean
+ohm_plugin_hal_get_int (OhmPlugin   *plugin,
+			const gchar *key,
+			gint        *state)
+{
+	if (plugin->priv->hal_ctx == NULL) {
+		g_warning ("HAL not already initialised from this plugin!");
+		return FALSE;
+	}
+	*state = libhal_device_get_property_int  (plugin->priv->hal_ctx,
+						  plugin->priv->hal_udi,
+						  key, NULL);
+	return TRUE;
+}
+
 G_MODULE_EXPORT gboolean
 ohm_plugin_conf_interested (OhmPlugin   *plugin,
 			    const gchar	*key,
@@ -265,6 +379,15 @@ ohm_plugin_finalize (GObject *object)
 	if (plugin->priv->info != NULL) {
 		if (plugin->priv->info->unload != NULL) {
 			plugin->priv->info->unload (plugin);
+			/* free hal stuff, if used */
+			if (plugin->priv->hal_ctx != NULL) {
+				if (plugin->priv->hal_property_changed_cb != NULL) {
+					libhal_device_remove_property_watch (plugin->priv->hal_ctx,
+									     plugin->priv->hal_udi, NULL);
+				}
+				g_free (plugin->priv->hal_udi);
+				libhal_ctx_shutdown (plugin->priv->hal_ctx, NULL);
+			}
 		}
 	}
 	if (plugin->priv->handle != NULL) {

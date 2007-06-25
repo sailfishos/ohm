@@ -1,4 +1,5 @@
 INCLUDES =							\
+	$(HAL_CFLAGS)						\
 	$(GLIB_CFLAGS)						\
 	$(DBUS_CFLAGS)						\
 	$(GTHREAD_CFLAGS)					\
@@ -52,7 +53,7 @@ ohmd_SOURCES = 							\
 	ohm-manager.c						\
 	ohm-manager.h						\
 	ohm-main.c
-ohmd_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
+ohmd_LDADD = $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 
 BUILT_SOURCES =							\
 	ohm-marshal.c						\

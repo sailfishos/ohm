@@ -80,7 +80,7 @@ plugin_preload (OhmPlugin *plugin)
  * check_system_idle_state:
  * @plugin: This class instance
  *
- * Check the idle times, and dim the backlight is required
+ * Check the idle times, and dim the backlight if required
  */
 static void
 check_system_backlight_state (OhmPlugin *plugin)

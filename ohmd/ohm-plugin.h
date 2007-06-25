@@ -22,7 +22,6 @@
 #define __OHM_PLUGIN_H
 
 #include <glib-object.h>
-#include "ohm-plugin.h"
 
 G_BEGIN_DECLS
 
@@ -53,6 +52,8 @@ typedef struct
 							 const gchar	*name);
 	void		(* add_prevent)			(OhmPlugin	*plugin,
 							 const gchar	*name);
+	void		(* hal_key_changed)		(OhmPlugin	*plugin,
+							 const gchar	*key);
 } OhmPluginClass;
 
 typedef struct {
@@ -64,6 +65,10 @@ typedef struct {
 	void		(*coldplug)			(OhmPlugin *plugin);
 	void		(*conf_notify)			(OhmPlugin *plugin, gint id, gint value);
 } OhmPluginInfo;
+
+typedef void (*OhmPluginHalPropMod) 			(OhmPlugin   *plugin,
+							 const gchar *key);
+
 
 #define OHM_INIT_PLUGIN(plugininfo) G_MODULE_EXPORT OhmPluginInfo *ohm_init_plugin (OhmPlugin *plugin) {return &(plugin_info);}
 
@@ -96,6 +101,17 @@ gboolean	 ohm_plugin_conf_set_key		(OhmPlugin      *plugin,
 gboolean	 ohm_plugin_conf_interested		(OhmPlugin      *plugin,
 							 const gchar	*key,
 							 gint		 id);
+gboolean	 ohm_plugin_hal_init			(OhmPlugin	*plugin);
+gboolean	 ohm_plugin_hal_use_property_modified	(OhmPlugin	*plugin,
+							 OhmPluginHalPropMod func);
+gboolean	 ohm_plugin_hal_get_bool		(OhmPlugin	*plugin,
+							 const gchar	*key,
+							 gboolean	*state);
+gboolean	 ohm_plugin_hal_get_int			(OhmPlugin	*plugin,
+							 const gchar	*key,
+							 gint		*state);
+gboolean	 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
+							 const gchar	*capability);
 
 /* used by manager to plugin */
 gboolean	 ohm_plugin_conf_notify			(OhmPlugin      *plugin,

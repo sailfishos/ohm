@@ -20,24 +20,15 @@
 
 #include <gmodule.h>
 #include <glib.h>
-#include <libhal.h>
 #include <string.h>
 
 #include <ohm-plugin.h>
-
-typedef struct {
-	LibHalContext *ctx;
-	gchar *udi;
-} OhmPluginCacheData;
-
-static OhmPluginCacheData data;
-static OhmPlugin *plugin_global; /* ick, needed as there is no userdata with libhal */
 
 /**
  * plugin_preload:
  * @plugin: This class instance
  *
- * Called before the plugin is coldplg.
+ * Called before the plugin is coldplug.
  * Define any modules that the plugin depends on, but do not do coldplug here
  * as some of the modules may not have loaded yet.
  */
@@ -47,38 +38,17 @@ plugin_preload (OhmPlugin *plugin)
 	/* tell ohmd what keys we are going to provide - don't set keys
 	 * unless you provide them */
 	ohm_plugin_conf_provide (plugin, "battery.percentage");
-	plugin_global = plugin;
 	return TRUE;
 }
 
-/**
- * plugin_unload:
- * @plugin: This class instance
- *
- * Called just before the plugin module is unloaded, and gives the plugin
- * a chance to free private memory.
- */
 static void
-plugin_unload (OhmPlugin *plugin)
-{
-	if (data.udi != NULL) {
-		libhal_device_remove_property_watch (data.ctx, data.udi, NULL);
-		g_free (data.udi);
-	}
-	libhal_ctx_shutdown (data.ctx, NULL);
-}
-
-static void
-hal_property_changed_cb (LibHalContext *ctx,
-			 const char *udi,
-			 const char *key,
-			 dbus_bool_t is_removed,
-			 dbus_bool_t is_added)
+hal_property_changed_cb (OhmPlugin   *plugin,
+			 const gchar *key)
 {
 	gboolean state;
 	if (strcmp (key, "battery.charge_level.percentage") == 0) {
-		state = libhal_device_get_property_int (ctx, udi, key, NULL);
-		ohm_plugin_conf_set_key (plugin_global, "battery.percentage", state);
+		ohm_plugin_hal_get_int (plugin, "battery.percentage", &state);
+		ohm_plugin_conf_set_key (plugin, "battery.percentage", state);
 	}
 }
 
@@ -93,30 +63,24 @@ hal_property_changed_cb (LibHalContext *ctx,
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
-	char **devices;
-	int num_devices;
-	int state;
-	DBusConnection *conn;
+	gint state;
+	gboolean ret;
 
-	conn = dbus_bus_get (DBUS_BUS_SYSTEM, NULL);
-	
-	data.ctx = libhal_ctx_new ();
-	libhal_ctx_set_dbus_connection (data.ctx, conn);
-	libhal_ctx_init (data.ctx, NULL);
-	libhal_ctx_set_device_property_modified (data.ctx, hal_property_changed_cb);
+	/* initialise HAL */
+	ohm_plugin_hal_init (plugin);
 
-	devices = libhal_find_device_by_capability (data.ctx, "battery", &num_devices, NULL);
-	if (num_devices == 1) {
-		data.udi = g_strdup (devices[0]);
-		libhal_device_add_property_watch (data.ctx, data.udi, NULL);
-		state = libhal_device_get_property_int (data.ctx, data.udi, "battery.charge_level.percentage", NULL);
-		ohm_plugin_conf_set_key (plugin, "battery.percentage", state);
+	/* we want this function to get the property modified events for all devices */
+	ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);
+
+	/* get the only device with capability and watch it */
+	ret = ohm_plugin_hal_add_device_capability (plugin, "battery");
+	if (ret == TRUE) {
+		ohm_plugin_hal_get_int (plugin, "battery.percentage", &state);
 	} else {
-		data.udi = NULL;
-		ohm_plugin_conf_set_key (plugin, "battery.percentage", 100);
-		g_error ("not tested with not one battery");
+		g_warning ("not tested with not one battery");
+		state = 100;
 	}
-	libhal_free_string_array (devices);
+	ohm_plugin_conf_set_key (plugin, "battery.percentage", state);
 }
 
 static OhmPluginInfo plugin_info = {
@@ -124,7 +88,7 @@ static OhmPluginInfo plugin_info = {
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
 	plugin_preload,			/* preload */
-	plugin_unload,			/* unload */
+	NULL,				/* unload */
 	plugin_coldplug,		/* coldplug */
 	NULL,				/* conf_notify */
 };

@@ -55,9 +55,6 @@ gint		 ohm_confobj_get_value			(OhmConfObj *confobj);
 gboolean	 ohm_confobj_set_value			(OhmConfObj *confobj, gint value);
 gboolean	 ohm_confobj_get_public			(OhmConfObj *confobj);
 void		 ohm_confobj_set_public			(OhmConfObj *confobj, gboolean public);
-gboolean	 ohm_confobj_user_add			(OhmConfObj *confobj, guint uid);
-gboolean	 ohm_confobj_user_remove		(OhmConfObj *confobj, guint uid);
-gboolean	 ohm_confobj_user_switch		(OhmConfObj *confobj, guint uid);
 
 G_END_DECLS
 
