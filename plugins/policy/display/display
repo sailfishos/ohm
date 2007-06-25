@@ -1,0 +1,6 @@
+display.value_ac 100 public
+display.value_battery 70 public
+display.value_idle 40 public
+display.time_idle 200 public
+display.time_off 400 public
+
