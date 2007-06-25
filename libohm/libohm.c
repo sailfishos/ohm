@@ -97,7 +97,7 @@ libohm_get_type (void)
 }
 
 static void
-libohm_class_init (LibOhmClass * class)
+libohm_class_init (LibOhmClass *class)
 {
 	GObjectClass *object_class;
 

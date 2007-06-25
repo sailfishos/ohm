@@ -67,6 +67,13 @@ main (int argc, char *argv[])
 
 	g_type_init ();
 	ctx = libohm_new ();
+	error = NULL;
+	ret = libohm_connect (ctx, &error);
+	if (ret == FALSE) {
+		g_warning ("cannot connect to ohmd: %s", error->message);
+		g_error_free (error);
+		goto unref;
+	}
 
 	/* returns list of all the LibOhmKeyValue on the system */
 	error = NULL;
@@ -74,6 +81,7 @@ main (int argc, char *argv[])
 	if (ret == FALSE) {
 		g_warning ("cannot get keys: %s", error->message);
 		g_error_free (error);
+		goto unref;
 	}
 
 	/* get the max length of the name part of the keys */
@@ -99,7 +107,7 @@ main (int argc, char *argv[])
 
 	/* free the keys */
 	libohm_keystore_free_keys (ctx, list);
-
+unref:
 	g_object_unref (ctx);
 	return 0;
 }
