@@ -18,12 +18,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-/*
- * TODO
- *
- * - Add battery brightness, and detect change in battery state
- */
-
 #include <gmodule.h>
 #include <glib.h>
 
@@ -34,26 +28,12 @@
 #define	HAL_DBUS_INTERFACE_LAPTOP_PANEL	 	"org.freedesktop.Hal.Device.LaptopPanel"
 
 enum {
-	CONF_AC_STATE_CHANGED,
-	CONF_SYSTEM_IDLE_CHANGED,
-	CONF_BRIGHTNESS_AC_CHANGED,
-	CONF_BRIGHTNESS_BATTERY_CHANGED,
-	CONF_BRIGHTNESS_IDLE_CHANGED,
-	CONF_TIME_IDLE_CHANGED,
-	CONF_TIME_OFF_CHANGED,
+	CONF_BRIGHTNESS_PERCENT_CHANGED,
+	CONF_BRIGHTNESS_HARDWARE_CHANGED,
 	CONF_LAST
 };
 
 typedef struct {
-	gint ac_state;
-	gint system_idle;
-	gint state;
-	gint brightness;
-	gint brightness_ac;
-	gint brightness_battery;
-	gint brightness_idle;
-	gint time_idle;
-	gint time_off;
 	gint levels;
 } OhmPluginCacheData;
 
@@ -136,14 +116,10 @@ backlight_get_brightness (OhmPlugin *plugin, guint *brightness)
 static gboolean
 plugin_preload (OhmPlugin *plugin)
 {
-	/* FIXME: detect if we have any backlights in the system and return false if not */
-	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_suggest (plugin, "idle");
-	ohm_plugin_suggest (plugin, "acadapter");
-
 	/* tell ohmd what keys we are going to provide so it can create them */
-	ohm_plugin_conf_provide (plugin, "backlight.state");
-	ohm_plugin_conf_provide (plugin, "backlight.brightness");
+	ohm_plugin_conf_provide (plugin, "backlight.hardware_brightness");
+	ohm_plugin_conf_provide (plugin, "backlight.percent_brightness");
+	ohm_plugin_conf_provide (plugin, "backlight.num_levels");
 	return TRUE;
 }
 
@@ -163,45 +139,6 @@ percent_to_discrete (guint percentage,
 }
 
 /**
- * check_system_idle_state:
- * @plugin: This class instance
- *
- * Check the idle times, and dim the backlight if required
- */
-static void
-check_system_backlight_state (OhmPlugin *plugin)
-{
-	guint hw;
-
-	if (data.system_idle > data.time_off) {
-		/* turn off screen after 20 seconds */
-		data.state = 0;
-		data.brightness = 0;
-	} else if (data.system_idle > data.time_idle) {
-		/* dim screen after 5 seconds */
-		data.state = 1;
-		data.brightness = data.brightness_idle;
-	} else {
-		/* set brightness to default value */
-		data.state = 1;
-		if (data.ac_state == 1) {
-			data.brightness = data.brightness_ac;
-		} else {
-			data.brightness = data.brightness_battery;
-		}
-	}
-	ohm_plugin_conf_set_key (plugin, "backlight.state", data.state);
-	ohm_plugin_conf_set_key (plugin, "backlight.brightness", data.brightness);
-	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
-	if (data.levels == 0) {
-		g_warning ("levels zero");
-		return;
-	}
-	hw = percent_to_discrete (data.brightness, data.levels);
-	backlight_set_brightness (plugin, hw);
-}
-
-/**
  * plugin_coldplug:
  * @plugin: This class instance
  *
@@ -214,23 +151,9 @@ plugin_coldplug (OhmPlugin *plugin)
 {
 	gboolean ret;
 
-	/* interested keys */
-	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "idle.system_idle", CONF_SYSTEM_IDLE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.value_ac", CONF_BRIGHTNESS_AC_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.time_idle", CONF_TIME_IDLE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.time_off", CONF_TIME_OFF_CHANGED);
-
-	/* preference values */
-	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
-	ohm_plugin_conf_get_key (plugin, "idle.system_idle", &(data.system_idle));
-	ohm_plugin_conf_get_key (plugin, "backlight.value_ac", &(data.brightness_ac));
-	ohm_plugin_conf_get_key (plugin, "backlight.value_battery", &(data.brightness_battery));
-	ohm_plugin_conf_get_key (plugin, "backlight.value_idle", &(data.brightness_idle));
-	ohm_plugin_conf_get_key (plugin, "backlight.time_idle", &(data.time_idle));
-	ohm_plugin_conf_get_key (plugin, "backlight.time_off", &(data.time_off));
+	/* interested keys, either can be changed without changing the other  */
+	ohm_plugin_conf_interested (plugin, "backlight.hardware_brightness", CONF_BRIGHTNESS_HARDWARE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "backlight.percent_brightness", CONF_BRIGHTNESS_PERCENT_CHANGED);
 
 	/* initialise HAL */
 	ohm_plugin_hal_init (plugin);
@@ -246,8 +169,11 @@ plugin_coldplug (OhmPlugin *plugin)
 
 	/* get levels that the adapter supports -- this does not change ever */
 	ohm_plugin_hal_get_int (plugin, "laptop_panel.num_levels", &data.levels);
-
-	check_system_backlight_state (plugin);
+	if (data.levels == 0) {
+		g_error ("levels zero!");
+		return;
+	}
+	ohm_plugin_conf_set_key (plugin, "backlight.num_levels", data.levels);
 }
 
 /**
@@ -261,33 +187,19 @@ plugin_coldplug (OhmPlugin *plugin)
 static void
 plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
-	if (id == CONF_SYSTEM_IDLE_CHANGED) {
-		data.system_idle = value;
-		check_system_backlight_state (plugin);
-	} else if (id == CONF_AC_STATE_CHANGED) {
-		data.ac_state = value;
-		check_system_backlight_state (plugin);
-	} else if (id == CONF_BRIGHTNESS_AC_CHANGED) {
-		data.brightness_ac = value;
-		check_system_backlight_state (plugin);
-	} else if (id == CONF_BRIGHTNESS_BATTERY_CHANGED) {
-		data.brightness_battery = value;
-		check_system_backlight_state (plugin);
-	} else if (id == CONF_BRIGHTNESS_IDLE_CHANGED) {
-		data.brightness_idle = value;
-		check_system_backlight_state (plugin);
-	} else if (id == CONF_TIME_IDLE_CHANGED) {
-		data.time_idle = value;
-		check_system_backlight_state (plugin);
-	} else if (id == CONF_TIME_OFF_CHANGED) {
-		data.time_off = value;
-		check_system_backlight_state (plugin);
+	guint hw;
+	if (id == CONF_BRIGHTNESS_PERCENT_CHANGED) {
+		hw = percent_to_discrete (value, data.levels);
+		ohm_plugin_conf_set_key (plugin, "backlight.hardware_brightness", hw);
+		// backlight_set_brightness (plugin, hw); ------ SHOULDN'T BE NEEDED
+	} else if (id == CONF_BRIGHTNESS_HARDWARE_CHANGED) {
+		backlight_set_brightness (plugin, value);
 	}
 }
 
 static OhmPluginInfo plugin_info = {
 	"OHM Backlight",		/* description */
-	"0.0.1",			/* version */
+	"0.0.2",			/* version */
 	"richard@hughsie.com",		/* author */
 	plugin_preload,			/* preload */
 	NULL,				/* unload */

@@ -101,6 +101,7 @@ gboolean	 ohm_plugin_conf_set_key		(OhmPlugin      *plugin,
 gboolean	 ohm_plugin_conf_interested		(OhmPlugin      *plugin,
 							 const gchar	*key,
 							 gint		 id);
+/* used by plugin for hal */
 gboolean	 ohm_plugin_hal_init			(OhmPlugin	*plugin);
 gboolean	 ohm_plugin_hal_use_property_modified	(OhmPlugin	*plugin,
 							 OhmPluginHalPropMod func);

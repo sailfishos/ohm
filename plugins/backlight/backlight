@@ -1,6 +1,0 @@
-# backlight preference values
-backlight.value_ac 100 public
-backlight.value_battery 70 public
-backlight.value_idle 40 public
-backlight.time_idle 200 public
-backlight.time_off 400 public

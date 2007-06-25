@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(ohm, 0.0.2)
+AC_INIT(ohm, 0.0.3)
 AC_CONFIG_SRCDIR(ohmd)
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 AM_CONFIG_HEADER(config.h)
@@ -299,13 +299,16 @@ ohm.conf
 Makefile
 etc/Makefile
 plugins/Makefile
-plugins/acadapter/Makefile
-plugins/dpms/Makefile
-plugins/idle/Makefile
-plugins/powerstatus/Makefile
-plugins/timeremaining/Makefile
-plugins/backlight/Makefile
-plugins/battery/Makefile
+plugins/glue/Makefile
+plugins/glue/acadapter/Makefile
+plugins/glue/dpms/Makefile
+plugins/glue/idle/Makefile
+plugins/glue/powerstatus/Makefile
+plugins/glue/timeremaining/Makefile
+plugins/glue/backlight/Makefile
+plugins/glue/battery/Makefile
+plugins/policy/Makefile
+plugins/policy/display/Makefile
 ohmd/Makefile
 po/Makefile.in
 docs/Makefile
