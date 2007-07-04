@@ -13,7 +13,7 @@ lib_LTLIBRARIES = libohm_battery.la
 libohm_batteryincludedir = $(includedir)/ohm
 libohm_battery_la_SOURCES = ohm-plugin-battery.c
 libohm_battery_la_LIBADD = $(INTLLIBS)
-libohm_battery_la_LDFLAGS = -module -avoid-version
+libohm_battery_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 clean-local:
 	rm -f *.la

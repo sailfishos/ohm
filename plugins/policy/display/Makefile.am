@@ -15,7 +15,7 @@ lib_LTLIBRARIES = libohm_display.la
 libohm_displayincludedir = $(includedir)/ohm
 libohm_display_la_SOURCES = ohm-plugin-display.c
 libohm_display_la_LIBADD = @HAL_LIBS@ @DBUS_LIBS@ $(INTLLIBS)
-libohm_display_la_LDFLAGS = -module -avoid-version
+libohm_display_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 clean-local:
 	rm -f *.la

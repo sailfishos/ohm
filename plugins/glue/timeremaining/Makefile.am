@@ -14,7 +14,7 @@ lib_LTLIBRARIES = libohm_timeremaining.la
 libohm_timeremainingincludedir = $(includedir)/ohm
 libohm_timeremaining_la_SOURCES = ohm-plugin-timeremaining.c
 libohm_timeremaining_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
-libohm_timeremaining_la_LDFLAGS = -module -avoid-version
+libohm_timeremaining_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 clean-local:
 	rm -f *.la

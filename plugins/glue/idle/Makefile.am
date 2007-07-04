@@ -14,7 +14,7 @@ lib_LTLIBRARIES = libohm_idle.la
 libohm_idleincludedir = $(includedir)/ohm
 libohm_idle_la_SOURCES = ohm-plugin-idle.c
 libohm_idle_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
-libohm_idle_la_LDFLAGS = -module -avoid-version
+libohm_idle_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 clean-local:
 	rm -f *.la

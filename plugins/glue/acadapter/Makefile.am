@@ -13,7 +13,7 @@ lib_LTLIBRARIES = libohm_acadapter.la
 libohm_acadapterincludedir = $(includedir)/ohm
 libohm_acadapter_la_SOURCES = ohm-plugin-acadapter.c
 libohm_acadapter_la_LIBADD = $(INTLLIBS)
-libohm_acadapter_la_LDFLAGS = -module -avoid-version
+libohm_acadapter_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 clean-local:
 	rm -f *.la
