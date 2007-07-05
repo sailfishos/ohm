@@ -15,7 +15,7 @@ libohm_dpmsincludedir = $(includedir)/ohm
 libohm_dpms_la_SOURCES = ohm-plugin-dpms.c
 libohm_dpms_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)	$(OHM_X11_LIBS)
 
-libohm_dpms_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+libohm_dpms_la_LDFLAGS = -module -avoid-version
 
 clean-local:
 	rm -f *.la

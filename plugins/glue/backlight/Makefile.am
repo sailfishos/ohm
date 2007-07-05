@@ -15,7 +15,7 @@ lib_LTLIBRARIES = libohm_backlight.la
 libohm_backlightincludedir = $(includedir)/ohm
 libohm_backlight_la_SOURCES = ohm-plugin-backlight.c
 libohm_backlight_la_LIBADD = @HAL_LIBS@ @DBUS_LIBS@ $(INTLLIBS)
-libohm_backlight_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+libohm_backlight_la_LDFLAGS = -module -avoid-version
 
 clean-local:
 	rm -f *.la

@@ -14,7 +14,7 @@ lib_LTLIBRARIES = libohm_powerstatus.la
 libohm_powerstatusincludedir = $(includedir)/ohm
 libohm_powerstatus_la_SOURCES = ohm-plugin-powerstatus.c
 libohm_powerstatus_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)
-libohm_powerstatus_la_LDFLAGS = -module -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+libohm_powerstatus_la_LDFLAGS = -module -avoid-version
 
 clean-local:
 	rm -f *.la
