@@ -18,7 +18,7 @@ SPEC_XML_FILES =			\
 SPEC_HTML_FILES =			\
 	index.html
 
-htmldocdir = $(DOCDIR)
+htmldocdir = $(docdir)
 htmldoc_DATA = index.html
 
 if DOCBOOK_DOCS_ENABLED

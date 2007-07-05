@@ -106,19 +106,6 @@ AC_SUBST(LIBDIR, $bindir)
 AC_SUBST(SBINDIR, $sbindir)
 
 dnl ---------------------------------------------------------------------------
-dnl - Where should we put documentation ?
-dnl ---------------------------------------------------------------------------
-AC_ARG_WITH(doc-dir,
-              [AC_HELP_STRING([--with-doc-dir=<dir>],
-              [directory to install documentation])])
-if ! test -z "$with_doc_dir"; then
-   DOCDIR="$with_doc_dir/ohm-$VERSION"
-else
-   DOCDIR="$DATADIR/ohm-$VERSION"
-fi
-AC_SUBST(DOCDIR)
-
-dnl ---------------------------------------------------------------------------
 dnl - DocBook Documentation
 dnl ---------------------------------------------------------------------------
 AC_ARG_ENABLE(docbook-docs, [  --enable-docbook-docs   build documentation (requires xmlto)],enable_docbook_docs=$enableval,enable_docbook_docs=auto)
@@ -333,7 +320,7 @@ echo "
 
         prefix:                    ${prefix}
         datadir:                   ${datadir}
-        documentation dir:         $DOCDIR
+        documentation dir:         ${docdir}
         compiler:                  ${CC}
         cflags:                    ${CFLAGS}
         DPMS support:              ${have_dpms}
