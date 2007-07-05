@@ -10,7 +10,8 @@ EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
 Data_DATA = powerstatus
 
-lib_LTLIBRARIES = libohm_powerstatus.la
+plugindir = $(libdir)/ohm
+plugin_LTLIBRARIES = libohm_powerstatus.la
 libohm_powerstatusincludedir = $(includedir)/ohm
 libohm_powerstatus_la_SOURCES = ohm-plugin-powerstatus.c
 libohm_powerstatus_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)

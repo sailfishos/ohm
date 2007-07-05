@@ -10,7 +10,8 @@ EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
 Data_DATA = idle
 
-lib_LTLIBRARIES = libohm_idle.la
+plugindir = $(libdir)/ohm
+plugin_LTLIBRARIES = libohm_idle.la
 libohm_idleincludedir = $(includedir)/ohm
 libohm_idle_la_SOURCES = ohm-plugin-idle.c
 libohm_idle_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)

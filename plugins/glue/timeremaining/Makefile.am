@@ -10,7 +10,8 @@ EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
 Data_DATA = timeremaining
 
-lib_LTLIBRARIES = libohm_timeremaining.la
+plugindir = $(libdir)/ohm
+plugin_LTLIBRARIES = libohm_timeremaining.la
 libohm_timeremainingincludedir = $(includedir)/ohm
 libohm_timeremaining_la_SOURCES = ohm-plugin-timeremaining.c
 libohm_timeremaining_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)

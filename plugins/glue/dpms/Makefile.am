@@ -10,7 +10,8 @@ EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
 Data_DATA = dpms
 
-lib_LTLIBRARIES = libohm_dpms.la
+plugindir = $(libdir)/ohm
+plugin_LTLIBRARIES = libohm_dpms.la
 libohm_dpmsincludedir = $(includedir)/ohm
 libohm_dpms_la_SOURCES = ohm-plugin-dpms.c
 libohm_dpms_la_LIBADD = @DBUS_LIBS@ $(INTLLIBS)	$(OHM_X11_LIBS)

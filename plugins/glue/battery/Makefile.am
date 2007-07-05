@@ -9,7 +9,8 @@ EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
 Data_DATA = battery
 
-lib_LTLIBRARIES = libohm_battery.la
+plugindir = $(libdir)/ohm
+plugin_LTLIBRARIES = libohm_battery.la
 libohm_batteryincludedir = $(includedir)/ohm
 libohm_battery_la_SOURCES = ohm-plugin-battery.c
 libohm_battery_la_LIBADD = $(INTLLIBS)
