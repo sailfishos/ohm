@@ -4,6 +4,7 @@ SUBDIRS = 				\
 	initscript			\
 	docs				\
 	libohm				\
+	libidletime			\
 	tools				\
 	etc				\
 	plugins
