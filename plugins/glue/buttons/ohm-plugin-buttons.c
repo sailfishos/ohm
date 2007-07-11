@@ -35,6 +35,7 @@ static gboolean
 plugin_preload (OhmPlugin *plugin)
 {
 	ohm_plugin_conf_provide (plugin, "button.power");
+	ohm_plugin_conf_provide (plugin, "button.lid");
 	return TRUE;
 }
 
@@ -42,11 +43,6 @@ static void
 hal_property_changed_cb (OhmPlugin   *plugin,
 			 const gchar *key)
 {
-//	gboolean state;
-//	if (strcmp (key, "ac_adapter.present") == 0) {
-//		ohm_plugin_hal_get_bool (plugin, "ac_adapter.present", &state);
-//		ohm_plugin_conf_set_key (plugin, "buttons.state", state);
-//	}
 	g_debug ("changed=%s", key);
 }
 
@@ -55,17 +51,13 @@ hal_condition_cb (OhmPlugin   *plugin,
 		  const gchar *name,
 		  const gchar *detail)
 {
+	g_debug ("name=%s, detail=%s", name, detail);
 	if (strcmp (name, "ButtonPressed") == 0) {
 		if (strcmp (detail, "power") == 0) {
 			ohm_plugin_conf_set_key (plugin, "button.power", 1);
 			ohm_plugin_conf_set_key (plugin, "button.power", 0);
 		}
 	}
-//	gboolean state;
-//		ohm_plugin_hal_get_bool (plugin, "ac_adapter.present", &state);
-//		ohm_plugin_conf_set_key (plugin, "buttons.state", state);
-//	}
-	g_debug ("name=%s, detail=%s", name, detail);
 }
 
 /**
@@ -90,6 +82,10 @@ plugin_coldplug (OhmPlugin *plugin)
 
 	/* get the only device with capability and watch it */
 	ret = ohm_plugin_hal_add_device_capability (plugin, "button");
+
+	/* fixme: assumes open on boot */
+	ohm_plugin_conf_set_key (plugin, "button.lid", 0);
+	ohm_plugin_conf_set_key (plugin, "button.power", 0);
 }
 
 static OhmPluginInfo plugin_info = {

@@ -25,31 +25,13 @@
 enum {
 	CONF_AC_STATE_CHANGED,
 	CONF_LID_STATE_CHANGED,
-	CONF_SYSTEM_IDLE_CHANGED,
 	CONF_BRIGHTNESS_AC_CHANGED,
 	CONF_BRIGHTNESS_BATTERY_CHANGED,
 	CONF_BRIGHTNESS_IDLE_CHANGED,
-	CONF_TIME_IDLE_CHANGED,
-	CONF_TIME_OFF_CHANGED,
+	CONF_IDLE_POWERSAVE_CHANGED,
+	CONF_IDLE_MOMENTARY_CHANGED,
 	CONF_LAST
 };
-
-typedef struct {
-	gint ac_state;
-	gint lid_state;
-	gint system_idle;
-	gint state;
-	gint brightness;
-	gint brightness_ac;
-	gint brightness_battery;
-	gint brightness_idle;
-	gint time_idle;
-	gint time_off;
-	gint levels;
-} OhmPluginCacheData;
-
-static OhmPluginCacheData data;
-
 
 /**
  * plugin_preload:
@@ -72,42 +54,6 @@ plugin_preload (OhmPlugin *plugin)
 }
 
 /**
- * check_system_idle_state:
- * @plugin: This class instance
- *
- * Check the idle times, and dim the backlight if required
- */
-static void
-check_system_backlight_state (OhmPlugin *plugin)
-{
-	/* lid closed, just turn off display */
-	if (data.lid_state == 1) {
-		/* turn off screen unconditionally */
-		data.state = 0;
-		data.brightness = 0;
-	} else if (data.system_idle > data.time_off) {
-		/* turn off screen after 20 seconds */
-		data.state = 0;
-		data.brightness = 0;
-	} else if (data.system_idle > data.time_idle) {
-		/* dim screen after 5 seconds */
-		data.state = 1;
-		data.brightness = data.brightness_idle;
-	} else {
-		/* set brightness to default value */
-		data.state = 1;
-		if (data.ac_state == 1) {
-			data.brightness = data.brightness_ac;
-		} else {
-			data.brightness = data.brightness_battery;
-		}
-	}
-//	ohm_plugin_conf_set_key (plugin, "backlight.state", data.state);
-	ohm_plugin_conf_set_key (plugin, "backlight.percent_brightness", data.brightness);
-	g_debug ("setting state %i and brightness %i", data.state, data.brightness);
-}
-
-/**
  * plugin_coldplug:
  * @plugin: This class instance
  *
@@ -121,24 +67,92 @@ plugin_coldplug (OhmPlugin *plugin)
 	/* interested keys */
 	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "button.lid", CONF_LID_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "idle.is_powersave", CONF_SYSTEM_IDLE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "idle.powersave", CONF_IDLE_POWERSAVE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "idle.momentary", CONF_IDLE_MOMENTARY_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_ac", CONF_BRIGHTNESS_AC_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "display.time_idle", CONF_TIME_IDLE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "display.time_off", CONF_TIME_OFF_CHANGED);
+}
 
-	/* preference values */
-	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
-	ohm_plugin_conf_get_key (plugin, "button.lid", &(data.lid_state));
-	ohm_plugin_conf_get_key (plugin, "idle.is_powersave", &(data.system_idle));
-	ohm_plugin_conf_get_key (plugin, "display.value_ac", &(data.brightness_ac));
-	ohm_plugin_conf_get_key (plugin, "display.value_battery", &(data.brightness_battery));
-	ohm_plugin_conf_get_key (plugin, "display.value_idle", &(data.brightness_idle));
-	ohm_plugin_conf_get_key (plugin, "display.time_idle", &(data.time_idle));
-	ohm_plugin_conf_get_key (plugin, "display.time_off", &(data.time_off));
+static void
+reset_brightness (OhmPlugin *plugin)
+{
+	gint onac;
+	gint value;
 
-	check_system_backlight_state (plugin);
+	/* turn on dcon */
+	ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
+
+	ohm_plugin_conf_get_key (plugin, "acadapter.state", &onac);
+	if (onac == TRUE) {
+		ohm_plugin_conf_get_key (plugin, "display.value_ac", &value);
+	} else {
+		ohm_plugin_conf_get_key (plugin, "display.value_battery", &value);
+	}
+
+	/* dim screen to idle brightness */
+	ohm_plugin_conf_set_key (plugin, "backlight.percent_brightness", value);
+}
+
+/* todo, we need to inhibit the screen from dimming */
+static void
+brightness_momentary (OhmPlugin *plugin, gboolean is_idle)
+{
+	gint lidshut;
+	gint value;
+
+	/* if lid shut */
+	ohm_plugin_conf_get_key (plugin, "button.lid", &lidshut);
+	if (lidshut == 1) {
+		/* we've already turned off the screen */
+		return;
+	}
+
+	/* if not idle any more */
+	if (is_idle == FALSE) {
+		reset_brightness (plugin);
+		return;
+	}
+
+	/* dim screen to idle brightness */
+	ohm_plugin_conf_get_key (plugin, "display.value_idle", &value);
+	ohm_plugin_conf_set_key (plugin, "backlight.percent_brightness", value);
+}
+
+/* todo, we need to inhibit the screen from turning off */
+static void
+backlight_powersave (OhmPlugin *plugin, gboolean is_idle)
+{
+	gint lidshut;
+
+	/* if lid shut */
+	ohm_plugin_conf_get_key (plugin, "button.lid", &lidshut);
+	if (lidshut == 1) {
+		/* we've already turned off the screen */
+		return;
+	}
+
+	/* if not idle any more */
+	if (is_idle == FALSE) {
+		reset_brightness (plugin);
+		return;
+	}
+
+	/* turn off screen */
+	ohm_plugin_conf_set_key (plugin, "backlight.state", 0);
+}
+
+static void
+lid_closed (OhmPlugin *plugin, gboolean is_closed)
+{
+	/* just turn on DCON */
+	if (is_closed == FALSE) {
+		ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
+		return;
+	}
+		
+	/* just turn off dcon unconditionally */
+	ohm_plugin_conf_set_key (plugin, "backlight.state", 0);
 }
 
 /**
@@ -152,24 +166,25 @@ plugin_coldplug (OhmPlugin *plugin)
 static void
 plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
-	if (id == CONF_SYSTEM_IDLE_CHANGED) {
-		data.system_idle = value;
-	} else if (id == CONF_LID_STATE_CHANGED) {
-		data.lid_state = value;
-	} else if (id == CONF_AC_STATE_CHANGED) {
-		data.ac_state = value;
-	} else if (id == CONF_BRIGHTNESS_AC_CHANGED) {
-		data.brightness_ac = value;
-	} else if (id == CONF_BRIGHTNESS_BATTERY_CHANGED) {
-		data.brightness_battery = value;
-	} else if (id == CONF_BRIGHTNESS_IDLE_CHANGED) {
-		data.brightness_idle = value;
-	} else if (id == CONF_TIME_IDLE_CHANGED) {
-		data.time_idle = value;
-	} else if (id == CONF_TIME_OFF_CHANGED) {
-		data.time_off = value;
+	switch (id) {
+	case CONF_BRIGHTNESS_AC_CHANGED:
+	case CONF_BRIGHTNESS_BATTERY_CHANGED:
+	case CONF_BRIGHTNESS_IDLE_CHANGED:
+		reset_brightness (plugin);
+		break;
+	case CONF_IDLE_POWERSAVE_CHANGED:
+		backlight_powersave (plugin, (value == 1));
+		break;
+	case CONF_LID_STATE_CHANGED:
+		lid_closed (plugin, (value == 1));
+		break;
+	case CONF_AC_STATE_CHANGED:
+		reset_brightness (plugin);
+		break;
+	case CONF_IDLE_MOMENTARY_CHANGED:
+		brightness_momentary (plugin, (value == 1));
+		break;
 	}
-	check_system_backlight_state (plugin);
 }
 
 static OhmPluginInfo plugin_info = {

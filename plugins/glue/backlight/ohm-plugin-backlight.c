@@ -124,6 +124,9 @@ backlight_get_brightness (OhmPlugin *plugin, guint *brightness)
 static gboolean
 plugin_preload (OhmPlugin *plugin)
 {
+	/* todo: split into dcon glue plugin */
+	ohm_plugin_conf_provide (plugin, "backlight.state");
+
 	/* tell ohmd what keys we are going to provide so it can create them */
 	ohm_plugin_conf_provide (plugin, "backlight.hardware_brightness");
 	ohm_plugin_conf_provide (plugin, "backlight.percent_brightness");
