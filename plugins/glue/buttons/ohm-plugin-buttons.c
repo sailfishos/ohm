@@ -41,14 +41,6 @@ plugin_preload (OhmPlugin *plugin)
 }
 
 static void
-hal_property_changed_cb (OhmPlugin   *plugin,
-			 guint        id,
-			 const gchar *key)
-{
-	g_debug ("%i changed=%s", id, key);
-}
-
-static void
 hal_condition_cb (OhmPlugin   *plugin,
 		  guint        id,
 		  const gchar *name,
@@ -86,7 +78,6 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_hal_init (plugin);
 
 	/* we want this function to get the property modified events for all devices */
-	ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);
 	ohm_plugin_hal_use_condition (plugin, hal_condition_cb);
 
 	/* get the only device with capability and watch it */
@@ -99,7 +90,7 @@ plugin_coldplug (OhmPlugin *plugin)
 }
 
 static OhmPluginInfo plugin_info = {
-	"OHM HAL AC Adapter",		/* description */
+	"OHM HAL Buttons",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
 	plugin_preload,			/* preload */
