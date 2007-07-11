@@ -33,6 +33,8 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/dpmsstr.h>
 
+static Display *dpy;
+
 enum {
 	CONF_BACKLIGHT_STATE_CHANGED,
 	CONF_LAST
@@ -44,13 +46,6 @@ typedef enum {
 	OHM_DPMS_MODE_SUSPEND,
 	OHM_DPMS_MODE_OFF
 } OhmDpmsMode;
-
-typedef struct {
-	gint state;
-	Display *dpy;
-} OhmPluginCacheData;
-
-static OhmPluginCacheData data;
 
 /**
  * plugin_preload:
@@ -80,16 +75,16 @@ ohm_dpms_get_mode (OhmDpmsMode *mode)
 	BOOL enabled = FALSE;
 	CARD16 state;
 
-	if (! DPMSQueryExtension (data.dpy, &event_number, &error_number)) {
+	if (! DPMSQueryExtension (dpy, &event_number, &error_number)) {
 		/* Server doesn't know -- assume the monitor is on. */
 		result = OHM_DPMS_MODE_ON;
 
-	} else if (! DPMSCapable (data.dpy)) {
+	} else if (! DPMSCapable (dpy)) {
 		/* Server says the monitor doesn't do power management -- so it's on. */
 		result = OHM_DPMS_MODE_ON;
 
 	} else {
-		DPMSInfo (data.dpy, &state, &enabled);
+		DPMSInfo (dpy, &state, &enabled);
 		if (! enabled) {
 			/* Server says DPMS is disabled -- so the monitor is on. */
 			result = OHM_DPMS_MODE_ON;
@@ -129,12 +124,12 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 	CARD16 state;
 	OhmDpmsMode current_mode;
 
-	if (data.dpy == NULL) {
+	if (dpy == NULL) {
 		g_debug ("cannot open display");
 		return FALSE;
 	}
 
-	if (! DPMSCapable (data.dpy)) {
+	if (! DPMSCapable (dpy)) {
 		g_debug ("display not DPMS capable");
 		return FALSE;
 	}
@@ -156,31 +151,14 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 	ohm_dpms_get_mode (&current_mode);
 	if (current_mode != mode) {
 		g_debug ("Setting DPMS state");
-		if (! DPMSForceLevel (data.dpy, state)) {
+		if (! DPMSForceLevel (dpy, state)) {
 			g_warning ("Could not change DPMS mode");
 			return FALSE;
 		}
 	}
 
-	XSync (data.dpy, FALSE);
+	XSync (dpy, FALSE);
 	return TRUE;
-}
-
-/**
- * check_system_dpms_state:
- *
- * Check the battery, and set the low and critical values if battery is low
- */
-static void
-check_system_dpms_state (OhmPlugin *plugin)
-{
-	if (data.state == 0) {
-		ohm_dpms_set_mode (OHM_DPMS_MODE_OFF);
-	} else if (data.state == 1) {
-		ohm_dpms_set_mode (OHM_DPMS_MODE_ON);
-	} else {
-		g_error ("unknown mode, can't set with DPMS");
-	}
 }
 
 /**
@@ -193,16 +171,14 @@ check_system_dpms_state (OhmPlugin *plugin)
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
+	/* we can assume DPMS is on */
+	ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
+
 	/* interested keys */
 	ohm_plugin_conf_interested (plugin, "backlight.state", CONF_BACKLIGHT_STATE_CHANGED);
 
-	/* initial values */
-	data.state = 1;
-
 	/* open display, need to free using XCloseDisplay */
-	data.dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
-
-	check_system_dpms_state (plugin);
+	dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
 }
 
 /**
@@ -213,8 +189,8 @@ plugin_coldplug (OhmPlugin *plugin)
 static void
 plugin_unload (OhmPlugin *plugin)
 {
-	XCloseDisplay (data.dpy);
-	data.dpy = NULL;
+	XCloseDisplay (dpy);
+	dpy = NULL;
 }
 
 /**
@@ -228,8 +204,11 @@ static void
 plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	if (id == CONF_BACKLIGHT_STATE_CHANGED) {
-		data.state = value;
-		check_system_dpms_state (plugin);
+		if (value == 0) {
+			ohm_dpms_set_mode (OHM_DPMS_MODE_OFF);
+		} else {
+			ohm_dpms_set_mode (OHM_DPMS_MODE_ON);
+		}
 	}
 }
 
