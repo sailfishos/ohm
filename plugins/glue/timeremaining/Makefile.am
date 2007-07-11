@@ -8,7 +8,7 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = timeremaining
+Data_DATA = timeremaining.ini
 
 plugindir = $(libdir)/ohm
 plugin_LTLIBRARIES = libohm_timeremaining.la

@@ -9,7 +9,7 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = display
+Data_DATA = display.ini
 
 plugindir = $(libdir)/ohm
 plugin_LTLIBRARIES = libohm_display.la

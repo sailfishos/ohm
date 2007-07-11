@@ -8,7 +8,7 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = dpms
+Data_DATA = dpms.ini
 
 plugindir = $(libdir)/ohm
 plugin_LTLIBRARIES = libohm_dpms.la

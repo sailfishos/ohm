@@ -1,5 +1,6 @@
 SUBDIRS = 				\
 	idle				\
+	buttons				\
 	battery				\
 	acadapter			\
 	timeremaining			\

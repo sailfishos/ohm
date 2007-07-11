@@ -68,6 +68,9 @@ typedef struct {
 
 typedef void (*OhmPluginHalPropMod) 			(OhmPlugin   *plugin,
 							 const gchar *key);
+typedef void (*OhmPluginHalCondition) 			(OhmPlugin   *plugin,
+							 const gchar *name,
+							 const gchar *detail);
 
 
 #define OHM_INIT_PLUGIN(plugininfo) G_MODULE_EXPORT OhmPluginInfo *ohm_init_plugin (OhmPlugin *plugin) {return &(plugin_info);}
@@ -105,6 +108,8 @@ gboolean	 ohm_plugin_conf_interested		(OhmPlugin      *plugin,
 gboolean	 ohm_plugin_hal_init			(OhmPlugin	*plugin);
 gboolean	 ohm_plugin_hal_use_property_modified	(OhmPlugin	*plugin,
 							 OhmPluginHalPropMod func);
+gboolean	 ohm_plugin_hal_use_condition		(OhmPlugin	*plugin,
+							 OhmPluginHalCondition func);
 gboolean	 ohm_plugin_hal_get_bool		(OhmPlugin	*plugin,
 							 const gchar	*key,
 							 gboolean	*state);

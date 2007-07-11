@@ -57,6 +57,7 @@ struct OhmPluginPrivate
 	LibHalContext		*hal_ctx;
 	gchar			*hal_udi; /* we only support one device */
 	OhmPluginHalPropMod	 hal_property_changed_cb;
+	OhmPluginHalCondition	 hal_condition_cb;
 };
 
 enum {
@@ -258,6 +259,7 @@ ohm_plugin_hal_init (OhmPlugin   *plugin)
 	/* open a new ctx */
 	plugin->priv->hal_ctx = libhal_ctx_new ();
 	plugin->priv->hal_property_changed_cb = NULL;
+	plugin->priv->hal_condition_cb = NULL;
 
 	/* set the bus connection */
 	conn = dbus_bus_get (DBUS_BUS_SYSTEM, NULL);
@@ -283,6 +285,17 @@ hal_property_changed_cb (LibHalContext *ctx,
 	plugin->priv->hal_property_changed_cb (plugin, key);
 }
 
+static void
+hal_condition_cb (LibHalContext *ctx,
+		  const char *udi,
+		  const char *name,
+		  const char *detail)
+{
+	OhmPlugin *plugin;
+	plugin = (OhmPlugin*) libhal_ctx_get_user_data (ctx);
+	plugin->priv->hal_condition_cb (plugin, name, detail);
+}
+
 G_MODULE_EXPORT gboolean
 ohm_plugin_hal_use_property_modified (OhmPlugin	         *plugin,
 				      OhmPluginHalPropMod func)
@@ -293,12 +306,22 @@ ohm_plugin_hal_use_property_modified (OhmPlugin	         *plugin,
 }
 
 G_MODULE_EXPORT gboolean
+ohm_plugin_hal_use_condition (OhmPlugin	           *plugin,
+			      OhmPluginHalCondition func)
+{
+	libhal_ctx_set_device_condition (plugin->priv->hal_ctx, hal_condition_cb);
+	plugin->priv->hal_condition_cb = func;
+	return TRUE;
+}
+
+G_MODULE_EXPORT gboolean
 ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 				      const gchar *capability)
 {
 	gchar **devices;
 	gint num_devices;
-	gboolean ret = FALSE;
+	gboolean ret = TRUE;
+	guint i;
 
 	if (plugin->priv->hal_ctx == NULL) {
 		g_warning ("HAL not already initialised from this plugin!");
@@ -308,17 +331,25 @@ ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 	devices = libhal_find_device_by_capability (plugin->priv->hal_ctx,
 						    capability,
 						    &num_devices, NULL);
-	/* we only support one device with this function */
-	if (num_devices == 1) {
-		plugin->priv->hal_udi = g_strdup (devices[0]);
-		if (plugin->priv->hal_property_changed_cb != NULL) {
-			libhal_device_add_property_watch (plugin->priv->hal_ctx,
-							  plugin->priv->hal_udi, NULL);
+
+	/* we only support one querying one device with this plugin helper */
+	for (i=0; i<num_devices; i++) {
+		/* we only save the first UDI */
+		if (i == 0) {
+			plugin->priv->hal_udi = g_strdup (devices[i]);
 		}
-		ret = TRUE;
-	} else {
-		g_warning ("found %i devices with capability %s", num_devices, capability);
+		if (plugin->priv->hal_property_changed_cb != NULL) {
+			libhal_device_add_property_watch (plugin->priv->hal_ctx, devices[i], NULL);
+		}
 	}
+	if (num_devices == 0) {
+		g_warning ("no devices of type %s", capability);
+		ret = FALSE;
+	} else if (num_devices > 1) {
+		g_warning ("found %i devices with capability %s (not tested)", num_devices, capability);
+		ret = FALSE;
+	}
+
 	libhal_free_string_array (devices);
 	return ret;
 }

@@ -51,6 +51,10 @@ backlight_set_brightness (OhmPlugin *plugin, guint brightness)
 
 	/* get udi and connection, assume connected */
 	udi = ohm_plugin_hal_get_udi (plugin);
+	if (udi == NULL) {
+		g_warning ("cannot set brightness as no device!");
+		return FALSE;
+	}
 	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, NULL);
 
 	/* reuse the connection from HAL */
@@ -65,7 +69,7 @@ backlight_set_brightness (OhmPlugin *plugin, guint brightness)
 				 G_TYPE_INVALID,
 				 G_TYPE_UINT, &retval,
 				 G_TYPE_INVALID);
-	if (ret == FALSE) {
+	if (error != NULL) {
 		g_printerr ("Error: %s\n", error->message);
 		g_error_free (error);
 	}
@@ -87,6 +91,10 @@ backlight_get_brightness (OhmPlugin *plugin, guint *brightness)
 	/* reuse the connection from HAL */
 	connection = libhal_ctx_get_dbus_connection (ctx);
 	proxy = dbus_g_proxy_new_for_name (connection, HAL_DBUS_SERVICE, udi, HAL_DBUS_INTERFACE_LAPTOP_PANEL);
+	if (udi == NULL) {
+		g_warning ("cannot get brightness as no device!");
+		return FALSE;
+	}
 
 	/* get the brightness from HAL */
 	error = NULL;
@@ -94,7 +102,7 @@ backlight_get_brightness (OhmPlugin *plugin, guint *brightness)
 				 G_TYPE_INVALID,
 				 G_TYPE_UINT, &level,
 				 G_TYPE_INVALID);
-	if (ret == FALSE) {
+	if (error != NULL) {
 		g_printerr ("Error: %s\n", error->message);
 		g_error_free (error);
 		level = 0;

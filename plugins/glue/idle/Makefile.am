@@ -13,7 +13,7 @@ LOCAL_LIBIDLETIME_LIBS =					\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = idle
+Data_DATA = idle.ini
 
 plugindir = $(libdir)/ohm
 plugin_LTLIBRARIES = libohm_idle.la

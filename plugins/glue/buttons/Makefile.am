@@ -7,14 +7,14 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = battery.ini
+Data_DATA = buttons.ini
 
 plugindir = $(libdir)/ohm
-plugin_LTLIBRARIES = libohm_battery.la
-libohm_batteryincludedir = $(includedir)/ohm
-libohm_battery_la_SOURCES = ohm-plugin-battery.c
-libohm_battery_la_LIBADD = $(INTLLIBS)
-libohm_battery_la_LDFLAGS = -module -avoid-version
+plugin_LTLIBRARIES = libohm_buttons.la
+libohm_buttonsincludedir = $(includedir)/ohm
+libohm_buttons_la_SOURCES = ohm-plugin-buttons.c
+libohm_buttons_la_LIBADD = $(INTLLIBS)
+libohm_buttons_la_LDFLAGS = -module -avoid-version
 
 clean-local:
 	rm -f *.la

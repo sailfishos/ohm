@@ -8,7 +8,7 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = powerstatus
+Data_DATA = powerstatus.ini
 
 plugindir = $(libdir)/ohm
 plugin_LTLIBRARIES = libohm_powerstatus.la

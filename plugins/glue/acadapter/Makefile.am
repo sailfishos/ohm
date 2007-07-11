@@ -7,7 +7,7 @@ INCLUDES =							\
 
 EXTRA_DIST = $(Data_DATA)
 Datadir = $(sysconfdir)/ohm/plugins
-Data_DATA = acadapter
+Data_DATA = acadapter.ini
 
 plugindir = $(libdir)/ohm
 plugin_LTLIBRARIES = libohm_acadapter.la

@@ -418,12 +418,17 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	gchar **lines;
 	guint i;
 	gchar *filename;
+	gchar *inifile;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (plugin_name != NULL, FALSE);
 
+	/* we have an ini extension, but not format */
+	inifile = g_strdup_printf ("%s.ini", plugin_name);
+
 	/* generate path for each module */
-	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins", plugin_name, NULL);
+	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins", inifile, NULL);
+	g_free (inifile);
 
 	ohm_debug ("Loading %s defaults from %s", plugin_name, filename);
 
