@@ -317,7 +317,7 @@ hal_property_changed_cb (LibHalContext *ctx,
 	/* find udi in the list so we can emit a easy to parse integer */
 	id = ohm_plugin_find_id_from_udi (plugin, udi);
 	if (id < 0) {
-		g_warning ("udi %s not found", udi);
+		/* not watched for this plugin */
 		return;
 	}
 

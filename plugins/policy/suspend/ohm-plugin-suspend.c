@@ -124,6 +124,10 @@ lid_closed (OhmPlugin *plugin, gboolean is_closed)
 {
 	gint value;
 
+	if (is_closed == FALSE) {
+		return;
+	}
+
 	/* check system inhibit - this is broken as any client can unref all */
 	ohm_plugin_conf_get_key (plugin, "suspend.fixme_inhibit", &value);
 	if (value == 1) {
