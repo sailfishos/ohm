@@ -115,7 +115,8 @@ power_button_pressed (OhmPlugin *plugin)
 		return;
 	}
 
-	g_error ("suspend!");
+	/* actually do the suspend */
+	system_suspend (plugin);
 }
 
 static void
