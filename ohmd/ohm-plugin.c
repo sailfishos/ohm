@@ -446,9 +446,9 @@ ohm_plugin_spawn_async (OhmPlugin   *plugin,
 
 	error = NULL;
 	ohm_debug ("spawning %s", commandline);
-	ret = g_spawn_commandline_async (commandline, &error);
+	ret = g_spawn_command_line_async (commandline, &error);
 	if (ret == FALSE) {
-		ohm_warning ("spawn failed: %s", commandline, error->message);
+		ohm_debug ("spawn failed: %s", commandline, error->message);
 		g_error_free (error);
 	}
 	return ret;
