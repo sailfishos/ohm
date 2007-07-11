@@ -24,6 +24,7 @@
 
 enum {
 	CONF_AC_STATE_CHANGED,
+	CONF_BACKLIGHT_STATE_CHANGED,
 	CONF_LID_STATE_CHANGED,
 	CONF_TABLET_STATE_CHANGED,
 	CONF_BRIGHTNESS_AC_CHANGED,
@@ -67,6 +68,7 @@ plugin_coldplug (OhmPlugin *plugin)
 {
 	/* interested keys */
 	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "backlight.state", CONF_BACKLIGHT_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "button.lid", CONF_LID_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "button.tablet", CONF_TABLET_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "idle.powersave", CONF_IDLE_POWERSAVE_CHANGED);
@@ -102,6 +104,13 @@ brightness_momentary (OhmPlugin *plugin, gboolean is_idle)
 {
 	gint lidshut;
 	gint value;
+	gint state;
+
+	ohm_plugin_conf_get_key (plugin, "backlight.state", &state);
+	if (state == 0) {
+		/* work round a idletime bugs */
+		return;
+	}
 
 	/* if lid shut */
 	ohm_plugin_conf_get_key (plugin, "button.lid", &lidshut);
@@ -126,6 +135,13 @@ static void
 backlight_powersave (OhmPlugin *plugin, gboolean is_idle)
 {
 	gint lidshut;
+	gint state;
+
+	ohm_plugin_conf_get_key (plugin, "backlight.state", &state);
+	if (state == 0) {
+		/* work round a idletime bugs */
+		return;
+	}
 
 	/* if lid shut */
 	ohm_plugin_conf_get_key (plugin, "button.lid", &lidshut);
@@ -188,6 +204,7 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 		}
 		break;
 	case CONF_AC_STATE_CHANGED:
+	case CONF_BACKLIGHT_STATE_CHANGED:
 		reset_brightness (plugin);
 		break;
 	case CONF_IDLE_MOMENTARY_CHANGED:
