@@ -50,7 +50,7 @@ backlight_set_brightness (OhmPlugin *plugin, guint brightness)
 	gchar *udi;
 
 	/* get udi and connection, assume connected */
-	udi = ohm_plugin_hal_get_udi (plugin);
+	udi = ohm_plugin_hal_get_udi (plugin, 0);
 	if (udi == NULL) {
 		g_warning ("cannot set brightness as no device!");
 		return FALSE;
@@ -160,7 +160,7 @@ percent_to_discrete (guint percentage,
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
-	gboolean ret;
+	guint num;
 
 	/* interested keys, either can be changed without changing the other  */
 	ohm_plugin_conf_interested (plugin, "backlight.hardware_brightness", CONF_BRIGHTNESS_HARDWARE_CHANGED);
@@ -170,16 +170,13 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_hal_init (plugin);
 
 	/* get the only device with capability and watch it */
-	ret = ohm_plugin_hal_add_device_capability (plugin, "laptop_panel");
-	if (ret == TRUE) {
-		ohm_plugin_hal_get_int (plugin, "laptop_panel.num_levels", &data.levels);
-		g_debug ("Laptop panel levels: %i", data.levels);
-	} else {
+	num = ohm_plugin_hal_add_device_capability (plugin, "laptop_panel");
+	if (num != 1) {
 		g_warning ("not tested with not one laptop_panel");
 	}
 
 	/* get levels that the adapter supports -- this does not change ever */
-	ohm_plugin_hal_get_int (plugin, "laptop_panel.num_levels", &data.levels);
+	ohm_plugin_hal_get_int (plugin, 0, "laptop_panel.num_levels", &data.levels);
 	if (data.levels == 0) {
 		g_error ("levels zero!");
 		return;

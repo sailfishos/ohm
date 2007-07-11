@@ -40,11 +40,12 @@ plugin_preload (OhmPlugin *plugin)
 
 static void
 hal_property_changed_cb (OhmPlugin   *plugin,
+			 guint        id,
 			 const gchar *key)
 {
 	gboolean state;
 	if (strcmp (key, "ac_adapter.present") == 0) {
-		ohm_plugin_hal_get_bool (plugin, "ac_adapter.present", &state);
+		ohm_plugin_hal_get_bool (plugin, id, "ac_adapter.present", &state);
 		ohm_plugin_conf_set_key (plugin, "acadapter.state", state);
 	}
 }
@@ -61,7 +62,7 @@ static void
 plugin_coldplug (OhmPlugin *plugin)
 {
 	gboolean state;
-	gboolean ret;
+	guint num;
 
 	/* initialise HAL */
 	ohm_plugin_hal_init (plugin);
@@ -70,9 +71,9 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);
 
 	/* get the only device with capability and watch it */
-	ret = ohm_plugin_hal_add_device_capability (plugin, "ac_adapter");
-	if (ret == TRUE) {
-		ohm_plugin_hal_get_bool (plugin, "ac_adapter.present", &state);
+	num = ohm_plugin_hal_add_device_capability (plugin, "ac_adapter");
+	if (num == 1) {
+		ohm_plugin_hal_get_bool (plugin, 0, "ac_adapter.present", &state);
 	} else {
 		g_warning ("not tested with not one acadapter");
 		state = 1;

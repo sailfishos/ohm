@@ -66,11 +66,13 @@ typedef struct {
 	void		(*conf_notify)			(OhmPlugin *plugin, gint id, gint value);
 } OhmPluginInfo;
 
-typedef void (*OhmPluginHalPropMod) 			(OhmPlugin   *plugin,
-							 const gchar *key);
-typedef void (*OhmPluginHalCondition) 			(OhmPlugin   *plugin,
-							 const gchar *name,
-							 const gchar *detail);
+typedef void (*OhmPluginHalPropMod) 			(OhmPlugin	*plugin,
+							 guint		 id,
+							 const gchar	*key);
+typedef void (*OhmPluginHalCondition) 			(OhmPlugin	*plugin,
+							 guint		 id,
+							 const gchar	*name,
+							 const gchar	*detail);
 
 
 #define OHM_INIT_PLUGIN(plugininfo) G_MODULE_EXPORT OhmPluginInfo *ohm_init_plugin (OhmPlugin *plugin) {return &(plugin_info);}
@@ -111,13 +113,16 @@ gboolean	 ohm_plugin_hal_use_property_modified	(OhmPlugin	*plugin,
 gboolean	 ohm_plugin_hal_use_condition		(OhmPlugin	*plugin,
 							 OhmPluginHalCondition func);
 gboolean	 ohm_plugin_hal_get_bool		(OhmPlugin	*plugin,
+							 guint		 id,
 							 const gchar	*key,
 							 gboolean	*state);
 gboolean	 ohm_plugin_hal_get_int			(OhmPlugin	*plugin,
+							 guint		 id,
 							 const gchar	*key,
 							 gint		*state);
-gchar		*ohm_plugin_hal_get_udi			(OhmPlugin	*plugin);
-gboolean	 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
+gchar		*ohm_plugin_hal_get_udi			(OhmPlugin	*plugin,
+							 guint		 id);
+guint		 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 							 const gchar	*capability);
 
 /* used by manager to plugin */

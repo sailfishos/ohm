@@ -55,7 +55,7 @@ struct OhmPluginPrivate
 	gchar			*name;
 	/* not assigned unless a plugin uses hal */
 	LibHalContext		*hal_ctx;
-	gchar			*hal_udi; /* we only support one device */
+	GPtrArray		*hal_udis;
 	OhmPluginHalPropMod	 hal_property_changed_cb;
 	OhmPluginHalCondition	 hal_condition_cb;
 };
@@ -272,6 +272,35 @@ ohm_plugin_hal_init (OhmPlugin   *plugin)
 	return TRUE;
 }
 
+/* returns -1 for not found */
+static gint
+ohm_plugin_find_id_from_udi (OhmPlugin *plugin, const gchar *udi)
+{
+	guint i;
+	guint len;
+	const gchar *temp_udi;
+
+	len = plugin->priv->hal_udis->len;
+	for (i=0; i<len; i++) {
+		temp_udi = g_ptr_array_index (plugin->priv->hal_udis, i);
+		if (strcmp (temp_udi, udi) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+/* returns NULL for not found */
+const gchar *
+ohm_plugin_find_udi_from_id (OhmPlugin *plugin, guint id)
+{
+	/* overrange check */
+	if (id > plugin->priv->hal_udis->len) {
+		return NULL;
+	}
+	return g_ptr_array_index (plugin->priv->hal_udis, id);
+}
+
 /* do something sane and run a function */
 static void
 hal_property_changed_cb (LibHalContext *ctx,
@@ -281,8 +310,18 @@ hal_property_changed_cb (LibHalContext *ctx,
 			 dbus_bool_t is_added)
 {
 	OhmPlugin *plugin;
+	gint id;
+
 	plugin = (OhmPlugin*) libhal_ctx_get_user_data (ctx);
-	plugin->priv->hal_property_changed_cb (plugin, key);
+	
+	/* find udi in the list so we can emit a easy to parse integer */
+	id = ohm_plugin_find_id_from_udi (plugin, udi);
+	if (id < 0) {
+		g_warning ("udi %s not found", udi);
+		return;
+	}
+
+	plugin->priv->hal_property_changed_cb (plugin, id, key);
 }
 
 static void
@@ -292,8 +331,16 @@ hal_condition_cb (LibHalContext *ctx,
 		  const char *detail)
 {
 	OhmPlugin *plugin;
+	gint id;
 	plugin = (OhmPlugin*) libhal_ctx_get_user_data (ctx);
-	plugin->priv->hal_condition_cb (plugin, name, detail);
+
+	/* find udi in the list so we can emit a easy to parse integer */
+	id = ohm_plugin_find_id_from_udi (plugin, udi);
+	if (id < 0) {
+		g_warning ("udi %s not found", udi);
+		return;
+	}
+	plugin->priv->hal_condition_cb (plugin, id, name, detail);
 }
 
 G_MODULE_EXPORT gboolean
@@ -314,13 +361,12 @@ ohm_plugin_hal_use_condition (OhmPlugin	           *plugin,
 	return TRUE;
 }
 
-G_MODULE_EXPORT gboolean
+G_MODULE_EXPORT guint
 ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 				      const gchar *capability)
 {
 	gchar **devices;
 	gint num_devices;
-	gboolean ret = TRUE;
 	guint i;
 
 	if (plugin->priv->hal_ctx == NULL) {
@@ -334,61 +380,61 @@ ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 
 	/* we only support one querying one device with this plugin helper */
 	for (i=0; i<num_devices; i++) {
-		/* we only save the first UDI */
-		if (i == 0) {
-			plugin->priv->hal_udi = g_strdup (devices[i]);
-		}
+		/* save the udi's in the hash table */
+		g_ptr_array_add (plugin->priv->hal_udis, g_strdup (devices[i]));
+		/* watch them */
 		if (plugin->priv->hal_property_changed_cb != NULL) {
 			libhal_device_add_property_watch (plugin->priv->hal_ctx, devices[i], NULL);
 		}
 	}
-	if (num_devices == 0) {
-		g_warning ("no devices of type %s", capability);
-		ret = FALSE;
-	} else if (num_devices > 1) {
-		g_warning ("found %i devices with capability %s (not tested)", num_devices, capability);
-		ret = FALSE;
-	}
 
 	libhal_free_string_array (devices);
-	return ret;
+	return num_devices;
 }
 
 G_MODULE_EXPORT gboolean
 ohm_plugin_hal_get_bool (OhmPlugin   *plugin,
+			 guint        id,
 			 const gchar *key,
 			 gboolean    *state)
 {
+	const gchar *udi;
 	if (plugin->priv->hal_ctx == NULL) {
 		g_warning ("HAL not already initialised from this plugin!");
 		return FALSE;
 	}
-	*state = libhal_device_get_property_bool (plugin->priv->hal_ctx,
-						  plugin->priv->hal_udi,
-						  key, NULL);
+	
+	udi = ohm_plugin_find_udi_from_id (plugin, id);
+	*state = libhal_device_get_property_bool (plugin->priv->hal_ctx, udi, key, NULL);
 	return TRUE;
 }
 
 G_MODULE_EXPORT gboolean
 ohm_plugin_hal_get_int (OhmPlugin   *plugin,
+			guint        id,
 			const gchar *key,
 			gint        *state)
 {
+	const gchar *udi;
 	if (plugin->priv->hal_ctx == NULL) {
 		g_warning ("HAL not already initialised from this plugin!");
 		return FALSE;
 	}
-	*state = libhal_device_get_property_int  (plugin->priv->hal_ctx,
-						  plugin->priv->hal_udi,
-						  key, NULL);
+	udi = ohm_plugin_find_udi_from_id (plugin, id);
+	*state = libhal_device_get_property_int  (plugin->priv->hal_ctx, udi, key, NULL);
 	return TRUE;
 }
 
 /* have to free */
 G_MODULE_EXPORT gchar *
-ohm_plugin_hal_get_udi (OhmPlugin*plugin)
+ohm_plugin_hal_get_udi (OhmPlugin *plugin, guint id)
 {
-	return g_strdup (plugin->priv->hal_udi);
+	const gchar *udi;
+	udi = ohm_plugin_find_udi_from_id (plugin, id);
+	if (udi == NULL) {
+		return NULL;
+	}
+	return g_strdup (udi);
 }
 
 G_MODULE_EXPORT gboolean
@@ -399,6 +445,24 @@ ohm_plugin_conf_interested (OhmPlugin   *plugin,
 	ohm_debug ("%s provides wants notification of %s on signal %i", plugin->priv->name, key, id);
 	g_signal_emit (plugin, signals[ADD_INTERESTED], 0, key, id);
 	return TRUE;
+}
+
+static void
+ohm_plugin_free_hal_table (OhmPlugin *plugin)
+{
+	guint i;
+	guint len;
+	gchar *temp_udi;
+
+	len = plugin->priv->hal_udis->len;
+	for (i=0; i<len; i++) {
+		temp_udi = g_ptr_array_index (plugin->priv->hal_udis, i);
+		if (plugin->priv->hal_property_changed_cb != NULL) {
+			libhal_device_remove_property_watch (plugin->priv->hal_ctx, temp_udi, NULL);
+		}
+		g_free (temp_udi);
+		g_ptr_array_remove (plugin->priv->hal_udis, temp_udi);
+	}
 }
 
 /**
@@ -419,11 +483,7 @@ ohm_plugin_finalize (GObject *object)
 			plugin->priv->info->unload (plugin);
 			/* free hal stuff, if used */
 			if (plugin->priv->hal_ctx != NULL) {
-				if (plugin->priv->hal_property_changed_cb != NULL) {
-					libhal_device_remove_property_watch (plugin->priv->hal_ctx,
-									     plugin->priv->hal_udi, NULL);
-				}
-				g_free (plugin->priv->hal_udi);
+				ohm_plugin_free_hal_table (plugin);
 				libhal_ctx_shutdown (plugin->priv->hal_ctx, NULL);
 			}
 		}
@@ -435,7 +495,7 @@ ohm_plugin_finalize (GObject *object)
 	if (plugin->priv->name != NULL) {
 		g_free (plugin->priv->name);
 	}
-
+	g_ptr_array_free (plugin->priv->hal_udis, TRUE);
 	g_return_if_fail (plugin->priv != NULL);
 	G_OBJECT_CLASS (ohm_plugin_parent_class)->finalize (object);
 }
@@ -497,6 +557,7 @@ ohm_plugin_init (OhmPlugin *plugin)
 	plugin->priv = OHM_PLUGIN_GET_PRIVATE (plugin);
 
 	plugin->priv->conf = ohm_conf_new ();
+	plugin->priv->hal_udis = g_ptr_array_new ();
 }
 
 /**

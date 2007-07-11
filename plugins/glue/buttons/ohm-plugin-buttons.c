@@ -36,26 +36,37 @@ plugin_preload (OhmPlugin *plugin)
 {
 	ohm_plugin_conf_provide (plugin, "button.power");
 	ohm_plugin_conf_provide (plugin, "button.lid");
+	ohm_plugin_conf_provide (plugin, "button.tablet");
 	return TRUE;
 }
 
 static void
 hal_property_changed_cb (OhmPlugin   *plugin,
+			 guint        id,
 			 const gchar *key)
 {
-	g_debug ("changed=%s", key);
+	g_debug ("%i changed=%s", id, key);
 }
 
 static void
 hal_condition_cb (OhmPlugin   *plugin,
+		  guint        id,
 		  const gchar *name,
 		  const gchar *detail)
 {
-	g_debug ("name=%s, detail=%s", name, detail);
+	gboolean state;
 	if (strcmp (name, "ButtonPressed") == 0) {
 		if (strcmp (detail, "power") == 0) {
 			ohm_plugin_conf_set_key (plugin, "button.power", 1);
 			ohm_plugin_conf_set_key (plugin, "button.power", 0);
+		}
+		if (strcmp (detail, "lid") == 0) {
+			ohm_plugin_hal_get_bool (plugin, id, "button.state.value", &state);
+			ohm_plugin_conf_set_key (plugin, "button.lid", state);
+		}
+		if (strcmp (detail, "tablet_mode") == 0) {
+			ohm_plugin_hal_get_bool (plugin, id, "button.state.value", &state);
+			ohm_plugin_conf_set_key (plugin, "button.tablet", state);
 		}
 	}
 }
@@ -71,8 +82,6 @@ hal_condition_cb (OhmPlugin   *plugin,
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
-	gboolean ret;
-
 	/* initialise HAL */
 	ohm_plugin_hal_init (plugin);
 
@@ -81,11 +90,12 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_hal_use_condition (plugin, hal_condition_cb);
 
 	/* get the only device with capability and watch it */
-	ret = ohm_plugin_hal_add_device_capability (plugin, "button");
+	ohm_plugin_hal_add_device_capability (plugin, "button");
 
 	/* fixme: assumes open on boot */
 	ohm_plugin_conf_set_key (plugin, "button.lid", 0);
 	ohm_plugin_conf_set_key (plugin, "button.power", 0);
+	ohm_plugin_conf_set_key (plugin, "button.tablet", 0);
 }
 
 static OhmPluginInfo plugin_info = {

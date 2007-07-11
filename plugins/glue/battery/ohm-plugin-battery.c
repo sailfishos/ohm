@@ -43,11 +43,12 @@ plugin_preload (OhmPlugin *plugin)
 
 static void
 hal_property_changed_cb (OhmPlugin   *plugin,
+			 guint        id,
 			 const gchar *key)
 {
 	gboolean state;
 	if (strcmp (key, "battery.charge_level.percentage") == 0) {
-		ohm_plugin_hal_get_int (plugin, "battery.percentage", &state);
+		ohm_plugin_hal_get_int (plugin, id, "battery.percentage", &state);
 		ohm_plugin_conf_set_key (plugin, "battery.percentage", state);
 	}
 }
@@ -64,7 +65,7 @@ static void
 plugin_coldplug (OhmPlugin *plugin)
 {
 	gint state;
-	gboolean ret;
+	guint num;
 
 	/* initialise HAL */
 	ohm_plugin_hal_init (plugin);
@@ -73,9 +74,9 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);
 
 	/* get the only device with capability and watch it */
-	ret = ohm_plugin_hal_add_device_capability (plugin, "battery");
-	if (ret == TRUE) {
-		ohm_plugin_hal_get_int (plugin, "battery.percentage", &state);
+	num = ohm_plugin_hal_add_device_capability (plugin, "battery");
+	if (num == 1) {
+		ohm_plugin_hal_get_int (plugin, 0, "battery.percentage", &state);
 	} else {
 		g_warning ("not tested with not one battery");
 		state = 100;
