@@ -1,5 +1,6 @@
 SUBDIRS = 				\
-	display
+	display				\
+	suspend
 
 clean-local:
 	rm -f *~

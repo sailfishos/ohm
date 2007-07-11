@@ -39,9 +39,9 @@ static gboolean
 plugin_preload (OhmPlugin *plugin)
 {
 	/* tell ohmd what keys we are going to provide */
-	ohm_plugin_conf_provide (plugin, "idle.is_momentary");
-	ohm_plugin_conf_provide (plugin, "idle.is_powersave");
-	ohm_plugin_conf_provide (plugin, "idle.is_powerdown");
+	ohm_plugin_conf_provide (plugin, "idle.momentary");
+	ohm_plugin_conf_provide (plugin, "idle.powersave");
+	ohm_plugin_conf_provide (plugin, "idle.powerdown");
 	return TRUE;
 }
 
@@ -50,15 +50,15 @@ ohm_alarm_expired_cb (LibIdletime *idletime, guint alarm, gpointer data)
 {
 	OhmPlugin *plugin = (OhmPlugin *) data;
 	if (alarm == 0) {
-		ohm_plugin_conf_set_key (plugin, "idle.is_momentary", 0);
-		ohm_plugin_conf_set_key (plugin, "idle.is_powersave", 0);
-		ohm_plugin_conf_set_key (plugin, "idle.is_powerdown", 0);
+		ohm_plugin_conf_set_key (plugin, "idle.momentary", 0);
+		ohm_plugin_conf_set_key (plugin, "idle.powersave", 0);
+		ohm_plugin_conf_set_key (plugin, "idle.powerdown", 0);
 	} else if (alarm == 1) {
-		ohm_plugin_conf_set_key (plugin, "idle.is_momentary", 1);
+		ohm_plugin_conf_set_key (plugin, "idle.momentary", 1);
 	} else if (alarm == 2) {
-		ohm_plugin_conf_set_key (plugin, "idle.is_powersave", 1);
+		ohm_plugin_conf_set_key (plugin, "idle.powersave", 1);
 	} else if (alarm == 3) {
-		ohm_plugin_conf_set_key (plugin, "idle.is_powerdown", 1);
+		ohm_plugin_conf_set_key (plugin, "idle.powerdown", 1);
 	}
 	g_print ("[evt %i]\n", alarm);
 }

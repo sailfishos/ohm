@@ -66,7 +66,7 @@ plugin_preload (OhmPlugin *plugin)
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "idle");
 	ohm_plugin_suggest (plugin, "acadapter");
-	ohm_plugin_suggest (plugin, "lid");
+	ohm_plugin_suggest (plugin, "button");
 	ohm_plugin_suggest (plugin, "backlight");
 	return TRUE;
 }
@@ -120,8 +120,8 @@ plugin_coldplug (OhmPlugin *plugin)
 {
 	/* interested keys */
 	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "lid.state", CONF_LID_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "idle.system_idle", CONF_SYSTEM_IDLE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "button.lid", CONF_LID_STATE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "idle.is_powersave", CONF_SYSTEM_IDLE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_ac", CONF_BRIGHTNESS_AC_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED);
@@ -130,8 +130,8 @@ plugin_coldplug (OhmPlugin *plugin)
 
 	/* preference values */
 	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
-	ohm_plugin_conf_get_key (plugin, "lid.state", &(data.lid_state));
-	ohm_plugin_conf_get_key (plugin, "idle.system_idle", &(data.system_idle));
+	ohm_plugin_conf_get_key (plugin, "button.lid", &(data.lid_state));
+	ohm_plugin_conf_get_key (plugin, "idle.is_powersave", &(data.system_idle));
 	ohm_plugin_conf_get_key (plugin, "display.value_ac", &(data.brightness_ac));
 	ohm_plugin_conf_get_key (plugin, "display.value_battery", &(data.brightness_battery));
 	ohm_plugin_conf_get_key (plugin, "display.value_idle", &(data.brightness_idle));

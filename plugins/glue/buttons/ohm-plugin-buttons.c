@@ -79,7 +79,6 @@ hal_condition_cb (OhmPlugin   *plugin,
 static void
 plugin_coldplug (OhmPlugin *plugin)
 {
-	gboolean state;
 	gboolean ret;
 
 	/* initialise HAL */
@@ -91,12 +90,6 @@ plugin_coldplug (OhmPlugin *plugin)
 
 	/* get the only device with capability and watch it */
 	ret = ohm_plugin_hal_add_device_capability (plugin, "button");
-	if (ret == TRUE) {
-		ohm_plugin_hal_get_bool (plugin, "ac_adapter.present", &state);
-	} else {
-		g_warning ("not tested with not one buttons");
-		state = 1;
-	}
 }
 
 static OhmPluginInfo plugin_info = {

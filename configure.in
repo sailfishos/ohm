@@ -301,6 +301,7 @@ plugins/glue/backlight/Makefile
 plugins/glue/battery/Makefile
 plugins/policy/Makefile
 plugins/policy/display/Makefile
+plugins/policy/suspend/Makefile
 ohmd/Makefile
 po/Makefile.in
 docs/Makefile
