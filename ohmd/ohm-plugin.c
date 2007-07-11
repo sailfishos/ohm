@@ -438,6 +438,23 @@ ohm_plugin_hal_get_udi (OhmPlugin *plugin, guint id)
 }
 
 G_MODULE_EXPORT gboolean
+ohm_plugin_spawn_async (OhmPlugin   *plugin,
+			const gchar *commandline)
+{
+	gboolean ret;
+	GError *error;
+
+	error = NULL;
+	ohm_debug ("spawning %s", commandline);
+	ret = g_spawn_commandline_async (commandline, &error);
+	if (ret == FALSE) {
+		ohm_warning ("spawn failed: %s", commandline, error->message);
+		g_error_free (error);
+	}
+	return ret;
+}
+
+G_MODULE_EXPORT gboolean
 ohm_plugin_conf_interested (OhmPlugin   *plugin,
 			    const gchar	*key,
 			    gint         id)

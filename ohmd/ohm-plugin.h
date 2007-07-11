@@ -94,6 +94,10 @@ const gchar	*ohm_plugin_get_name			(OhmPlugin	*plugin);
 const gchar	*ohm_plugin_get_version			(OhmPlugin	*plugin);
 const gchar	*ohm_plugin_get_author			(OhmPlugin	*plugin);
 
+/* used by plugin to do crazy stuff */
+gboolean	 ohm_plugin_spawn_async			(OhmPlugin      *plugin,
+							 const gchar	*commandline);
+
 /* used by plugin to manager */
 gboolean	 ohm_plugin_conf_provide		(OhmPlugin      *plugin,
 							 const gchar	*name);

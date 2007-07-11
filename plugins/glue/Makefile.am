@@ -5,6 +5,7 @@ SUBDIRS = 				\
 	acadapter			\
 	timeremaining			\
 	powerstatus			\
+	xrandr				\
 	backlight
 
 if HAVE_DPMS_EXTENSION

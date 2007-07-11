@@ -299,6 +299,7 @@ plugins/glue/powerstatus/Makefile
 plugins/glue/timeremaining/Makefile
 plugins/glue/backlight/Makefile
 plugins/glue/battery/Makefile
+plugins/glue/xrandr/Makefile
 plugins/policy/Makefile
 plugins/policy/display/Makefile
 plugins/policy/suspend/Makefile

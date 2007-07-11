@@ -25,6 +25,7 @@
 enum {
 	CONF_AC_STATE_CHANGED,
 	CONF_LID_STATE_CHANGED,
+	CONF_TABLET_STATE_CHANGED,
 	CONF_BRIGHTNESS_AC_CHANGED,
 	CONF_BRIGHTNESS_BATTERY_CHANGED,
 	CONF_BRIGHTNESS_IDLE_CHANGED,
@@ -67,6 +68,7 @@ plugin_coldplug (OhmPlugin *plugin)
 	/* interested keys */
 	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "button.lid", CONF_LID_STATE_CHANGED);
+	ohm_plugin_conf_interested (plugin, "button.tablet", CONF_TABLET_STATE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "idle.powersave", CONF_IDLE_POWERSAVE_CHANGED);
 	ohm_plugin_conf_interested (plugin, "idle.momentary", CONF_IDLE_MOMENTARY_CHANGED);
 	ohm_plugin_conf_interested (plugin, "display.value_ac", CONF_BRIGHTNESS_AC_CHANGED);
@@ -177,6 +179,13 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 		break;
 	case CONF_LID_STATE_CHANGED:
 		lid_closed (plugin, (value == 1));
+		break;
+	case CONF_TABLET_STATE_CHANGED:
+		if (value == 0) {
+			ohm_plugin_conf_set_key (plugin, "xrandr.position", 0);
+		} else {
+			ohm_plugin_conf_set_key (plugin, "xrandr.position", 1);
+		}
 		break;
 	case CONF_AC_STATE_CHANGED:
 		reset_brightness (plugin);
