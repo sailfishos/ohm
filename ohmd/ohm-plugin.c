@@ -383,7 +383,8 @@ ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 		/* save the udi's in the hash table */
 		g_ptr_array_add (plugin->priv->hal_udis, g_strdup (devices[i]));
 		/* watch them */
-		if (plugin->priv->hal_property_changed_cb != NULL) {
+		if (plugin->priv->hal_property_changed_cb != NULL ||
+		    plugin->priv->hal_condition_cb != NULL) {
 			libhal_device_add_property_watch (plugin->priv->hal_ctx, devices[i], NULL);
 		}
 	}
@@ -474,7 +475,8 @@ ohm_plugin_free_hal_table (OhmPlugin *plugin)
 	len = plugin->priv->hal_udis->len;
 	for (i=0; i<len; i++) {
 		temp_udi = g_ptr_array_index (plugin->priv->hal_udis, i);
-		if (plugin->priv->hal_property_changed_cb != NULL) {
+		if (plugin->priv->hal_property_changed_cb != NULL ||
+		    plugin->priv->hal_condition_cb != NULL) {
 			libhal_device_remove_property_watch (plugin->priv->hal_ctx, temp_udi, NULL);
 		}
 		g_free (temp_udi);
