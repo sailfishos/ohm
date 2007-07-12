@@ -51,6 +51,7 @@ plugin_preload (OhmPlugin *plugin)
 	ohm_plugin_suggest (plugin, "idle");
 	ohm_plugin_suggest (plugin, "acadapter");
 	ohm_plugin_suggest (plugin, "button");
+	ohm_plugin_suggest (plugin, "xrandr");
 	ohm_plugin_suggest (plugin, "backlight");
 	return TRUE;
 }
