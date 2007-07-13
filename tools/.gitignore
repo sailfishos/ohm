@@ -4,6 +4,7 @@ Makefile
 Makefile.in
 libohm-test
 lsohm
+ohm-set-key
 *.la
 *.lo
 *.o
