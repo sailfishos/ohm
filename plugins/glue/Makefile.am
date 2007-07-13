@@ -6,6 +6,7 @@ SUBDIRS = 				\
 	timeremaining			\
 	powerstatus			\
 	xrandr				\
+	xorg				\
 	backlight
 
 if HAVE_DPMS_EXTENSION
