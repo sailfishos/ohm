@@ -74,13 +74,17 @@ G_DEFINE_TYPE (LibIdletime, idletime, G_TYPE_OBJECT)
  * Gets the time remaining for the current percentage
  *
  */
-static void
+static gboolean
 idletime_xsync_alarm_set (LibIdletime *idletime, LibIdletimeAlarm *alarm, gboolean positive)
 {
 	XSyncAlarmAttributes attr;
 	XSyncValue delta;
 	unsigned int flags;
 	XSyncTestType test;
+
+	if (idletime->priv->dpy == NULL) {
+		return FALSE;
+	}
 
 	/* which way do we do the test? */
 	if (positive == TRUE) {
@@ -104,6 +108,7 @@ idletime_xsync_alarm_set (LibIdletime *idletime, LibIdletimeAlarm *alarm, gboole
 	} else {
 		alarm->xalarm = XSyncCreateAlarm (idletime->priv->dpy, flags, &attr);
 	}
+	return TRUE;
 }
 
 /**
@@ -266,7 +271,6 @@ gboolean
 idletime_alarm_set (LibIdletime *idletime, guint id, guint timeout)
 {
 	LibIdletimeAlarm *alarm;
-
 	if (id == 0) {
 		/* id cannot be zero */
 		return FALSE;
@@ -303,6 +307,9 @@ idletime_alarm_set (LibIdletime *idletime, guint id, guint timeout)
 static gboolean
 idletime_alarm_free (LibIdletime *idletime, LibIdletimeAlarm *alarm)
 {
+	if (idletime->priv->dpy == NULL) {
+		return FALSE;
+	}
 	XSyncDestroyAlarm (idletime->priv->dpy, alarm->xalarm);
 	g_free (alarm);
 	g_ptr_array_remove (idletime->priv->array, alarm);
@@ -357,25 +364,51 @@ idletime_connect_x (LibIdletime *idletime)
 	int sync_error;
 	int ncounters;
 	XSyncSystemCounter *counters;
+	gboolean ret;
+
+	ret = gdk_init_check (NULL, NULL);
+	if (ret == FALSE) {
+		/* we failed */
+		return FALSE;
+	}
 
 	/* are we started in X? */
 	idletime->priv->dpy = GDK_DISPLAY ();
+
+#if 0
 	if (idletime->priv->dpy == NULL) {
 		/* try using root display */
+		gdk_error_trap_push ();
 		idletime->priv->dpy = XOpenDisplay (NULL);
+		if (gdk_error_trap_pop ()) {
+			g_warning ("No NULL connection");
+		}
 	}
 	if (idletime->priv->dpy == NULL) {
 		/* try using root display :0 */
+		gdk_error_trap_push ();
 		idletime->priv->dpy = XOpenDisplay (":0");
+		if (gdk_error_trap_pop ()) {
+			g_warning ("No :0 connection");
+		}
 	}
 	if (idletime->priv->dpy == NULL) {
 		/* try using root display :0.0 */
+		gdk_error_trap_push ();
 		idletime->priv->dpy = XOpenDisplay (":0.0");
+		if (gdk_error_trap_pop ()) {
+			g_warning ("No :0.0 connection");
+		}
 	}
+#endif
+
 	/* bugger */
 	if (idletime->priv->dpy == NULL) {
+		g_debug ("no X connection!");
 		return FALSE;
 	}
+
+	g_debug ("Using X dpy : %p", idletime->priv->dpy);
 
 	/* get the sync event */
 	if (!XSyncQueryExtension (idletime->priv->dpy, &idletime->priv->sync_event, &sync_error)) {
@@ -450,7 +483,7 @@ idletime_init (LibIdletime *idletime)
 	if (ret == FALSE) {
 		/* we failed to connect to X - maybe X is not alive yet? */
 		g_debug ("Could not connect to X, polling until we can");
-		g_timeout_add (500, idletime_poll_startup, idletime);
+		g_timeout_add (2000, idletime_poll_startup, idletime);
 	}
 
 	/* create a reset alarm */

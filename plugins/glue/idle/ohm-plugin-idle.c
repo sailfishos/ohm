@@ -23,7 +23,6 @@
 
 #include <ohm-plugin.h>
 #include <libidletime.h>
-#include <gdk/gdk.h>
 
 static LibIdletime *idletime;
 
@@ -79,7 +78,6 @@ plugin_coldplug (OhmPlugin *plugin)
 	gint powersave;
 	gint powerdown;
 
-	gdk_init (NULL, NULL);
 	idletime = idletime_new ();
 	if (idletime == NULL) {
 		g_error ("cannot create idletime");
