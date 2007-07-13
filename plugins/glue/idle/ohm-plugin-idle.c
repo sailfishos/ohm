@@ -122,7 +122,7 @@ plugin_coldplug (OhmPlugin *plugin)
 	/* check system inhibit - this is broken as any client can unref all */
 	ohm_plugin_conf_get_key (plugin, "xorg.has_xauthority", &value);
 	if (value == 1) {
-		g_error ("already set - is this possible?");
+		plugin_connect_idletime (plugin);
 	}
 
 	ohm_plugin_conf_interested (plugin, "xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED);
@@ -152,7 +152,7 @@ plugin_unload (OhmPlugin *plugin)
 }
 
 static OhmPluginInfo plugin_info = {
-	"OHM IdleTime",		/* description */
+	"OHM IdleTime",			/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
 	plugin_preload,			/* preload */
