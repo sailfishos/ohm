@@ -44,12 +44,10 @@ main (int argc, char *argv[])
 	const GOptionEntry options[] = {
 		{ "key", '\0', 0, G_OPTION_ARG_STRING, &key,
 		  "The public key, e.g. idle.timer_powerdown", NULL },
-		{ "value", '\0', 0, G_OPTION_ARG_INT, &value,
-		  "The value of the key, e.g. 1000", NULL },
 		{ NULL}
 	};
 
-	context = g_option_context_new ("ohm-set-key");
+	context = g_option_context_new ("ohm-get-key");
 	g_option_context_add_main_entries (context, options, GETTEXT_PACKAGE);
 	g_option_context_parse (context, &argc, &argv, NULL);
 
@@ -69,12 +67,13 @@ main (int argc, char *argv[])
 
 	/* returns list of all the LibOhmKeyValue on the system */
 	error = NULL;
-	ret = libohm_keystore_set_key (ctx, key, value, &error);
+	ret = libohm_keystore_get_key (ctx, key, &value, &error);
 	if (ret == FALSE) {
-		g_warning ("cannot set key: %s", error->message);
+		g_warning ("cannot get key: %s", error->message);
 		g_error_free (error);
 		goto unref;
 	}
+	g_print ("%i\n", value);
 
 unref:
 	g_object_unref (ctx);
