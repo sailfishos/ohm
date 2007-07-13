@@ -23,8 +23,14 @@
 
 #include <ohm-plugin.h>
 #include <libidletime.h>
+#include <stdlib.h>
 
 static LibIdletime *idletime;
+
+enum {
+	CONF_XORG_HASXAUTH_CHANGED,
+	CONF_LAST
+};
 
 /**
  * plugin_preload:
@@ -62,21 +68,17 @@ ohm_alarm_expired_cb (LibIdletime *idletime, guint alarm, gpointer data)
 	g_print ("[evt %i]\n", alarm);
 }
 
-/**
- * plugin_coldplug:
- * @plugin: This class instance
- *
- * Coldplug, i.e. read and set the initial state of the plugin.
- * We can assume all the required modules have been loaded, although it's
- * dangerous to assume the key values are anything other than the defaults.
- */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_connect_idletime (OhmPlugin *plugin)
 {
 	gboolean ret;
 	gint momentary;
 	gint powersave;
 	gint powerdown;
+	const gchar *xauth;
+
+	xauth = getenv ("XAUTHORITY");
+	g_debug ("connecting with %s", xauth);
 
 	idletime = idletime_new ();
 	if (idletime == NULL) {
@@ -103,6 +105,45 @@ plugin_coldplug (OhmPlugin *plugin)
 	}
 }
 
+/**
+ * plugin_coldplug:
+ * @plugin: This class instance
+ *
+ * Coldplug, i.e. read and set the initial state of the plugin.
+ * We can assume all the required modules have been loaded, although it's
+ * dangerous to assume the key values are anything other than the defaults.
+ */
+static void
+plugin_coldplug (OhmPlugin *plugin)
+{
+	gint value;
+
+	/* check system inhibit - this is broken as any client can unref all */
+	ohm_plugin_conf_get_key (plugin, "xorg.has_xauthority", &value);
+	if (value == 1) {
+		g_error ("already set - is this possible?");
+	}
+
+	ohm_plugin_conf_interested (plugin, "xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED);
+}
+
+/**
+ * plugin_conf_notify:
+ * @plugin: This class instance
+ *
+ * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
+ * has it's value changed.
+ * An enumerated numeric id rather than the key is returned for processing speed.
+ */
+static void
+plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+{
+	if (id == CONF_XORG_HASXAUTH_CHANGED) {
+		if (value == 1) {
+			plugin_connect_idletime (plugin);
+		}
+	}
+}
 static void
 plugin_unload (OhmPlugin *plugin)
 {
@@ -116,7 +157,7 @@ static OhmPluginInfo plugin_info = {
 	plugin_preload,			/* preload */
 	plugin_unload,			/* unload */
 	plugin_coldplug,		/* coldplug */
-	NULL,				/* conf_notify */
+	plugin_conf_notify,		/* conf_notify */
 };
 
 OHM_INIT_PLUGIN (plugin_info);
