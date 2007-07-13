@@ -50,7 +50,7 @@ plugin_preload (OhmPlugin *plugin)
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "idle");
 	ohm_plugin_suggest (plugin, "acadapter");
-	ohm_plugin_suggest (plugin, "button");
+	ohm_plugin_suggest (plugin, "buttons");
 	ohm_plugin_suggest (plugin, "xrandr");
 	ohm_plugin_suggest (plugin, "backlight");
 	return TRUE;

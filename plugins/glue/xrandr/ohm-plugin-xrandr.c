@@ -39,6 +39,7 @@ enum {
 static gboolean
 plugin_preload (OhmPlugin *plugin)
 {
+	ohm_plugin_require (plugin, "xorg");
 	ohm_plugin_conf_provide (plugin, "xrandr.position");
 	return TRUE;
 }

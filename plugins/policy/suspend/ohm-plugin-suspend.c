@@ -81,7 +81,7 @@ plugin_preload (OhmPlugin *plugin)
 	/* FIXME: detect if we have any backlights in the system and return false if not */
 	/* add in the required, suggested and prevented plugins */
 	ohm_plugin_suggest (plugin, "idle");
-	ohm_plugin_suggest (plugin, "button");
+	ohm_plugin_suggest (plugin, "buttons");
 	return TRUE;
 }
 

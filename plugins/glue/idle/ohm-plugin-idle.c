@@ -44,6 +44,7 @@ static gboolean
 plugin_preload (OhmPlugin *plugin)
 {
 	/* tell ohmd what keys we are going to provide */
+	ohm_plugin_require (plugin, "xorg");
 	ohm_plugin_conf_provide (plugin, "idle.momentary");
 	ohm_plugin_conf_provide (plugin, "idle.powersave");
 	ohm_plugin_conf_provide (plugin, "idle.powerdown");
