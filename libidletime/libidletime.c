@@ -348,32 +348,39 @@ idletime_class_init (LibIdletimeClass *klass)
 }
 
 /**
- * idletime_init:
- *
- * @idletime: This class instance
+ * idletime_connect_x:
  **/
-static void
-idletime_init (LibIdletime *idletime)
+static gboolean
+idletime_connect_x (LibIdletime *idletime)
 {
+	int i;
 	int sync_error;
 	int ncounters;
 	XSyncSystemCounter *counters;
-	LibIdletimeAlarm *alarm;
-	int i;
 
-	idletime->priv = LIBIDLETIME_GET_PRIVATE (idletime);
-
-	idletime->priv->array = g_ptr_array_new ();
-
-	idletime->priv->idle_counter = None;
-	idletime->priv->last_event = 0;
-	idletime->priv->sync_event = 0;
+	/* are we started in X? */
 	idletime->priv->dpy = GDK_DISPLAY ();
+	if (idletime->priv->dpy == NULL) {
+		/* try using root display */
+		idletime->priv->dpy = XOpenDisplay (NULL);
+	}
+	if (idletime->priv->dpy == NULL) {
+		/* try using root display :0 */
+		idletime->priv->dpy = XOpenDisplay (":0");
+	}
+	if (idletime->priv->dpy == NULL) {
+		/* try using root display :0.0 */
+		idletime->priv->dpy = XOpenDisplay (":0.0");
+	}
+	/* bugger */
+	if (idletime->priv->dpy == NULL) {
+		return FALSE;
+	}
 
 	/* get the sync event */
 	if (!XSyncQueryExtension (idletime->priv->dpy, &idletime->priv->sync_event, &sync_error)) {
 		g_warning ("No Sync extension.");
-		return;
+		return FALSE;
 	}
 
 	/* gtk_init should do XSyncInitialize for us */
@@ -387,7 +394,7 @@ idletime_init (LibIdletime *idletime)
 	/* arh. we don't have IDLETIME support */
 	if (!idletime->priv->idle_counter) {
 		g_warning ("No idle counter.");
-		return;
+		return FALSE;
 	}
 
 	idletime->priv->reset_set = FALSE;
@@ -401,6 +408,50 @@ idletime_init (LibIdletime *idletime)
 
 	/* this is where we want events */
 	gdk_window_add_filter (NULL, idletime_x_event_filter, idletime);
+	return TRUE;
+}
+
+static gboolean
+idletime_poll_startup (gpointer data)
+{
+	LibIdletime *idletime = (LibIdletime *) data;
+	gboolean ret;
+	g_debug ("Try to connect to X");
+	ret = idletime_connect_x (idletime);
+	if (ret == TRUE) {
+		g_debug ("Got X!");
+		/* we don't need to poll anymore */
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
+ * idletime_init:
+ *
+ * @idletime: This class instance
+ **/
+static void
+idletime_init (LibIdletime *idletime)
+{
+	LibIdletimeAlarm *alarm;
+	gboolean ret;
+
+	idletime->priv = LIBIDLETIME_GET_PRIVATE (idletime);
+
+	idletime->priv->array = g_ptr_array_new ();
+
+	idletime->priv->idle_counter = None;
+	idletime->priv->last_event = 0;
+	idletime->priv->sync_event = 0;
+	idletime->priv->dpy = NULL;
+
+	ret = idletime_connect_x (idletime);
+	if (ret == FALSE) {
+		/* we failed to connect to X - maybe X is not alive yet? */
+		g_debug ("Could not connect to X, polling until we can");
+		g_timeout_add (500, idletime_poll_startup, idletime);
+	}
 
 	/* create a reset alarm */
 	alarm = g_new0 (LibIdletimeAlarm, 1);
