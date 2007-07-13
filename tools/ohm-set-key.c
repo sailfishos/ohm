@@ -55,7 +55,7 @@ main (int argc, char *argv[])
 
 	/* do nothing */
 	if (key == NULL)
-		goto unref;
+		return 0;
 
 	g_type_init ();
 	ctx = libohm_new ();
