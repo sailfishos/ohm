@@ -503,7 +503,7 @@ ohm_conf_class_init (OhmConfClass *klass)
 		g_signal_new ("key-added",
 			      G_TYPE_FROM_CLASS (object_class),
 			      G_SIGNAL_RUN_LAST,
-			      G_STRUCT_OFFSET (OhmConfClass, key_added),
+			      0,
 			      NULL, NULL,
 			      ohm_marshal_VOID__STRING_INT,
 			      G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_INT);
@@ -511,7 +511,7 @@ ohm_conf_class_init (OhmConfClass *klass)
 		g_signal_new ("key-changed",
 			      G_TYPE_FROM_CLASS (object_class),
 			      G_SIGNAL_RUN_LAST,
-			      G_STRUCT_OFFSET (OhmConfClass, key_changed),
+			      0,
 			      NULL, NULL,
 			      ohm_marshal_VOID__STRING_INT,
 			      G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_INT);

@@ -43,12 +43,6 @@ typedef struct
 typedef struct
 {
 	GObjectClass	parent_class;
-	void		(* key_added)			(OhmConf	*conf,
-							 const gchar	*key,
-							 gint		 value);
-	void		(* key_changed)			(OhmConf	*conf,
-							 const gchar	*key,
-							 gint		 value);
 } OhmConfClass;
 
 /* ABI stable representation suitable for consumption by session apps */
