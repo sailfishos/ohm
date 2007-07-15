@@ -69,10 +69,10 @@ ohm-marshal.h: ohm-marshal.list
 	@GLIB_GENMARSHAL@ $< --prefix=ohm_marshal --header > $@
 
 ohm-dbus-manager.h: ohm-dbus-manager.xml
-	libtool --mode=execute dbus-binding-tool --prefix=ohm_manager --mode=glib-server --output=ohm-dbus-manager.h $(srcdir)/ohm-dbus-manager.xml
+	$(LIBTOOL) --mode=execute dbus-binding-tool --prefix=ohm_manager --mode=glib-server --output=ohm-dbus-manager.h $(srcdir)/ohm-dbus-manager.xml
 
 ohm-dbus-keystore.h: ohm-dbus-keystore.xml
-	libtool --mode=execute dbus-binding-tool --prefix=ohm_keystore --mode=glib-server --output=ohm-dbus-keystore.h $(srcdir)/ohm-dbus-keystore.xml
+	$(LIBTOOL) --mode=execute dbus-binding-tool --prefix=ohm_keystore --mode=glib-server --output=ohm-dbus-keystore.h $(srcdir)/ohm-dbus-keystore.xml
 
 CLEANFILES = $(BUILT_SOURCES)
 
