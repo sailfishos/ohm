@@ -107,10 +107,14 @@ ohm_conf_to_slist_iter (gpointer    key,
 }
 
 /**
- * ohm_conf_get_all:
+ * ohm_conf_get_keys:
+ * @conf: an #OhmConf object
+ * @list: a pointer in which to return the list of keys
  *
- * Gets an ordered list of all the key values in OhmConfKeyValue's.
- * Free the list with ohm_conf_free_keys().
+ * Gets an ordered list of all the key values in #OhmConfKeyValue's.
+ * Free the list with #ohm_conf_free_keys.
+ *
+ * Returns: FALSE if an error occured.
  **/
 gboolean
 ohm_conf_get_keys (OhmConf *conf,
@@ -135,10 +139,11 @@ ohm_conf_get_keys (OhmConf *conf,
 }
 
 /**
- * ohm_conf_get_all:
+ * ohm_conf_free_keys:
+ * @conf: an #OhmConf store
+ * @list: list of keys as returned by #ohm_conf_get_keys
  *
- * Gets an ordered list of all the key values in OhmConfKeyValue's.
- * Make sure to delete the list after it's been used with g_slist_free()
+ * Frees a list of keys, as returned from #ohm_conf_get_keys.
  **/
 gboolean
 ohm_conf_free_keys (OhmConf *conf,
@@ -200,9 +205,16 @@ ohm_conf_get_key (OhmConf     *conf,
 }
 
 /**
- * ohm_conf_set_key:
- * internal set true for plugin access and false for public dbus
+ * ohm_conf_add_key:
+ * @conf: an #OhmConf object
+ * @key: name of key to add
+ * @value: initial value of key
+ * @public: whether key should be exposed on public dbus interface
+ * @error: a #GError return location
  *
+ * Creates a new key in #conf configuration object.
+ *
+ * Returns: FALSE on error, TRUE otherwise.
  **/
 gboolean
 ohm_conf_add_key (OhmConf     *conf,
