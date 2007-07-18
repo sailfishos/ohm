@@ -124,6 +124,9 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 	CARD16 state;
 	OhmDpmsMode current_mode;
 
+	/* FIXME: why is dpy NULL if we don't do this? */ 
+	dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
+	
 	if (dpy == NULL) {
 		g_debug ("cannot open display");
 		return FALSE;
@@ -158,6 +161,7 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 	}
 
 	XSync (dpy, FALSE);
+	XCloseDisplay(dpy); 
 	return TRUE;
 }
 

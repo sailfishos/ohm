@@ -85,8 +85,8 @@ reset_brightness (OhmPlugin *plugin)
 	gint onac;
 	gint value;
 
-	/* turn on dcon */
-	ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
+	/* FIXME: turn on dcon -- why was this here? */
+	/* ohm_plugin_conf_set_key (plugin, "backlight.state", 1); */
 
 	ohm_plugin_conf_get_key (plugin, "acadapter.state", &onac);
 	if (onac == TRUE) {
