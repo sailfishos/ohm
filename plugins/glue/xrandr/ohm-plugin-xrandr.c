@@ -72,9 +72,9 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	if (id == CONF_XRANDR_POSITION_CHANGED) {
 		if (value == 0) {
-			ohm_plugin_spawn_async (plugin, "/usr/bin/xrandr -o left");
-		} else {
 			ohm_plugin_spawn_async (plugin, "/usr/bin/xrandr -o normal");
+		} else {
+			ohm_plugin_spawn_async (plugin, "/usr/bin/xrandr -o left");
 		}
 	}
 }
