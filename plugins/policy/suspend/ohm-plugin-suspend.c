@@ -44,6 +44,9 @@ system_suspend (OhmPlugin *plugin)
 	gboolean ret;
 	gint retval;
 
+	/* Tell the DPMS plugin to kill the backlight. */
+	ohm_plugin_conf_set_key (plugin, "backlight.state", 0);
+
 	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, NULL);
 
 	/* reuse the connection from HAL */
@@ -64,6 +67,10 @@ system_suspend (OhmPlugin *plugin)
 		g_error_free (error);
 	}
 	g_object_unref (proxy);
+
+	/* We've resumed now.  Bring the backlight back. */
+	ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
+
 	return ret;
 }
 
