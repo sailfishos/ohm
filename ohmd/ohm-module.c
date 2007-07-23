@@ -290,13 +290,22 @@ ohm_module_read_defaults (OhmModule *module)
 	keyfile = g_key_file_new ();
 
 	/* generate path for conf file */
-	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "modules.ini", NULL);
+	filename = getenv ("OHM_CONF_DIR");
+
+	g_warning ("OHM_CONF_DIR=%s", filename);
+
+	if (!filename)
+		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "modules.ini", NULL);
+	else
+		filename = g_build_path (G_DIR_SEPARATOR_S, filename, "modules.ini", NULL);
+
+	g_warning ("keyfile = %s", filename);
 
 	/* we can never save the file back unless we remove G_KEY_FILE_NONE */
 	error = NULL;
 	ret = g_key_file_load_from_file (keyfile, filename, G_KEY_FILE_NONE, &error);
 	if (ret == FALSE) {
-		g_error ("cannot load keyfile %s", filename);
+		g_error ("cannot load goddammded keyfile %s", filename);
 	}
 	g_free (filename);
 

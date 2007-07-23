@@ -9,13 +9,10 @@ SUBDIRS = 				\
 	etc				\
 	plugins
 
-dbusconfdir = $(sysconfdir)/dbus-1/system.d
-dbusconf_DATA = ohm.conf
-
-pkgconfigdir = $(libdir)/pkgconfig
+pkgconfigdir = ${libdir}/pkgconfig
 pkgconfig_DATA = ohm.pc
 
-dbusdir = $(DBUS_SYS_DIR)
+dbusdir = @DBUS_SYS_DIR@
 dist_dbus_DATA = ohm.conf
 
 EXTRA_DIST =				\

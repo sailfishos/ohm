@@ -124,7 +124,11 @@ ohm_plugin_preload (OhmPlugin *plugin, const gchar *name)
 	ohm_debug ("Trying to load : %s", name);
 
 	filename = g_strdup_printf ("libohm_%s.so", name);
-	path = g_build_filename (LIBDIR, "ohm", filename, NULL);
+	path = getenv ("OHM_PLUGIN_DIR");
+	if (path)
+		path = g_build_filename (path, filename, NULL);
+	else
+		path = g_build_filename (LIBDIR, "ohm", filename, NULL);
 	g_free (filename);
 	handle = g_module_open (path, 0);
 	if (!handle) {

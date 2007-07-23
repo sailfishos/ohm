@@ -439,7 +439,11 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	inifile = g_strdup_printf ("%s.ini", plugin_name);
 
 	/* generate path for each module */
-	filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins", inifile, NULL);
+	filename = getenv ("OHM_CONF_DIR");
+	if (!filename)
+		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins.d", NULL);
+
+	filename = g_build_path (G_DIR_SEPARATOR_S, filename, "plugins.d", inifile, NULL);
 	g_free (inifile);
 
 	ohm_debug ("Loading %s defaults from %s", plugin_name, filename);
@@ -468,20 +472,6 @@ ohm_conf_load_defaults (OhmConf     *conf,
 }
 
 /**
- * ohm_hash_remove_return:
- * FIXME: there must be a better way to do this
- **/
-static gboolean
-ohm_hash_remove_return (gpointer key,
-			gpointer value,
-			gpointer user_data)
-{
-	OhmConfObj *confobj = (OhmConfObj *) value;
-	g_object_unref (confobj);
-	return TRUE;
-}
-
-/**
  * ohm_conf_finalize:
  **/
 static void
@@ -493,9 +483,7 @@ ohm_conf_finalize (GObject *object)
 	conf = OHM_CONF (object);
 
 	ohm_debug ("freeing conf");
-	g_hash_table_foreach_remove (conf->priv->keys,
-				     ohm_hash_remove_return, NULL);
-	g_hash_table_destroy (conf->priv->keys);
+	g_hash_table_unref (conf->priv->keys);
 	conf->priv->keys = NULL;
 
 	g_return_if_fail (conf->priv != NULL);
@@ -538,7 +526,8 @@ static void
 ohm_conf_init (OhmConf *conf)
 {
 	conf->priv = OHM_CONF_GET_PRIVATE (conf);
-	conf->priv->keys = g_hash_table_new (g_str_hash, g_str_equal);
+	conf->priv->keys = g_hash_table_new_full (g_str_hash, g_str_equal,
+						  g_free, g_object_unref);
 }
 
 /**

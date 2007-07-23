@@ -1,21 +1,10 @@
-INCLUDES =							\
-	-I$(top_srcdir)/ohmd					\
-	$(GLIB_CFLAGS)						\
-	$(GMODULE_CFLAGS)					\
-	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\"
-
 EXTRA_DIST = $(Data_DATA)
-Datadir = $(sysconfdir)/ohm/plugins
+Datadir = @OHM_PLUGIN_CONF_DIR@
 Data_DATA = xrandr.ini
 
-plugindir = $(libdir)/ohm
+plugindir = @OHM_PLUGIN_DIR@
 plugin_LTLIBRARIES = libohm_xrandr.la
-libohm_xrandrincludedir = $(includedir)/ohm
 libohm_xrandr_la_SOURCES = ohm-plugin-xrandr.c
-libohm_xrandr_la_LIBADD = $(INTLLIBS)
+libohm_xrandr_la_LIBADD = @OHM_PLUGIN_LIBS@
 libohm_xrandr_la_LDFLAGS = -module -avoid-version
-
-clean-local:
-	rm -f *.la
-	rm -f *~
+libohm_xrandr_la_CFLAGS = @OHM_PLUGIN_CFLAGS@

@@ -100,14 +100,25 @@ PKG_CHECK_MODULES(GDK, gdk-2.0 >= 2.10.0 gdk-x11-2.0 >= 2.10.0)
 AC_SUBST(GDK_CFLAGS)
 AC_SUBST(GDK_LIBS)
 
+AC_SUBST(OHM_CONF_DIR, "\$(sysconfdir)/ohm")
+
+AC_SUBST(OHM_PLUGIN_CONF_DIR, "\$(OHM_CONF_DIR)/plugins.d")
+AC_SUBST(OHM_PLUGIN_DIR, "\$(libdir)/ohm")
+AC_SUBST(OHM_PLUGIN_CFLAGS, "-I\$(top_srcdir)/ohmd $GLIB_CFLAGS $DBUS_CFLAGS $GMODULE_CFLAGS")
+AC_SUBST(OHM_PLUGIN_LIBS, "$GLIB_LIBS $DBUS_LIBS $GMODULE_LIBS")
+
 dnl ---------------------------------------------------------------------------
-dnl - Make paths available for source files
+dnl - Where should we put documentation ?
 dnl ---------------------------------------------------------------------------
-AC_SUBST(SYSCONFDIR, $sysconfdir)
-AC_SUBST(DATADIR, $datadir)
-AC_SUBST(BINDIR, $bindir)
-AC_SUBST(LIBDIR, $bindir)
-AC_SUBST(SBINDIR, $sbindir)
+AC_ARG_WITH(doc-dir,
+              [AC_HELP_STRING([--with-doc-dir=<dir>],
+              [directory to install documentation])])
+if ! test -z "$with_doc_dir"; then
+	DOCDIR="$with_doc_dir/ohm-$VERSION"
+else
+	DOCDIR="\$(docdir\)"
+fi
+AC_SUBST(DOCDIR)
 
 dnl ---------------------------------------------------------------------------
 dnl - DocBook Documentation
@@ -140,10 +151,11 @@ AC_ARG_WITH(dbus-sys, [  --with-dbus-sys=<dir>   where D-BUS system.d directory 
 if ! test -z "$with_dbus_sys" ; then
     DBUS_SYS_DIR="$with_dbus_sys"
 else
-    DBUS_SYS_DIR="$SYSCONFDIR/dbus-1/system.d"
+    DBUS_SYS_DIR="\${sysconfdir}/dbus-1/system.d"
 fi
 AC_SUBST(DBUS_SYS_DIR)
 AC_DEFINE_UNQUOTED(DBUS_SYSTEMD_DIR, "$DBUS_SYS_DIR", [Where system.d dir for DBUS is])
+
 
 dnl ---------------------------------------------------------------------------
 dnl - Some utility functions to make checking for X things easier.
