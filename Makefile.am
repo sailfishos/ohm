@@ -21,8 +21,7 @@ EXTRA_DIST =				\
 	intltool-merge.in		\
 	intltool-extract.in		\
 	ohm.pc.in			\
-	ohm.conf.in			\
-	mkinstalldirs
+	ohm.conf.in
 
 DISTCLEANFILES = 			\
 	intltool-extract		\
