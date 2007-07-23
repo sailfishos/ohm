@@ -7,4 +7,4 @@ plugin_LTLIBRARIES = libohm_backlight.la
 libohm_backlight_la_SOURCES = ohm-plugin-backlight.c
 libohm_backlight_la_LIBADD = @HAL_LIBS@ @OHM_PLUGIN_LIBS@
 libohm_backlight_la_LDFLAGS = -module -avoid-version
-libohm_backlight_CFLAGS = @HAL_CFLAGS@ @OHM_PLUGIN_CFLAGS@
+libohm_backlight_la_CFLAGS = @HAL_CFLAGS@ @OHM_PLUGIN_CFLAGS@
