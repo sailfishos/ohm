@@ -430,6 +430,7 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	gchar **lines;
 	guint i;
 	gchar *filename;
+	gchar *conf_dir;
 	gchar *inifile;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
@@ -439,11 +440,15 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	inifile = g_strdup_printf ("%s.ini", plugin_name);
 
 	/* generate path for each module */
-	filename = getenv ("OHM_CONF_DIR");
-	if (!filename)
-		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins.d", NULL);
+	conf_dir = getenv ("OHM_CONF_DIR");
+	if (conf_dir != NULL) {
+		/* we have from the environment */
+		filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, "plugins.d", inifile, NULL);
+	} else {
+		/* we are running as normal */
+		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins.d", inifile, NULL);
+	}
 
-	filename = g_build_path (G_DIR_SEPARATOR_S, filename, "plugins.d", inifile, NULL);
 	g_free (inifile);
 
 	ohm_debug ("Loading %s defaults from %s", plugin_name, filename);

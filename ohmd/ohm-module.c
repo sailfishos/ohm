@@ -280,6 +280,7 @@ ohm_module_read_defaults (OhmModule *module)
 {
 	GKeyFile *keyfile;
 	gchar *filename;
+	gchar *conf_dir;
 	gchar **modules;
 	gsize length;
 	guint i;
@@ -290,16 +291,15 @@ ohm_module_read_defaults (OhmModule *module)
 	keyfile = g_key_file_new ();
 
 	/* generate path for conf file */
-	filename = getenv ("OHM_CONF_DIR");
-
-	g_warning ("OHM_CONF_DIR=%s", filename);
-
-	if (!filename)
+	conf_dir = getenv ("OHM_CONF_DIR");
+	if (conf_dir != NULL) {
+		/* we have from the environment */
+		filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, "modules.ini", NULL);
+	} else {
+		/* we are running as normal */
 		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "modules.ini", NULL);
-	else
-		filename = g_build_path (G_DIR_SEPARATOR_S, filename, "modules.ini", NULL);
-
-	g_warning ("keyfile = %s", filename);
+	}
+	ohm_debug ("keyfile = %s", filename);
 
 	/* we can never save the file back unless we remove G_KEY_FILE_NONE */
 	error = NULL;
