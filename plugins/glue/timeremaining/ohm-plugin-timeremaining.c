@@ -37,27 +37,6 @@ typedef struct {
 static OhmPluginCacheData data;
 
 /**
- * plugin_preload:
- * @plugin: This class instance
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_suggest (plugin, "battery");
-	ohm_plugin_suggest (plugin, "acadapter");
-
-	/* tell ohmd what keys we are going to provide so it can create them */
-	ohm_plugin_conf_provide (plugin, "timeremaining.to_charge");
-	ohm_plugin_conf_provide (plugin, "timeremaining.to_discharge");
-	return TRUE;
-}
-
-/**
  * check_system_power_state:
  * @plugin: This class instance
  *
@@ -71,7 +50,7 @@ check_system_power_state (OhmPlugin *plugin)
 }
 
 /**
- * plugin_coldplug:
+ * plugin_initialize:
  * @plugin: This class instance
  *
  * Coldplug, i.e. read and set the initial state of the plugin.
@@ -79,12 +58,8 @@ check_system_power_state (OhmPlugin *plugin)
  * dangerous to assume the key values are anything other than the defaults.
  */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_initialize (OhmPlugin *plugin)
 {
-	/* interested keys */
-	ohm_plugin_conf_interested (plugin, "battery.percentage", CONF_BATTERY_PERCENT_CHANGED);
-	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
-
 	/* initial values */
 	ohm_plugin_conf_get_key (plugin, "battery.percentage", &(data.percentage));
 	ohm_plugin_conf_get_key (plugin, "acadapter.state", &(data.ac_state));
@@ -93,7 +68,7 @@ plugin_coldplug (OhmPlugin *plugin)
 }
 
 /**
- * plugin_conf_notify:
+ * plugin_notify:
  * @plugin: This class instance
  *
  * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
@@ -101,7 +76,7 @@ plugin_coldplug (OhmPlugin *plugin)
  * An enumerated numeric id rather than the key is returned for processing speed.
  */
 static void
-plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	if (id == CONF_BATTERY_PERCENT_CHANGED) {
 		data.percentage = value;
@@ -112,14 +87,22 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	}
 }
 
-static OhmPluginInfo plugin_info = {
+OHM_PLUGIN_DESCRIPTION (
 	"OHM timeremaining",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	NULL,				/* unload */
-	plugin_coldplug,		/* coldplug */
-	plugin_conf_notify,		/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	plugin_initialize,		/* initialize */
+	NULL,				/* destroy */
+	plugin_notify			/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_SUGGESTS ("battery", "acadapter");
+
+OHM_PLUGIN_PROVIDES ("timeremaining.to_charge", "timeremaining.to_discharge");
+
+OHM_PLUGIN_INTERESTED (
+	{"battery.percentage", CONF_BATTERY_PERCENT_CHANGED},
+	{"acadapter.state", CONF_AC_STATE_CHANGED}
+);
+	

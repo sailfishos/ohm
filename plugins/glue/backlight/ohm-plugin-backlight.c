@@ -113,27 +113,6 @@ backlight_get_brightness (OhmPlugin *plugin, guint *brightness)
 }
 #endif
 
-/**
- * plugin_preload:
- * @plugin: This class instance
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* todo: split into dcon glue plugin */
-	ohm_plugin_conf_provide (plugin, "backlight.state");
-
-	/* tell ohmd what keys we are going to provide so it can create them */
-	ohm_plugin_conf_provide (plugin, "backlight.hardware_brightness");
-	ohm_plugin_conf_provide (plugin, "backlight.percent_brightness");
-	ohm_plugin_conf_provide (plugin, "backlight.num_levels");
-	return TRUE;
-}
-
 static guint
 percent_to_discrete (guint percentage,
 		     guint levels)
@@ -150,7 +129,7 @@ percent_to_discrete (guint percentage,
 }
 
 /**
- * plugin_coldplug:
+ * plugin_initalize:
  * @plugin: This class instance
  *
  * Coldplug, i.e. read and set the initial state of the plugin.
@@ -158,15 +137,13 @@ percent_to_discrete (guint percentage,
  * dangerous to assume the key values are anything other than the defaults.
  */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_initalize (OhmPlugin *plugin)
 {
 	guint num;
 
 	/* interested keys, either can be changed without changing the other  */
-	ohm_plugin_conf_interested (plugin, "backlight.hardware_brightness", CONF_BRIGHTNESS_HARDWARE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.percent_brightness", CONF_BRIGHTNESS_PERCENT_CHANGED);
 
-	/* initialise HAL */
+	/* initalize HAL */
 	ohm_plugin_hal_init (plugin);
 
 	/* get the only device with capability and watch it */
@@ -185,7 +162,7 @@ plugin_coldplug (OhmPlugin *plugin)
 }
 
 /**
- * plugin_conf_notify:
+ * plugin_notify:
  * @plugin: This class instance
  *
  * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
@@ -193,7 +170,7 @@ plugin_coldplug (OhmPlugin *plugin)
  * An enumerated numeric id rather than the key is returned for processing speed.
  */
 static void
-plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	guint hw;
 	if (id == CONF_BRIGHTNESS_PERCENT_CHANGED) {
@@ -205,14 +182,21 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	}
 }
 
-static OhmPluginInfo plugin_info = {
-	"OHM Backlight",		/* description */
-	"0.0.2",			/* version */
-	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	NULL,				/* unload */
-	plugin_coldplug,		/* coldplug */
-	plugin_conf_notify,		/* conf_notify */
-};
+OHM_PLUGIN_DESCRIPTION (
+	"OHM Backlight",
+	"0.0.2",
+	"richard@hughsie.com",
+	OHM_LICENSE_LGPL,
+	plugin_initalize,
+	NULL,
+	plugin_notify);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_INTERESTED (
+	{"backlight.hardware_brightness", CONF_BRIGHTNESS_HARDWARE_CHANGED},
+	{"backlight.percent_brightness", CONF_BRIGHTNESS_PERCENT_CHANGED});
+
+OHM_PLUGIN_PROVIDES (
+	"backlight.state",
+	"backlight.hardware_brightness",
+	"backlight.percent_brightness",
+	"backlight.num_levels");

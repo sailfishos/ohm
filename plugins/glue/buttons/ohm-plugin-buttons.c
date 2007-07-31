@@ -23,23 +23,6 @@
 #include <string.h>
 #include <ohm-plugin.h>
 
-/**
- * plugin_preload:
- * @plugin: This class instance
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	ohm_plugin_conf_provide (plugin, "button.power");
-	ohm_plugin_conf_provide (plugin, "button.lid");
-	ohm_plugin_conf_provide (plugin, "button.tablet");
-	return TRUE;
-}
-
 static void
 hal_condition_cb (OhmPlugin   *plugin,
 		  guint        id,
@@ -64,17 +47,17 @@ hal_condition_cb (OhmPlugin   *plugin,
 }
 
 /**
- * plugin_coldplug:
+ * plugin_initalize:
  * @plugin: This class instance
  *
- * Coldplug, i.e. read and set the initial state of the plugin.
+ * Read and set the initial state of the plugin.
  * We can assume all the required modules have been loaded, although it's
  * dangerous to assume the key values are anything other than the defaults.
  */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_initalize (OhmPlugin *plugin)
 {
-	/* initialise HAL */
+	/* initalize HAL */
 	ohm_plugin_hal_init (plugin);
 
 	/* we want this function to get the property modified events for all devices */
@@ -89,14 +72,19 @@ plugin_coldplug (OhmPlugin *plugin)
 	ohm_plugin_conf_set_key (plugin, "button.tablet", 0);
 }
 
-static OhmPluginInfo plugin_info = {
+
+OHM_PLUGIN_DESCRIPTION (
 	"OHM HAL Buttons",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	NULL,				/* unload */
-	plugin_coldplug,		/* coldplug */
-	NULL,				/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	plugin_initalize,		/* initalize */
+	NULL,				/* destroy */
+	NULL				/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_PROVIDES (
+	"button.lid",
+	"button.power",
+	"button.tablet"
+);

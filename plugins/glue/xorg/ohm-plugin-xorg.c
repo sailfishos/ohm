@@ -28,21 +28,6 @@
 
 #include <ohm-plugin.h>
 
-/**
- * plugin_preload:
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_conf_provide (plugin, "xorg.has_xauthority");
-	return TRUE;
-}
-
 static gboolean
 plugin_poll_startup (gpointer data)
 {
@@ -74,14 +59,14 @@ plugin_poll_startup (gpointer data)
 }
 
 /**
- * plugin_coldplug:
+ * plugin_initialize:
  *
  * Coldplug, i.e. read and set the initial state of the plugin.
  * We can assume all the required modules have been loaded, although it's
  * dangerous to assume the key values are anything other than the defaults.
  */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_initialize (OhmPlugin *plugin)
 {
 	gboolean ret;
 
@@ -97,14 +82,14 @@ plugin_coldplug (OhmPlugin *plugin)
 	}
 }
 
-static OhmPluginInfo plugin_info = {
+OHM_PLUGIN_DESCRIPTION (
 	"OHM xorg finder",		/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	NULL,				/* unload */
-	plugin_coldplug,		/* coldplug */
-	NULL,				/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	plugin_initialize,		/* initialize */
+	NULL,				/* destroy */
+	NULL				/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_PROVIDES ("xorg.has_xauthority");

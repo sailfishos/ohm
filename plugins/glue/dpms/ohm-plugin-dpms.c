@@ -47,21 +47,6 @@ typedef enum {
 	OHM_DPMS_MODE_OFF
 } OhmDpmsMode;
 
-/**
- * plugin_preload:
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_require (plugin, "backlight");
-	return TRUE;
-}
-
 
 /**
  * ohm_dpms_get_mode:
@@ -166,46 +151,43 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 }
 
 /**
- * plugin_coldplug:
+ * plugin_initalize:
  *
  * Coldplug, i.e. read and set the initial state of the plugin.
  * We can assume all the required modules have been loaded, although it's
  * dangerous to assume the key values are anything other than the defaults.
  */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_initalize (OhmPlugin *plugin)
 {
 	/* we can assume DPMS is on */
 	ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
-
-	/* interested keys */
-	ohm_plugin_conf_interested (plugin, "backlight.state", CONF_BACKLIGHT_STATE_CHANGED);
 
 	/* open display, need to free using XCloseDisplay */
 	dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
 }
 
 /**
- * plugin_unload:
+ * plugin_destroy:
  *
  * Unload drivers, free memory.
  */
 static void
-plugin_unload (OhmPlugin *plugin)
+plugin_destroy (OhmPlugin *plugin)
 {
 	XCloseDisplay (dpy);
 	dpy = NULL;
 }
 
 /**
- * plugin_conf_notify:
+ * plugin_notify:
  *
  * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
  * has it's value changed.
  * An enumerated numeric id rather than the key is returned for processing speed.
  */
 static void
-plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	if (id == CONF_BACKLIGHT_STATE_CHANGED) {
 		if (value == 0) {
@@ -216,14 +198,16 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	}
 }
 
-static OhmPluginInfo plugin_info = {
+OHM_PLUGIN_DESCRIPTION (
 	"OHM DPMS",			/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	plugin_unload,			/* unload */
-	plugin_coldplug,		/* coldplug */
-	plugin_conf_notify,		/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	plugin_initalize,		/* initalize */
+	plugin_destroy,			/* destroy */
+	plugin_notify		/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_INTERESTED ({"backlight.state", CONF_BACKLIGHT_STATE_CHANGED});
+
+OHM_PLUGIN_REQUIRES ("backlight");

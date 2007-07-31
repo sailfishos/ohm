@@ -74,42 +74,6 @@ system_suspend (OhmPlugin *plugin)
 	return ret;
 }
 
-/**
- * plugin_preload:
- * @plugin: This class instance
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* FIXME: detect if we have any backlights in the system and return false if not */
-	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_suggest (plugin, "idle");
-	ohm_plugin_suggest (plugin, "buttons");
-	return TRUE;
-}
-
-/**
- * plugin_coldplug:
- * @plugin: This class instance
- *
- * Coldplug, i.e. read and set the initial state of the plugin.
- * We can assume all the required modules have been loaded, although it's
- * dangerous to assume the key values are anything other than the defaults.
- */
-static void
-plugin_coldplug (OhmPlugin *plugin)
-{
-	/* interested keys */
-	ohm_plugin_conf_interested (plugin, "button.power", CONF_BUTTON_POWER_CHANGED);
-	ohm_plugin_conf_interested (plugin, "button.lid", CONF_BUTTON_LID_CHANGED);
-	ohm_plugin_conf_interested (plugin, "idle.powerdown", CONF_IDLE_POWERDOWN_CHANGED);
-	ohm_plugin_conf_interested (plugin, "suspend.fixme_inhibit", CONF_INHIBIT_CHANGED);
-}
-
 static void
 power_button_pressed (OhmPlugin *plugin)
 {
@@ -163,7 +127,7 @@ system_is_idle (OhmPlugin *plugin)
 }
 
 /**
- * plugin_conf_notify:
+ * plugin_notify:
  * @plugin: This class instance
  *
  * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
@@ -171,7 +135,7 @@ system_is_idle (OhmPlugin *plugin)
  * An enumerated numeric id rather than the key is returned for processing speed.
  */
 static void
-plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	if (id == CONF_BUTTON_LID_CHANGED) {
 		if (value == 1) {
@@ -192,14 +156,24 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	}
 }
 
-static OhmPluginInfo plugin_info = {
+OHM_PLUGIN_DESCRIPTION (
 	"suspend",			/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	NULL,				/* unload */
-	plugin_coldplug,		/* coldplug */
-	plugin_conf_notify,		/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	NULL,				/* initialize */
+	NULL,				/* destroy */
+	plugin_notify			/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_SUGGESTS (
+	"idle",
+	"buttons"
+);
+
+OHM_PLUGIN_INTERESTED (
+	{"button.power", CONF_BUTTON_POWER_CHANGED},
+	{"button.lid", CONF_BUTTON_LID_CHANGED},
+	{"idle.powerdown", CONF_IDLE_POWERDOWN_CHANGED},
+	{"suspend.fixme_inhibit", CONF_INHIBIT_CHANGED}
+);

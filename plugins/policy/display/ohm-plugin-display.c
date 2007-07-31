@@ -35,50 +35,6 @@ enum {
 	CONF_LAST
 };
 
-/**
- * plugin_preload:
- * @plugin: This class instance
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* FIXME: detect if we have any backlights in the system and return false if not */
-	/* add in the required, suggested and prevented plugins */
-	ohm_plugin_suggest (plugin, "idle");
-	ohm_plugin_suggest (plugin, "acadapter");
-	ohm_plugin_suggest (plugin, "buttons");
-	ohm_plugin_suggest (plugin, "xrandr");
-	ohm_plugin_suggest (plugin, "backlight");
-	return TRUE;
-}
-
-/**
- * plugin_coldplug:
- * @plugin: This class instance
- *
- * Coldplug, i.e. read and set the initial state of the plugin.
- * We can assume all the required modules have been loaded, although it's
- * dangerous to assume the key values are anything other than the defaults.
- */
-static void
-plugin_coldplug (OhmPlugin *plugin)
-{
-	/* interested keys */
-	ohm_plugin_conf_interested (plugin, "acadapter.state", CONF_AC_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "backlight.state", CONF_BACKLIGHT_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "button.lid", CONF_LID_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "button.tablet", CONF_TABLET_STATE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "idle.powersave", CONF_IDLE_POWERSAVE_CHANGED);
-	ohm_plugin_conf_interested (plugin, "idle.momentary", CONF_IDLE_MOMENTARY_CHANGED);
-	ohm_plugin_conf_interested (plugin, "display.value_ac", CONF_BRIGHTNESS_AC_CHANGED);
-	ohm_plugin_conf_interested (plugin, "display.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED);
-	ohm_plugin_conf_interested (plugin, "display.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED);
-}
-
 static void
 reset_brightness (OhmPlugin *plugin)
 {
@@ -175,7 +131,7 @@ lid_closed (OhmPlugin *plugin, gboolean is_closed)
 }
 
 /**
- * plugin_conf_notify:
+ * plugin_notify:
  * @plugin: This class instance
  *
  * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
@@ -183,7 +139,7 @@ lid_closed (OhmPlugin *plugin, gboolean is_closed)
  * An enumerated numeric id rather than the key is returned for processing speed.
  */
 static void
-plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	switch (id) {
 	case CONF_BRIGHTNESS_AC_CHANGED:
@@ -214,14 +170,32 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	}
 }
 
-static OhmPluginInfo plugin_info = {
+OHM_PLUGIN_DESCRIPTION (
 	"Display",			/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	NULL,				/* unload */
-	plugin_coldplug,		/* coldplug */
-	plugin_conf_notify,		/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	NULL,				/* initialize */
+	NULL,				/* destroy */
+	plugin_notify			/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_SUGGESTS (
+	"idle",
+	"acadapter",
+	"buttons",
+	"xrandr",
+	"backlight"
+);
+
+OHM_PLUGIN_INTERESTED (
+	{"acadapter.state", CONF_AC_STATE_CHANGED},
+	{"backlight.state", CONF_BACKLIGHT_STATE_CHANGED},
+	{"button.lid", CONF_LID_STATE_CHANGED},
+	{"button.tablet", CONF_TABLET_STATE_CHANGED},
+	{"idle.powersave", CONF_IDLE_POWERSAVE_CHANGED},
+	{"idle.momentary", CONF_IDLE_MOMENTARY_CHANGED},
+	{"display.value_ac", CONF_BRIGHTNESS_AC_CHANGED},
+	{"display.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED},
+	{"display.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED}
+);

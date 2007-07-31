@@ -32,25 +32,6 @@ enum {
 	CONF_LAST
 };
 
-/**
- * plugin_preload:
- * @plugin: This class instance
- *
- * Called before the plugin is coldplg.
- * Define any modules that the plugin depends on, but do not do coldplug here
- * as some of the modules may not have loaded yet.
- */
-static gboolean
-plugin_preload (OhmPlugin *plugin)
-{
-	/* tell ohmd what keys we are going to provide */
-	ohm_plugin_require (plugin, "xorg");
-	ohm_plugin_conf_provide (plugin, "idle.momentary");
-	ohm_plugin_conf_provide (plugin, "idle.powersave");
-	ohm_plugin_conf_provide (plugin, "idle.powerdown");
-	return TRUE;
-}
-
 static void
 ohm_alarm_expired_cb (LibIdletime *idletime, guint alarm, gpointer data)
 {
@@ -107,7 +88,7 @@ plugin_connect_idletime (OhmPlugin *plugin)
 }
 
 /**
- * plugin_coldplug:
+ * plugin_initalize:
  * @plugin: This class instance
  *
  * Coldplug, i.e. read and set the initial state of the plugin.
@@ -115,7 +96,7 @@ plugin_connect_idletime (OhmPlugin *plugin)
  * dangerous to assume the key values are anything other than the defaults.
  */
 static void
-plugin_coldplug (OhmPlugin *plugin)
+plugin_initalize (OhmPlugin *plugin)
 {
 	gint value;
 
@@ -125,11 +106,10 @@ plugin_coldplug (OhmPlugin *plugin)
 		plugin_connect_idletime (plugin);
 	}
 
-	ohm_plugin_conf_interested (plugin, "xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED);
 }
 
 /**
- * plugin_conf_notify:
+ * plugin_notify:
  * @plugin: This class instance
  *
  * Notify the plugin that a key marked with ohm_plugin_conf_interested ()
@@ -137,7 +117,7 @@ plugin_coldplug (OhmPlugin *plugin)
  * An enumerated numeric id rather than the key is returned for processing speed.
  */
 static void
-plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
+plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
 	if (id == CONF_XORG_HASXAUTH_CHANGED) {
 		if (value == 1) {
@@ -146,19 +126,23 @@ plugin_conf_notify (OhmPlugin *plugin, gint id, gint value)
 	}
 }
 static void
-plugin_unload (OhmPlugin *plugin)
+plugin_destroy (OhmPlugin *plugin)
 {
 	g_object_unref (idletime);
 }
 
-static OhmPluginInfo plugin_info = {
+OHM_PLUGIN_DESCRIPTION (
 	"OHM IdleTime",			/* description */
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
-	plugin_preload,			/* preload */
-	plugin_unload,			/* unload */
-	plugin_coldplug,		/* coldplug */
-	plugin_conf_notify,		/* conf_notify */
-};
+	OHM_LICENSE_LGPL,		/* license */
+	plugin_initalize,		/* initalize */
+	plugin_destroy,			/* destroy */
+	plugin_notify		/* notify */
+);
 
-OHM_INIT_PLUGIN (plugin_info);
+OHM_PLUGIN_REQUIRES ("xorg");
+
+OHM_PLUGIN_PROVIDES ("idle.momentary", "idle.powersave", "idle.powerdown");
+
+OHM_PLUGIN_INTERESTED ({"xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED});
