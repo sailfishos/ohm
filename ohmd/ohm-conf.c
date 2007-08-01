@@ -262,7 +262,7 @@ ohm_conf_add_key (OhmConf     *conf,
 
 	/* add as the strdup'd value as key is constant */
 	confkey = ohm_confobj_get_key (confobj);
-	g_hash_table_insert (conf->priv->keys, (gpointer) confkey, (gpointer) confobj);
+	g_hash_table_insert (conf->priv->keys, (gpointer) g_strdup(confkey), (gpointer) confobj);
 
 	return TRUE;
 }

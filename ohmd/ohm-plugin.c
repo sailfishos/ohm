@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2007 Richard Hughes <richard@hughsie.com>
+ * Copyright (C) 2007 Codethink Ltd
+ *            Author: Rob Taylor <rob.taylor@codethink.co.uk>
  *
  * Licensed under the GNU Lesser General Public License Version 2
  *
@@ -50,7 +52,6 @@
 struct OhmPluginPrivate
 {
 	OhmConf			*conf;
-	OhmPluginInfo		*info;
 	GModule			*handle;
 	gchar			*name;
 	/* not assigned unless a plugin uses hal */
@@ -60,64 +61,14 @@ struct OhmPluginPrivate
 	OhmPluginHalCondition	 hal_condition_cb;
 };
 
-enum {
-	ADD_INTERESTED,
-	ADD_REQUIRE,
-	ADD_SUGGEST,
-	ADD_PREVENT,
-	LAST_SIGNAL
-};
-
-static guint	     signals[LAST_SIGNAL] = { 0, };
-
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
 
-/**
- * ohm_plugin_get_key:
- **/
 gboolean
-ohm_plugin_require (OhmPlugin   *plugin,
-		    const gchar *name)
-{
-	ohm_debug ("emitting add-require '%s'", name);
-	g_signal_emit (plugin, signals[ADD_REQUIRE], 0, name);
-	return TRUE;
-}
-
-/**
- * ohm_plugin_add_notify_key:
- **/
-gboolean
-ohm_plugin_suggest (OhmPlugin   *plugin,
-		    const gchar *name)
-{
-	ohm_debug ("emitting add-suggest '%s'", name);
-	g_signal_emit (plugin, signals[ADD_SUGGEST], 0, name);
-	return TRUE;
-}
-
-/**
- * ohm_plugin_set_key:
- *
- **/
-gboolean
-ohm_plugin_prevent (OhmPlugin   *plugin,
-		    const gchar *name)
-{
-	ohm_debug ("emitting add-prevent '%s'", name);
-	g_signal_emit (plugin, signals[ADD_PREVENT], 0, name);
-	return TRUE;
-}
-
-gboolean
-ohm_plugin_preload (OhmPlugin *plugin, const gchar *name)
+ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 {
 	gchar *path;
 	GModule *handle;
 	gchar *filename;
-	gboolean ret;
-
-	OhmPluginInfo * (*ohm_init_plugin) (OhmPlugin *);
 
 	g_return_val_if_fail (name != NULL, FALSE);
 
@@ -138,23 +89,20 @@ ohm_plugin_preload (OhmPlugin *plugin, const gchar *name)
 	}
 	g_free (path);
 
-	if (!g_module_symbol (handle, "ohm_init_plugin", (gpointer) &ohm_init_plugin)) {
+	if (!g_module_symbol (handle, "ohm_plugin_desc", (gpointer) &plugin->desc)) {
 		g_module_close (handle);
-		g_error ("could not find init function in plugin");
+		ohm_debug ("could not find description in plugin %s, not loading", name);
+		return FALSE;
 	}
 
+	g_module_symbol (handle, "ohm_plugin_interested", (gpointer) &plugin->interested);
+	g_module_symbol (handle, "ohm_plugin_provides", (gpointer) &plugin->provides);
+	g_module_symbol (handle, "ohm_plugin_requires", (gpointer) &plugin->requires);
+	g_module_symbol (handle, "ohm_plugin_suggests", (gpointer) &plugin->suggests);
+	g_module_symbol (handle, "ohm_plugin_prevents", (gpointer) &plugin->prevents);
 	plugin->priv->handle = handle;
 	plugin->priv->name = g_strdup (name);
-	plugin->priv->info = ohm_init_plugin (plugin);
-
-	/* do the load */
-	ret = TRUE;
-	if (plugin->priv->info->preload != NULL) {
-		ret = plugin->priv->info->preload (plugin);
-		/* the plugin preload might fail if we do not have the hardware */
-	}
-
-	return ret;
+	return TRUE;
 }
 
 const gchar *
@@ -170,7 +118,7 @@ ohm_plugin_get_version (OhmPlugin *plugin)
 {
 	g_return_val_if_fail (plugin != NULL, NULL);
 
-	return plugin->priv->info->version;
+	return plugin->desc->version;
 }
 
 const gchar *
@@ -178,32 +126,13 @@ ohm_plugin_get_author (OhmPlugin *plugin)
 {
 	g_return_val_if_fail (plugin != NULL, NULL);
 
-	return plugin->priv->info->author;
+	return plugin->desc->author;
 }
 
-G_MODULE_EXPORT gboolean
-ohm_plugin_conf_provide (OhmPlugin *plugin,
-			 const gchar *name)
-{
-	GError *error;
-	gboolean ret;
-	error = NULL;
-
-	ohm_debug ("%s provides %s", plugin->priv->name, name);
-
-	/* provides keys are never public and are always preset at zero */
-	ret = ohm_conf_add_key (plugin->priv->conf, name, 0, FALSE, &error);
-	if (ret == FALSE) {
-		ohm_debug ("Cannot provide key: %s", error->message);
-		g_error_free (error);
-	}
-	return ret;
-}
-
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_conf_get_key (OhmPlugin   *plugin,
-			 const gchar *key,
-			 int         *value)
+			const gchar  *key,
+			int	     *value)
 {
 	GError *error;
 	gboolean ret;
@@ -216,10 +145,10 @@ ohm_plugin_conf_get_key (OhmPlugin   *plugin,
 	return ret;
 }
 
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_conf_set_key (OhmPlugin   *plugin,
-			 const gchar *key,
-			 int          value)
+			const gchar  *key,
+			int	      value)
 {
 	GError *error;
 	gboolean ret;
@@ -233,30 +162,31 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 	return ret;
 }
 
-G_MODULE_EXPORT gboolean
-ohm_plugin_conf_notify (OhmPlugin   *plugin,
-			int          id,
-			int          value)
+gboolean
+ohm_plugin_notify (OhmPlugin   *plugin,
+			int     id,
+			int     value)
 {
-	plugin->priv->info->conf_notify (plugin, id, value);
+	plugin->desc->notify (plugin, id, value);
 	return TRUE;
 }
 
-G_MODULE_EXPORT gboolean
-ohm_plugin_coldplug (OhmPlugin   *plugin)
+gboolean
+ohm_plugin_initialize (OhmPlugin   *plugin)
 {
-	plugin->priv->info->coldplug (plugin);
+	if (plugin->desc->initialize)
+		plugin->desc->initialize (plugin);
 	return TRUE;
 }
 
 /* only use this when required */
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_hal_init (OhmPlugin   *plugin)
 {
 	DBusConnection *conn;
 
 	if (plugin->priv->hal_ctx != NULL) {
-		g_warning ("already initialised HAL from this plugin");
+		g_warning ("already initialized HAL from this plugin");
 		return FALSE;
 	}
 
@@ -347,7 +277,7 @@ hal_condition_cb (LibHalContext *ctx,
 	plugin->priv->hal_condition_cb (plugin, id, name, detail);
 }
 
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_hal_use_property_modified (OhmPlugin	         *plugin,
 				      OhmPluginHalPropMod func)
 {
@@ -356,7 +286,7 @@ ohm_plugin_hal_use_property_modified (OhmPlugin	         *plugin,
 	return TRUE;
 }
 
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_hal_use_condition (OhmPlugin	           *plugin,
 			      OhmPluginHalCondition func)
 {
@@ -365,7 +295,7 @@ ohm_plugin_hal_use_condition (OhmPlugin	           *plugin,
 	return TRUE;
 }
 
-G_MODULE_EXPORT guint
+guint
 ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 				      const gchar *capability)
 {
@@ -374,7 +304,7 @@ ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 	guint i;
 
 	if (plugin->priv->hal_ctx == NULL) {
-		g_warning ("HAL not already initialised from this plugin!");
+		g_warning ("HAL not already initialized from this plugin!");
 		return FALSE;
 	}
 
@@ -397,7 +327,7 @@ ohm_plugin_hal_add_device_capability (OhmPlugin   *plugin,
 	return num_devices;
 }
 
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_hal_get_bool (OhmPlugin   *plugin,
 			 guint        id,
 			 const gchar *key,
@@ -405,7 +335,7 @@ ohm_plugin_hal_get_bool (OhmPlugin   *plugin,
 {
 	const gchar *udi;
 	if (plugin->priv->hal_ctx == NULL) {
-		g_warning ("HAL not already initialised from this plugin!");
+		g_warning ("HAL not already initialized from this plugin!");
 		return FALSE;
 	}
 	
@@ -414,7 +344,7 @@ ohm_plugin_hal_get_bool (OhmPlugin   *plugin,
 	return TRUE;
 }
 
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_hal_get_int (OhmPlugin   *plugin,
 			guint        id,
 			const gchar *key,
@@ -422,7 +352,7 @@ ohm_plugin_hal_get_int (OhmPlugin   *plugin,
 {
 	const gchar *udi;
 	if (plugin->priv->hal_ctx == NULL) {
-		g_warning ("HAL not already initialised from this plugin!");
+		g_warning ("HAL not already initialized from this plugin!");
 		return FALSE;
 	}
 	udi = ohm_plugin_find_udi_from_id (plugin, id);
@@ -431,7 +361,7 @@ ohm_plugin_hal_get_int (OhmPlugin   *plugin,
 }
 
 /* have to free */
-G_MODULE_EXPORT gchar *
+gchar *
 ohm_plugin_hal_get_udi (OhmPlugin *plugin, guint id)
 {
 	const gchar *udi;
@@ -442,7 +372,7 @@ ohm_plugin_hal_get_udi (OhmPlugin *plugin, guint id)
 	return g_strdup (udi);
 }
 
-G_MODULE_EXPORT gboolean
+gboolean
 ohm_plugin_spawn_async (OhmPlugin   *plugin,
 			const gchar *commandline)
 {
@@ -457,16 +387,6 @@ ohm_plugin_spawn_async (OhmPlugin   *plugin,
 		g_error_free (error);
 	}
 	return ret;
-}
-
-G_MODULE_EXPORT gboolean
-ohm_plugin_conf_interested (OhmPlugin   *plugin,
-			    const gchar	*key,
-			    gint         id)
-{
-	ohm_debug ("%s provides wants notification of %s on signal %i", plugin->priv->name, key, id);
-	g_signal_emit (plugin, signals[ADD_INTERESTED], 0, key, id);
-	return TRUE;
 }
 
 static void
@@ -501,18 +421,16 @@ ohm_plugin_finalize (GObject *object)
 
 	g_object_unref (plugin->priv->conf);
 
-	if (plugin->priv->info != NULL) {
-		if (plugin->priv->info->unload != NULL) {
-			plugin->priv->info->unload (plugin);
-			/* free hal stuff, if used */
-			if (plugin->priv->hal_ctx != NULL) {
-				ohm_plugin_free_hal_table (plugin);
-				libhal_ctx_shutdown (plugin->priv->hal_ctx, NULL);
-			}
+	if (plugin->desc != NULL) {
+		if (plugin->desc->destroy != NULL) {
+			plugin->desc->destroy (plugin);
 		}
-	}
-	if (plugin->priv->handle != NULL) {
-		g_module_close (plugin->priv->handle);
+		/* free hal stuff, if used */
+		if (plugin->priv->hal_ctx != NULL) {
+			ohm_plugin_free_hal_table (plugin);
+			libhal_ctx_shutdown (plugin->priv->hal_ctx, NULL);
+		}
+		
 	}
 
 	if (plugin->priv->name != NULL) {
@@ -530,44 +448,8 @@ static void
 ohm_plugin_class_init (OhmPluginClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
-	object_class->finalize	   = ohm_plugin_finalize;
 
-	signals[ADD_INTERESTED] =
-		g_signal_new ("add-interested",
-			      G_TYPE_FROM_CLASS (object_class),
-			      G_SIGNAL_RUN_LAST,
-			      G_STRUCT_OFFSET (OhmPluginClass, add_interested),
-			      NULL, NULL,
-			      ohm_marshal_VOID__STRING_INT,
-			      G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_INT);
-
-	signals[ADD_REQUIRE] =
-		g_signal_new ("add-require",
-			      G_TYPE_FROM_CLASS (object_class),
-			      G_SIGNAL_RUN_LAST,
-			      G_STRUCT_OFFSET (OhmPluginClass, add_require),
-			      NULL, NULL,
-			      ohm_marshal_VOID__STRING,
-			      G_TYPE_NONE, 1, G_TYPE_STRING);
-
-	signals[ADD_SUGGEST] =
-		g_signal_new ("add-suggest",
-			      G_TYPE_FROM_CLASS (object_class),
-			      G_SIGNAL_RUN_LAST,
-			      G_STRUCT_OFFSET (OhmPluginClass, add_suggest),
-			      NULL, NULL,
-			      ohm_marshal_VOID__STRING,
-			      G_TYPE_NONE, 1, G_TYPE_STRING);
-
-	signals[ADD_PREVENT] =
-		g_signal_new ("add-prevent",
-			      G_TYPE_FROM_CLASS (object_class),
-			      G_SIGNAL_RUN_LAST,
-			      G_STRUCT_OFFSET (OhmPluginClass, add_prevent),
-			      NULL, NULL,
-			      ohm_marshal_VOID__STRING,
-			      G_TYPE_NONE, 1, G_TYPE_STRING);
-
+	object_class->finalize = ohm_plugin_finalize;
 	g_type_class_add_private (klass, sizeof (OhmPluginPrivate));
 }
 
@@ -579,7 +461,6 @@ ohm_plugin_init (OhmPlugin *plugin)
 {
 	plugin->priv = OHM_PLUGIN_GET_PRIVATE (plugin);
 
-	plugin->priv->conf = ohm_conf_new ();
 	plugin->priv->hal_udis = g_ptr_array_new ();
 }
 
@@ -591,5 +472,6 @@ ohm_plugin_new (void)
 {
 	OhmPlugin *plugin;
 	plugin = g_object_new (OHM_TYPE_PLUGIN, NULL);
+	plugin->priv->conf = ohm_conf_new ();
 	return OHM_PLUGIN (plugin);
 }

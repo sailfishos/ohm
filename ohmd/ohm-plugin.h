@@ -33,61 +33,104 @@ G_BEGIN_DECLS
 #define OHM_PLUGIN_GET_CLASS(o)	(G_TYPE_INSTANCE_GET_CLASS ((o), OHM_TYPE_PLUGIN, OhmPluginClass))
 
 typedef struct OhmPluginPrivate OhmPluginPrivate;
+typedef struct OhmPlugin OhmPlugin;
+typedef struct OhmPluginDesc OhmPluginDesc;
+typedef struct OhmPluginClass OhmPluginClass;
+typedef struct OhmPluginKeyIdMap OhmPluginKeyIdMap;
 
-typedef struct
+struct OhmPlugin
 {
-	GObject		  parent;
+	GObject		 parent;
+	const OhmPluginDesc *desc;
+	const OhmPluginKeyIdMap *interested;
+	const char **provides;
+	const char **requires;
+	const char **suggests;
+	const char **prevents;
 	OhmPluginPrivate *priv;
-} OhmPlugin;
+};
 
-typedef struct
+struct OhmPluginClass
 {
 	GObjectClass	parent_class;
-	void		(* add_interested)		(OhmPlugin	*plugin,
-							 const gchar	*key,
-							 gint		 id);
-	void		(* add_require)			(OhmPlugin	*plugin,
-							 const gchar	*name);
-	void		(* add_suggest)			(OhmPlugin	*plugin,
-							 const gchar	*name);
-	void		(* add_prevent)			(OhmPlugin	*plugin,
-							 const gchar	*name);
-	void		(* hal_key_changed)		(OhmPlugin	*plugin,
-							 const gchar	*key);
-} OhmPluginClass;
+};
 
-typedef struct {
-	gchar		*description;
-	gchar		*version;
-	gchar		*author;
-	gboolean	(*preload)			(OhmPlugin *plugin);
-	void		(*unload)			(OhmPlugin *plugin);
-	void		(*coldplug)			(OhmPlugin *plugin);
-	void		(*conf_notify)			(OhmPlugin *plugin, gint id, gint value);
-} OhmPluginInfo;
+struct OhmPluginKeyIdMap {
+	const char	*key_name;
+	gint		local_key_id;
+};
 
-typedef void (*OhmPluginHalPropMod) 			(OhmPlugin	*plugin,
+typedef enum {
+	OHM_LICENSE_LGPL,
+	OHM_LICENSE_GPL,
+	OHM_LICENSE_MIT,
+	OHM_LICENSE_BSD,
+	OHM_LICENSE_NON_FREE,
+	OHM_LICENSE_FREE_OTHER
+} OhmLicenseType;
+
+/**
+ * OhmPluginDesc:
+ * @description: Plugin description
+ * @version: Plugin version
+ * @author: Plugin author
+ * @license: Plugin license type
+ * @initialize: method to call on plugin initialization
+ * @destroy: method to call on plugin destruction
+ * @notify: method to call to notify of key changes, using the id's described by
+ *          #OHM_PLUGIN_INTERESTED
+ * @padding: Padding for future expansion
+ */
+struct OhmPluginDesc {
+	const char		*description;
+	const char		*version;
+	const char		*author;
+	OhmLicenseType	license;
+	void		(*initialize)			(OhmPlugin *plugin);
+	void		(*destroy)			(OhmPlugin *plugin);
+	void		(*notify)			(OhmPlugin *plugin, gint id, gint value);
+	gpointer padding[8];
+};
+
+#define OHM_PLUGIN_DESCRIPTION(description, version, author, license, initialize, destroy, notify) \
+	G_MODULE_EXPORT const OhmPluginDesc ohm_plugin_desc = { \
+		description, \
+		version, \
+		author, \
+		license,\
+		initialize, \
+		destroy, \
+		notify, \
+		{0} \
+	}
+
+#define OHM_PLUGIN_INTERESTED(...) \
+	G_MODULE_EXPORT const OhmPluginKeyIdMap ohm_plugin_interested[] = {__VA_ARGS__, {NULL,0}}
+
+#define OHM_PLUGIN_PROVIDES(...) \
+	G_MODULE_EXPORT const gchar *ohm_plugin_provides[] = {__VA_ARGS__,NULL}
+
+#define OHM_PLUGIN_REQUIRES(...) \
+	G_MODULE_EXPORT const gchar *ohm_plugin_requires[] = {__VA_ARGS__,NULL}
+
+#define OHM_PLUGIN_SUGGESTS(...) \
+	G_MODULE_EXPORT const gchar *ohm_plugin_suggests[] = {__VA_ARGS__,NULL}
+
+#define OHM_PLUGIN_PREVENTS(...) \
+	G_MODULE_EXPORT const gchar *ohm_plugin_prevents[] = {__VA_ARGS__,NULL}
+
+typedef void (*OhmPluginHalPropMod)			(OhmPlugin	*plugin,
 							 guint		 id,
 							 const gchar	*key);
-typedef void (*OhmPluginHalCondition) 			(OhmPlugin	*plugin,
+typedef void (*OhmPluginHalCondition)			(OhmPlugin	*plugin,
 							 guint		 id,
 							 const gchar	*name,
 							 const gchar	*detail);
 
-
-#define OHM_INIT_PLUGIN(plugininfo) G_MODULE_EXPORT OhmPluginInfo *ohm_init_plugin (OhmPlugin *plugin) {return &(plugin_info);}
-
 GType		 ohm_plugin_get_type			(void);
-OhmPlugin 	*ohm_plugin_new				(void);
+OhmPlugin	*ohm_plugin_new				(void);
 
-gboolean	 ohm_plugin_preload			(OhmPlugin      *plugin,
-							 const gchar	*name);
-
-gboolean	 ohm_plugin_require			(OhmPlugin	*plugin,
-							 const gchar	*name);
-gboolean	 ohm_plugin_suggest			(OhmPlugin	*plugin,
-							 const gchar	*name);
-gboolean	 ohm_plugin_prevent			(OhmPlugin	*plugin,
+gboolean	 ohm_plugin_load			(OhmPlugin      *plugin,
 							 const gchar	*name);
 
 const gchar	*ohm_plugin_get_name			(OhmPlugin	*plugin);
@@ -99,17 +142,12 @@ gboolean	 ohm_plugin_spawn_async			(OhmPlugin      *plugin,
 							 const gchar	*commandline);
 
 /* used by plugin to manager */
-gboolean	 ohm_plugin_conf_provide		(OhmPlugin      *plugin,
-							 const gchar	*name);
 gboolean	 ohm_plugin_conf_get_key		(OhmPlugin      *plugin,
 							 const gchar	*key,
 							 gint		*value);
 gboolean	 ohm_plugin_conf_set_key		(OhmPlugin      *plugin,
 							 const gchar	*key,
 							 gint		 value);
-gboolean	 ohm_plugin_conf_interested		(OhmPlugin      *plugin,
-							 const gchar	*key,
-							 gint		 id);
 /* used by plugin for hal */
 gboolean	 ohm_plugin_hal_init			(OhmPlugin	*plugin);
 gboolean	 ohm_plugin_hal_use_property_modified	(OhmPlugin	*plugin,
@@ -130,10 +168,10 @@ guint		 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 							 const gchar	*capability);
 
 /* used by manager to plugin */
-gboolean	 ohm_plugin_conf_notify			(OhmPlugin      *plugin,
+gboolean	 ohm_plugin_notify			(OhmPlugin      *plugin,
 							 gint		 id,
 							 gint		 value);
-gboolean	 ohm_plugin_coldplug			(OhmPlugin      *plugin);
+gboolean	 ohm_plugin_initialize			(OhmPlugin      *plugin);
 
 G_END_DECLS
 

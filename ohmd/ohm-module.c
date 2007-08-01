@@ -53,17 +53,30 @@ struct OhmModulePrivate
 	GSList			*plugins;	/* list of loaded OhmPlugin's */
 	GHashTable		*interested;
 	OhmConf			*conf;
-	gboolean		 doing_preload;
 	gboolean		 do_extra_checks;
+	gchar			**modules_banned;
+	gchar			**modules_suggested;
+	gchar			**modules_required;
 };
 
 /* used as a hash entry type to provide int-passing services to the plugin */
 typedef struct {
 	OhmPlugin		*plugin;
 	gint			 id;
-} OhmModuleNofif;
+} OhmModuleNotify;
 
 G_DEFINE_TYPE (OhmModule, ohm_module, G_TYPE_OBJECT)
+
+static void
+free_notify_list (GList *list)
+{
+	GList *l;
+
+	for (l=list; l != NULL; l=l->next) {
+		g_slice_free (OhmModuleNotify, list->data);
+	}
+	g_list_free (list);
+}
 
 static void
 key_changed_cb (OhmConf     *conf,
@@ -73,7 +86,7 @@ key_changed_cb (OhmConf     *conf,
 {
 	GSList **entry;
 	GSList *l;
-	OhmModuleNofif *notif;
+	OhmModuleNotify *notif;
 	const gchar *name;
 
 	ohm_debug ("key changed! %s : %i", key, value);
@@ -89,110 +102,109 @@ key_changed_cb (OhmConf     *conf,
 	ohm_debug ("found watched key %s", key);
 	/* go thru the SList and notify each plugin */
 	for (l=*entry; l != NULL; l=l->next) {
-		notif = (OhmModuleNofif *) l->data;
+		notif = (OhmModuleNotify *) l->data;
 		name = ohm_plugin_get_name (notif->plugin);
 		ohm_debug ("notify %s with id:%i", name, notif->id);
-		ohm_plugin_conf_notify (notif->plugin, notif->id, value);
+		ohm_plugin_notify (notif->plugin, notif->id, value);
 	}
 }
 
 static void
-add_interested_cb (OhmPlugin   *plugin,
-		   const gchar *key,
-		   gint	        id,
-		   OhmModule   *module)
+add_interesteds (OhmModule   *module, OhmPlugin   *plugin)
 {
 	GSList **entry;
 	GSList **l;
-	OhmModuleNofif *notif;
-	ohm_debug ("add interested! %s : %i", key, id);
+	OhmModuleNotify *notif;
+	const OhmPluginKeyIdMap *interested;
+	
+	if (plugin->interested == NULL)
+		return;
 
-	/* if present, add to SList, if not, add to hash as slist object */
-	entry = g_hash_table_lookup (module->priv->interested, key);
+	for (interested = plugin->interested; interested->key_name; interested++) {
+		ohm_debug ("add interested! %s : %i", interested->key_name, interested->local_key_id);
 
-	/* create a new notifier, and copy over the data */
-	notif = g_new0 (OhmModuleNofif, 1); /* TODO: use gslice */
-	notif->plugin = plugin;
-	notif->id = id;
+		/* if present, add to SList, if not, add to hash as slist object */
+		entry = g_hash_table_lookup (module->priv->interested, interested->key_name);
 
-	if (entry != NULL) {
-		/* already present, just append to SList */
-		ohm_debug ("key already watched by someting else");
-		*entry = g_slist_prepend (*entry, (gpointer) notif);
-	} else {
-		ohm_debug ("key not already watched by something else");
-		/* create the new SList andd add the new notification to it */
-		l = g_new0 (GSList *, 1);
-		*l = NULL;
-		*l = g_slist_prepend (*l, (gpointer) notif);
-		/* fixme we need to free this g_strdup at finalize and clear the list */
-		g_hash_table_insert (module->priv->interested, (gpointer) g_strdup (key), l);
+		/* create a new notifier, and copy over the data */
+		notif = g_slice_new (OhmModuleNotify);
+		notif->plugin = plugin;
+		notif->id = interested->local_key_id;
+
+		if (entry != NULL) {
+			/* already present, just append to SList */
+			ohm_debug ("key already watched by someting else");
+			*entry = g_slist_prepend (*entry, (gpointer) notif);
+		} else {
+			ohm_debug ("key not already watched by something else");
+			/* create the new SList andd add the new notification to it */
+			l = g_new0 (GSList *, 1);
+			*l = NULL;
+			*l = g_slist_prepend (*l, (gpointer) notif);
+			/*dupping string to cope if module is removed*/
+			g_hash_table_insert (module->priv->interested, (gpointer) interested->key_name, l);
+		}
 	}
 }
 
-static void
-add_require_cb (OhmPlugin   *plugin,
-		const gchar *name,
-		OhmModule   *module)
+
+static gboolean
+add_provides (OhmModule *module, OhmPlugin *plugin)
 {
-	if (module->priv->doing_preload == FALSE) {
-		g_error ("modules not allowed to call ohm_plugin_require() after load()");
+	GError *error;
+	const char **provides = plugin->provides;
+	gboolean ret=TRUE;
+	error = NULL;
+
+	if (provides == NULL)
+		return TRUE;
+
+	for (; *provides; provides++) {
+		ohm_debug ("%s provides %s", ohm_plugin_get_name(plugin), *provides);
+		/* provides keys are never public and are always preset at zero */
+		ret &= ohm_conf_add_key (module->priv->conf, *provides, 0, FALSE, &error);
+		if (ret == FALSE) {
+			ohm_debug ("Cannot provide key %s: %s", *provides, error->message);
+			g_error_free (error);
+		}
 	}
-	ohm_debug ("adding module require %s", name);
-	module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) strdup (name));
+	return ret;
 }
 
 static void
-add_suggest_cb (OhmPlugin   *plugin,
-		const gchar *name,
-		OhmModule   *module)
+add_names (GSList **l, const char **names)
 {
-	if (module->priv->doing_preload == FALSE) {
-		g_error ("modules not allowed to call ohm_suggest_require() after load()");
-	}
-	ohm_debug ("adding module suggest %s", name);
-	module->priv->mod_suggest = g_slist_prepend (module->priv->mod_suggest, (gpointer) strdup (name));
-}
+	if (names == NULL)
+		return;
 
-static void
-add_prevent_cb (OhmPlugin   *plugin,
-		const gchar *name,
-		OhmModule   *module)
-{
-	if (module->priv->doing_preload == FALSE) {
-		g_error ("modules not allowed to call ohm_plugin_prevent() after load()");
+	for (;*names; names++) {
+		*l = g_slist_prepend (*l, (gpointer) *names);
 	}
-	ohm_debug ("adding module prevent %s", name);
-	module->priv->mod_prevent = g_slist_prepend (module->priv->mod_prevent, (gpointer) strdup (name));
 }
 
 static gboolean
 ohm_module_add_plugin (OhmModule *module, const gchar *name)
 {
 	OhmPlugin *plugin;
-	gboolean ret;
 
 	/* setup new plugin */
 	plugin = ohm_plugin_new ();
-	g_signal_connect (plugin, "add-interested",
-			  G_CALLBACK (add_interested_cb), module);
-	g_signal_connect (plugin, "add-require",
-			  G_CALLBACK (add_require_cb), module);
-	g_signal_connect (plugin, "add-suggest",
-			  G_CALLBACK (add_suggest_cb), module);
-	g_signal_connect (plugin, "add-prevent",
-			  G_CALLBACK (add_prevent_cb), module);
-	/* try to preload plugin, this might fail */
-	ret = ohm_plugin_preload (plugin, name);
-	if (ret == TRUE) {
-		ohm_debug ("adding %s to module list", name);
-		module->priv->plugins = g_slist_prepend (module->priv->plugins, (gpointer) plugin);
-	} else {
-		/* if it does, just unref and warn */
-		ohm_debug ("not adding %s to module list as cannot load", name);
-		g_object_unref (plugin);
-	}
-	return ret;
+
+	/* try to load plugin, this might fail */
+	if (!ohm_plugin_load (plugin, name))
+		return FALSE;
+
+	ohm_debug ("adding %s to module list", name);
+	module->priv->plugins = g_slist_prepend (module->priv->plugins, (gpointer) plugin);
+	add_names (&module->priv->mod_require, plugin->requires);
+	add_names (&module->priv->mod_suggest, plugin->suggests);
+	add_names (&module->priv->mod_prevent, plugin->prevents);
+	add_interesteds (module, plugin);
+
+	if (!add_provides (module, plugin))
+		return FALSE;
+	else
+		return TRUE;
 }
 
 /* adds plugins from require and suggests lists. Failure of require is error, failure of suggests is warning */
@@ -281,7 +293,6 @@ ohm_module_read_defaults (OhmModule *module)
 	GKeyFile *keyfile;
 	gchar *filename;
 	gchar *conf_dir;
-	gchar **modules;
 	gsize length;
 	guint i;
 	GError *error;
@@ -305,7 +316,7 @@ ohm_module_read_defaults (OhmModule *module)
 	error = NULL;
 	ret = g_key_file_load_from_file (keyfile, filename, G_KEY_FILE_NONE, &error);
 	if (ret == FALSE) {
-		g_error ("cannot load goddammded keyfile %s", filename);
+		g_error ("cannot load keyfile %s", filename);
 	}
 	g_free (filename);
 
@@ -319,49 +330,43 @@ ohm_module_read_defaults (OhmModule *module)
 
 	/* read and process ModulesBanned */
 	error = NULL;
-	modules = g_key_file_get_string_list (keyfile, "Modules", "ModulesBanned", &length, &error);
+	module->priv->modules_banned = g_key_file_get_string_list (keyfile, "Modules", "ModulesBanned", &length, &error);
 	if (error != NULL) {
 		ohm_debug ("ModulesBanned read error: %s", error->message);
 		g_error_free (error);
 	}
 	for (i=0; i<length; i++) {
-		ohm_debug ("ModulesBanned: %s", modules[i]);
-		module->priv->mod_prevent = g_slist_prepend (module->priv->mod_prevent, (gpointer) strdup(modules[i]));
+		ohm_debug ("ModulesBanned: %s", module->priv->modules_banned[i]);
+		module->priv->mod_prevent = g_slist_prepend (module->priv->mod_prevent, (gpointer) module->priv->modules_banned[i]);
 	}
-	g_strfreev (modules);
 
 	/* read and process ModulesSuggested */
 	error = NULL;
-	modules = g_key_file_get_string_list (keyfile, "Modules", "ModulesSuggested", &length, &error);
+	module->priv->modules_suggested = g_key_file_get_string_list (keyfile, "Modules", "ModulesSuggested", &length, &error);
 	if (error != NULL) {
 		ohm_debug ("ModulesSuggested read error: %s", error->message);
 		g_error_free (error);
 	}
 	for (i=0; i<length; i++) {
-		ohm_debug ("ModulesSuggested: %s", modules[i]);
-		module->priv->mod_suggest = g_slist_prepend (module->priv->mod_suggest, (gpointer) strdup(modules[i]));
+		ohm_debug ("ModulesSuggested: %s", module->priv->modules_suggested[i]);
+		module->priv->mod_suggest = g_slist_prepend (module->priv->mod_suggest, (gpointer) module->priv->modules_suggested[i]);
 	}
-	g_strfreev (modules);
 
 	/* read and process ModulesRequired */
 	error = NULL;
-	modules = g_key_file_get_string_list (keyfile, "Modules", "ModulesRequired", &length, &error);
+	module->priv->modules_required = g_key_file_get_string_list (keyfile, "Modules", "ModulesRequired", &length, &error);
 	if (error != NULL) {
 		ohm_debug ("ModulesRequired read error: %s", error->message);
 		g_error_free (error);
 	}
 	for (i=0; i<length; i++) {
-		ohm_debug ("ModulesRequired: %s", modules[i]);
-		module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) strdup(modules[i]));
+		ohm_debug ("ModulesRequired: %s", module->priv->modules_required[i]);
+		module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) strdup(module->priv->modules_required[i]));
 	}
-	g_strfreev (modules);
 
 	g_key_file_free (keyfile);
 }
 
-/**
- * ohm_module_finalize:
- **/
 static void
 ohm_module_finalize (GObject *object)
 {
@@ -412,19 +417,12 @@ ohm_module_init (OhmModule *module)
 	gboolean ret;
 
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
-	/* clear lists */
-	module->priv->mod_require = NULL;
-	module->priv->mod_suggest = NULL;
-	module->priv->mod_prevent = NULL;
-	module->priv->mod_loaded = NULL;
 
-	module->priv->interested = g_hash_table_new (g_str_hash, g_str_equal);
+	module->priv->interested = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, (GDestroyNotify)free_notify_list);
 
 	module->priv->conf = ohm_conf_new ();
 	g_signal_connect (module->priv->conf, "key-changed",
 			  G_CALLBACK (key_changed_cb), module);
-
-	module->priv->doing_preload = TRUE;
 
 	/* read the defaults in from modules.ini */
 	ohm_module_read_defaults (module);
@@ -438,13 +436,16 @@ ohm_module_init (OhmModule *module)
 		ohm_debug ("module add iteration #%i", i++);
 		ohm_module_add_all_plugins (module);
 		if (i > 10) {
-			g_error ("module add too complex, please file a bug");
+			g_error ("Module add too complex, please file a bug");
 		}
 	}
-	module->priv->doing_preload = FALSE;
+	g_strfreev (module->priv->modules_required);
+	g_strfreev (module->priv->modules_suggested);
+	g_slist_free (module->priv->mod_prevent);
+	g_strfreev (module->priv->modules_banned);
 
-	/* add defaults for each plugin before the coldplug */
-	ohm_debug ("starting plugin coldplug");
+	/* add defaults for each plugin before the initialization*/
+	ohm_debug ("loading plugin defaults");
 	for (l=module->priv->plugins; l != NULL; l=l->next) {
 		plugin = (OhmPlugin *) l->data;
 		name = ohm_plugin_get_name (plugin);
@@ -459,13 +460,13 @@ ohm_module_init (OhmModule *module)
 		}
 	}
 
-	/* coldplug each plugin */
-	ohm_debug ("starting plugin coldplug");
+	/* initialize each plugin */
+	ohm_debug ("starting plugin initialization");
 	for (l=module->priv->plugins; l != NULL; l=l->next) {
 		plugin = (OhmPlugin *) l->data;
 		name = ohm_plugin_get_name (plugin);
-		ohm_debug ("coldplug %s", name);
-		ohm_plugin_coldplug (plugin);
+		ohm_debug ("initialize %s", name);
+		ohm_plugin_initialize (plugin);
 	}
 }
 
