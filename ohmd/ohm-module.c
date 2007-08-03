@@ -361,7 +361,7 @@ ohm_module_read_defaults (OhmModule *module)
 	}
 	for (i=0; i<length; i++) {
 		ohm_debug ("ModulesRequired: %s", module->priv->modules_required[i]);
-		module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) strdup(module->priv->modules_required[i]));
+		module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) module->priv->modules_required[i]);
 	}
 
 	g_key_file_free (keyfile);
