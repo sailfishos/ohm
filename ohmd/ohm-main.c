@@ -111,6 +111,8 @@ main (int argc, char *argv[])
 	gboolean verbose = FALSE;
 	gboolean no_daemon = FALSE;
 	gboolean timed_exit = FALSE;
+	gboolean g_fatal_warnings = FALSE;
+	gboolean g_fatal_critical = FALSE;
 	OhmManager *manager = NULL;
 	GError *error = NULL;
 	GOptionContext *context;
@@ -122,6 +124,10 @@ main (int argc, char *argv[])
 		  N_("Show extra debugging information"), NULL },
 		{ "timed-exit", '\0', 0, G_OPTION_ARG_NONE, &timed_exit,
 		  N_("Exit after a small delay (for debugging)"), NULL },
+		{ "g-fatal-warnings", 0, 0, G_OPTION_ARG_NONE, &g_fatal_warnings,
+		  N_("Make all warnings fatal"), NULL },
+		{ "g-fatal-critical", 0, 0, G_OPTION_ARG_NONE, &g_fatal_critical,
+		  N_("Make all critical warnings fatal"), NULL },
 		{ NULL}
 	};
 
@@ -130,6 +136,16 @@ main (int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 	g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
 	g_option_context_parse (context, &argc, &argv, &error);
+
+	if (g_fatal_warnings || g_fatal_critical)
+	{
+		GLogLevelFlags fatal_mask;
+	
+		g_debug("setting fatal warnings");
+		fatal_mask = g_log_set_always_fatal (G_LOG_FATAL_MASK);
+		fatal_mask |= (g_fatal_warnings?G_LOG_LEVEL_WARNING:0) | G_LOG_LEVEL_CRITICAL;
+		g_log_set_always_fatal (fatal_mask);
+	}
 
 	g_type_init ();
 	if (!g_thread_supported ())

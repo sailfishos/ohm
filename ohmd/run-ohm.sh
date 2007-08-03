@@ -39,5 +39,5 @@ fi
 export OHM_CONF_DIR=$OHM_TMPDIR/etc/ohm
 export OHM_PLUGIN_DIR=$OHM_TMPDIR/lib/ohm
 
-echo "Execing: $prefix ./ohmd --no-daemon --verbose $@"
-sudo $prefix ./ohmd --no-daemon --verbose $@
+echo "Execing: $prefix ./ohmd --no-daemon --verbose --g-fatal-critical $@"
+sudo $prefix ./ohmd --no-daemon --verbose --g-fatal-critical $@
