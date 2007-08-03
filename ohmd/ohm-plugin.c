@@ -404,7 +404,6 @@ ohm_plugin_free_hal_table (OhmPlugin *plugin)
 			libhal_device_remove_property_watch (plugin->priv->hal_ctx, temp_udi, NULL);
 		}
 		g_free (temp_udi);
-		g_ptr_array_remove (plugin->priv->hal_udis, temp_udi);
 	}
 }
 
