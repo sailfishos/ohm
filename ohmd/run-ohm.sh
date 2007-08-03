@@ -13,6 +13,8 @@ if [ "$1" = "--help" ]; then
 	echo "  --debug:               Run with gdb"
 	echo "  --memcheck:            Run with valgrind memcheck tool"
 	echo "  --massif:              Run with valgrind massif heap-profiling tool"
+	echo "  --efence:              Run with electric-fence chedking for overruns"
+	echo "  --underfence:          Run with electric-fence checking for underruns"
 	echo
 	./ohmd --help
 	exit 0
@@ -34,6 +36,12 @@ elif [ "$1" = "--memcheck" ] ; then
 elif [ "$1" = "--massif" ] ; then
 	shift
 	prefix="valgrind --tool=massif"
+elif [ "$1" = "--efence" ] ; then
+	shift
+	prefix="gdb -x ./efence.gdb --args"
+elif [ "$1" = "--underfence" ] ; then
+	shift
+	prefix="gdb -x ./underfence.gdb --args"
 fi
 
 export OHM_CONF_DIR=$OHM_TMPDIR/etc/ohm
