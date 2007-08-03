@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <glib.h>
 #include <glib/gi18n.h>
 #include <dbus/dbus-glib.h>
@@ -33,6 +34,8 @@
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-dbus-manager.h"
+
+static GMainLoop *loop;
 
 /**
  * ohm_object_register:
@@ -89,13 +92,21 @@ ohm_object_register (DBusGConnection *connection,
 	return TRUE;
 }
 
+
+void sighandler(int signum)
+{
+	if (signum == SIGINT) {
+		g_debug ("Caught SIGINT, exiting");
+		g_main_loop_quit (loop);
+	}
+}
+
 /**
  * main:
  **/
 int
 main (int argc, char *argv[])
 {
-	GMainLoop *loop;
 	DBusGConnection *connection;
 	gboolean verbose = FALSE;
 	gboolean no_daemon = FALSE;
@@ -149,6 +160,8 @@ main (int argc, char *argv[])
 		return 0;
 	}
 
+	signal (SIGINT, sighandler);
+
 	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
 
@@ -158,7 +171,6 @@ main (int argc, char *argv[])
 		g_main_loop_run (loop);
 	}
 
-	g_main_loop_quit (loop);
 	g_object_unref (manager);
 	dbus_g_connection_unref (connection);
 	g_option_context_free (context);
