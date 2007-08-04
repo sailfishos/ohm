@@ -67,15 +67,17 @@ typedef struct {
 
 G_DEFINE_TYPE (OhmModule, ohm_module, G_TYPE_OBJECT)
 
-static void
-free_notify_list (GList *list)
+static gboolean
+free_notify_list (const gchar *key, GSList *list, gpointer userdata)
 {
-	GList *l;
+	GSList *l;
 
 	for (l=list; l != NULL; l=l->next) {
-		g_slice_free (OhmModuleNotify, list->data);
+		g_slice_free (OhmModuleNotify, l->data);
 	}
-	g_list_free (list);
+	g_slist_free (list);
+
+	return TRUE;
 }
 
 static void
@@ -84,7 +86,7 @@ key_changed_cb (OhmConf     *conf,
 		gint	     value,
 		OhmModule   *module)
 {
-	GSList **entry;
+	GSList *entry;
 	GSList *l;
 	OhmModuleNotify *notif;
 	const gchar *name;
@@ -101,7 +103,7 @@ key_changed_cb (OhmConf     *conf,
 
 	ohm_debug ("found watched key %s", key);
 	/* go thru the SList and notify each plugin */
-	for (l=*entry; l != NULL; l=l->next) {
+	for (l=entry; l != NULL; l=l->next) {
 		notif = (OhmModuleNotify *) l->data;
 		name = ohm_plugin_get_name (notif->plugin);
 		ohm_debug ("notify %s with id:%i", name, notif->id);
@@ -112,8 +114,7 @@ key_changed_cb (OhmConf     *conf,
 static void
 add_interesteds (OhmModule   *module, OhmPlugin   *plugin)
 {
-	GSList **entry;
-	GSList **l;
+	GSList *entry;
 	OhmModuleNotify *notif;
 	const OhmPluginKeyIdMap *interested;
 	
@@ -131,19 +132,8 @@ add_interesteds (OhmModule   *module, OhmPlugin   *plugin)
 		notif->plugin = plugin;
 		notif->id = interested->local_key_id;
 
-		if (entry != NULL) {
-			/* already present, just append to SList */
-			ohm_debug ("key already watched by someting else");
-			*entry = g_slist_prepend (*entry, (gpointer) notif);
-		} else {
-			ohm_debug ("key not already watched by something else");
-			/* create the new SList andd add the new notification to it */
-			l = g_new0 (GSList *, 1);
-			*l = NULL;
-			*l = g_slist_prepend (*l, (gpointer) notif);
-			/*dupping string to cope if module is removed*/
-			g_hash_table_insert (module->priv->interested, (gpointer) interested->key_name, l);
-		}
+		entry = g_slist_prepend (entry, (gpointer) notif);
+		g_hash_table_insert (module->priv->interested, (gpointer) interested->key_name, entry);
 	}
 }
 
@@ -378,6 +368,7 @@ ohm_module_finalize (GObject *object)
 	g_return_if_fail (OHM_IS_MODULE (object));
 	module = OHM_MODULE (object);
 
+	g_hash_table_foreach_remove (module->priv->interested, (GHRFunc) free_notify_list, NULL);
 	g_hash_table_destroy (module->priv->interested);
 	g_object_unref (module->priv->conf);
 
@@ -386,6 +377,7 @@ ohm_module_finalize (GObject *object)
 		plugin = (OhmPlugin *) l->data;
 		g_object_unref (plugin);
 	}
+	g_slist_free (module->priv->plugins);
 
 	g_return_if_fail (module->priv != NULL);
 	G_OBJECT_CLASS (ohm_module_parent_class)->finalize (object);
@@ -418,7 +410,7 @@ ohm_module_init (OhmModule *module)
 
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
 
-	module->priv->interested = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, (GDestroyNotify)free_notify_list);
+	module->priv->interested = g_hash_table_new (g_str_hash, g_str_equal);
 
 	module->priv->conf = ohm_conf_new ();
 	g_signal_connect (module->priv->conf, "key-changed",
@@ -439,9 +431,10 @@ ohm_module_init (OhmModule *module)
 			g_error ("Module add too complex, please file a bug");
 		}
 	}
+	g_slist_free (module->priv->mod_prevent);
+	g_slist_free (module->priv->mod_loaded);
 	g_strfreev (module->priv->modules_required);
 	g_strfreev (module->priv->modules_suggested);
-	g_slist_free (module->priv->mod_prevent);
 	g_strfreev (module->priv->modules_banned);
 
 	/* add defaults for each plugin before the initialization*/
