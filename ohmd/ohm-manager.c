@@ -48,6 +48,7 @@
 
 static void     ohm_manager_class_init	(OhmManagerClass *klass);
 static void     ohm_manager_init	(OhmManager      *manager);
+static void     ohm_manager_dispose	(GObject	 *object);
 static void     ohm_manager_finalize	(GObject	 *object);
 
 #define OHM_MANAGER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_MANAGER, OhmManagerPrivate))
@@ -132,7 +133,8 @@ ohm_manager_class_init (OhmManagerClass *klass)
 {
 	GObjectClass   *object_class = G_OBJECT_CLASS (klass);
 
-	object_class->finalize	   = ohm_manager_finalize;
+	object_class->finalize	= ohm_manager_finalize;
+	object_class->dispose	= ohm_manager_dispose;
 
 	signals [ON_AC_CHANGED] =
 		g_signal_new ("on-ac-changed",
@@ -180,13 +182,13 @@ ohm_manager_init (OhmManager *manager)
 }
 
 /**
- * ohm_manager_finalize:
- * @object: The object to finalize
+ * ohm_manager_dispose:
+ * @object: The object to dispose
  *
- * Finalise the manager, by unref'ing all the depending modules.
+ * unref all objects we're holding
  **/
 static void
-ohm_manager_finalize (GObject *object)
+ohm_manager_dispose (GObject *object)
 {
 	OhmManager *manager;
 
@@ -199,6 +201,25 @@ ohm_manager_finalize (GObject *object)
 	g_object_unref (manager->priv->keystore);
 	g_object_unref (manager->priv->conf);
 
+	G_OBJECT_CLASS (ohm_manager_parent_class)->dispose (object);
+}
+
+/**
+ * ohm_manager_finalize:
+ * @object: The object to finalize
+ *
+ * Finalise the manager
+ **/
+static void
+ohm_manager_finalize (GObject *object)
+{
+	OhmManager *manager;
+
+	g_return_if_fail (object != NULL);
+	g_return_if_fail (OHM_IS_MANAGER (object));
+	manager = OHM_MANAGER (object);
+
+	g_debug ("Finalizing ohm_manager");
 	G_OBJECT_CLASS (ohm_manager_parent_class)->finalize (object);
 }
 

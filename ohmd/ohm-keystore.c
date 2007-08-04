@@ -137,6 +137,22 @@ ohm_keystore_get_keys (OhmKeystore *keystore,
 }
 
 /**
+ * ohm_keystore_dispose:
+ **/
+static void
+ohm_keystore_dispose (GObject *object)
+{
+	OhmKeystore *keystore;
+	g_return_if_fail (object != NULL);
+	g_return_if_fail (OHM_IS_KEYSTORE (object));
+	keystore = OHM_KEYSTORE (object);
+
+	g_object_unref (keystore->priv->conf);
+
+	G_OBJECT_CLASS (ohm_keystore_parent_class)->dispose (object);
+}
+
+/**
  * ohm_keystore_finalize:
  **/
 static void
@@ -147,11 +163,10 @@ ohm_keystore_finalize (GObject *object)
 	g_return_if_fail (OHM_IS_KEYSTORE (object));
 	keystore = OHM_KEYSTORE (object);
 
-	g_object_unref (keystore->priv->conf);
-
-	g_return_if_fail (keystore->priv != NULL);
+	g_debug ("Finalizing ohm-keystore");
 	G_OBJECT_CLASS (ohm_keystore_parent_class)->finalize (object);
 }
+
 
 /**
  * ohm_keystore_class_init:
@@ -160,7 +175,8 @@ static void
 ohm_keystore_class_init (OhmKeystoreClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
-	object_class->finalize	   = ohm_keystore_finalize;
+	object_class->finalize	= ohm_keystore_finalize;
+	object_class->dispose	= ohm_keystore_dispose;
 
 	signals [KEY_CHANGED] =
 		g_signal_new ("key-changed",
