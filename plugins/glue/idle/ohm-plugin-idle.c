@@ -25,7 +25,7 @@
 #include <libidletime.h>
 #include <stdlib.h>
 
-static LibIdletime *idletime;
+static LibIdletime *idletime = NULL;
 
 enum {
 	CONF_XORG_HASXAUTH_CHANGED,
@@ -128,7 +128,8 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 static void
 plugin_destroy (OhmPlugin *plugin)
 {
-	g_object_unref (idletime);
+	if (idletime)
+		g_object_unref (idletime);
 }
 
 OHM_PLUGIN_DESCRIPTION (
