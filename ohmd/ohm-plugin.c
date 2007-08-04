@@ -416,6 +416,7 @@ ohm_plugin_finalize (GObject *object)
 	OhmPlugin *plugin;
 	g_return_if_fail (object != NULL);
 	g_return_if_fail (OHM_IS_PLUGIN (object));
+
 	plugin = OHM_PLUGIN (object);
 
 	g_object_unref (plugin->priv->conf);
@@ -428,6 +429,7 @@ ohm_plugin_finalize (GObject *object)
 		if (plugin->priv->hal_ctx != NULL) {
 			ohm_plugin_free_hal_table (plugin);
 			libhal_ctx_shutdown (plugin->priv->hal_ctx, NULL);
+			libhal_ctx_free (plugin->priv->hal_ctx);
 		}
 		
 	}
@@ -436,7 +438,10 @@ ohm_plugin_finalize (GObject *object)
 		g_free (plugin->priv->name);
 	}
 	g_ptr_array_free (plugin->priv->hal_udis, TRUE);
-	g_return_if_fail (plugin->priv != NULL);
+
+	g_debug ("g_module_close(%p)", plugin->priv->handle);
+	g_module_close (plugin->priv->handle);
+
 	G_OBJECT_CLASS (ohm_plugin_parent_class)->finalize (object);
 }
 
