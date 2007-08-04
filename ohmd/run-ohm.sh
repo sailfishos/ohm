@@ -32,16 +32,20 @@ if [ "$1" = "--debug" ] ; then
 	prefix="gdb --args"
 elif [ "$1" = "--memcheck" ] ; then
 	shift
-	prefix="valgrind --show-reachable=yes --leak-check=full --tool=memcheck"
+	prefix="valgrind --show-reachable=yes --leak-check=full --tool=memcheck --suppressions=./valgrind.supp $VALGRIND_EXTRA"
+	export G_SLICE="always-malloc"
 elif [ "$1" = "--massif" ] ; then
 	shift
-	prefix="valgrind --tool=massif"
+	prefix="valgrind --tool=massif --suppressions=./valgrind.supp $VALGRIND_EXTRA"
+	export G_SLICE="always-malloc"
 elif [ "$1" = "--efence" ] ; then
 	shift
 	prefix="gdb -x ./efence.gdb --args"
+	export G_SLICE="always-malloc"
 elif [ "$1" = "--underfence" ] ; then
 	shift
 	prefix="gdb -x ./underfence.gdb --args"
+	export G_SLICE="always-malloc"
 fi
 
 export OHM_CONF_DIR=$OHM_TMPDIR/etc/ohm
