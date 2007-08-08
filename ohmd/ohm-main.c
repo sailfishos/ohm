@@ -136,6 +136,7 @@ main (int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 	g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
 	g_option_context_parse (context, &argc, &argv, &error);
+	g_option_context_free (context);
 
 	if (g_fatal_warnings || g_fatal_critical)
 	{
@@ -189,7 +190,8 @@ main (int argc, char *argv[])
 
 	g_object_unref (manager);
 	dbus_g_connection_unref (connection);
-	g_option_context_free (context);
+	/*free memory used by dbus*/
+	dbus_shutdown();
 
 	return 0;
 }
