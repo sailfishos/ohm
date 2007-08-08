@@ -10,6 +10,7 @@ if [ "$1" = "--help" ]; then
 	echo "  --skip-plugin-install: Don't do a temporary install of the plugins."
 	echo "                         Only use this if $0 has already been run"
 	echo "                         without this option"
+	echo "  --time:                Time OHMd startup"
 	echo "  --debug:               Run with gdb"
 	echo "  --memcheck:            Run with valgrind memcheck tool"
 	echo "  --massif:              Run with valgrind massif heap-profiling tool"
@@ -27,7 +28,13 @@ else
 	make -C ../plugins install DESTDIR=$OHM_TMPDIR prefix=/
 fi
 
-if [ "$1" = "--debug" ] ; then
+extra='--no-daemon --verbose --g-fatal-critical'
+
+if [ "$1" = "--time" ] ; then
+	shift
+	prefix="time -p"
+	extra="--no-daemon --timed-exit"
+elif [ "$1" = "--debug" ] ; then
 	shift
 	prefix="gdb --args"
 elif [ "$1" = "--memcheck" ] ; then
@@ -51,5 +58,5 @@ fi
 export OHM_CONF_DIR=$OHM_TMPDIR/etc/ohm
 export OHM_PLUGIN_DIR=$OHM_TMPDIR/lib/ohm
 
-echo "Execing: $prefix ./ohmd --no-daemon --verbose --g-fatal-critical $@"
-sudo $prefix ./ohmd --no-daemon --verbose --g-fatal-critical $@
+echo "Execing: $prefix ./ohmd $extra $@"
+sudo $prefix ./ohmd $extra $@
