@@ -99,6 +99,18 @@ ohm_keystore_set_key (OhmKeystore *keystore,
 	(dbus_g_type_get_struct ("GValueArray", \
 	G_TYPE_STRING, G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_INVALID))
 
+static void
+get_key_foreach (const char *key, gboolean public, gint value, gpointer user_data)
+{
+	GPtrArray *data = (GPtrArray *) user_data;
+	GValue gv ={0,};
+
+	g_value_init (&gv, OHM_DBUS_STRUCT_STRING_INT_BOOL);
+	g_value_take_boxed (&gv, dbus_g_type_specialized_construct (OHM_DBUS_STRUCT_STRING_INT_BOOL));
+	dbus_g_type_struct_set (&gv, 0, key, 1, value, 2, public, -1);
+	g_ptr_array_add (data, g_value_get_boxed (&gv));
+}
+
 /**
  * ohm_keystore_get_keys:
  *
@@ -109,30 +121,16 @@ ohm_keystore_get_keys (OhmKeystore *keystore,
 		       GPtrArray  **data,
 		       GError     **error)
 {
-	GSList *keys;
-	GSList *l;
-	OhmConfKeyValue *new;
-	GValue *value;
-
 	g_return_val_if_fail (keystore != NULL, FALSE);
 	g_return_val_if_fail (OHM_IS_KEYSTORE (keystore), FALSE);
 	g_return_val_if_fail (data != NULL, FALSE);
 
 	ohm_debug ("Getting list of keys");
 
-	keys = NULL;
-	ohm_conf_get_keys (keystore->priv->conf, &keys);
-	*data = g_ptr_array_sized_new (g_slist_length (keys));
+	*data = g_ptr_array_sized_new (ohm_conf_keys_length (keystore->priv->conf));
 
-	for (l=keys; l != NULL; l=l->next) {
-		new = (OhmConfKeyValue *) l->data;
-		value = g_new0 (GValue, 1);
-		g_value_init (value, OHM_DBUS_STRUCT_STRING_INT_BOOL);
-		g_value_take_boxed (value, dbus_g_type_specialized_construct (OHM_DBUS_STRUCT_STRING_INT_BOOL));
-		dbus_g_type_struct_set (value, 0, new->name, 1, new->value, 2, new->public, -1);
-		g_ptr_array_add (*data, g_value_get_boxed (value));
-		g_free (value);
-	}
+	ohm_conf_keys_foreach (keystore->priv->conf, get_key_foreach, *data);
+
 	return TRUE;
 }
 
