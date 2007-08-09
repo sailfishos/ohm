@@ -209,14 +209,19 @@ foreach_keys (gpointer key,
 }
 
 void
-ohm_conf_keys_foreach(OhmConf		 *conf,
-		      OhmConfForeachFunc  func,
-		      gpointer		  user_data)
+ohm_conf_keys_foreach (OhmConf		 *conf,
+		       OhmConfForeachFunc  func,
+		       gpointer		  user_data)
 {
 	ForeachData d = {func, user_data};
 	g_hash_table_foreach (conf->priv->keys, foreach_keys, &d);
 }
 
+gint
+ohm_conf_keys_length (OhmConf	*conf)
+{
+	return g_hash_table_size(conf->priv->keys);
+}
 
 /**
  * ohm_conf_set_key:

@@ -72,6 +72,8 @@ void		 ohm_conf_keys_foreach			(OhmConf	*conf,
 							 OhmConfForeachFunc func,
 							 gpointer	user_data);
 
+gint		 ohm_conf_keys_length			(OhmConf	*conf);
+
 gboolean	 ohm_conf_set_key_internal		(OhmConf	*conf,
 							 const gchar	*key,
 							 gint		 value,
