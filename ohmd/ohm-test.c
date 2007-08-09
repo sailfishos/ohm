@@ -30,7 +30,6 @@
 #include "ohm-debug.h"
 #include "ohm-common.h"
 #include "ohm-conf.h"
-#include "ohm-confobj.h"
 
 /**
  * main:
@@ -39,7 +38,6 @@ int
 main (int argc, char *argv[])
 {
 	OhmConf *conf = NULL;
-	OhmConfObj *confobj = NULL;
 	gboolean ret;
 	GError *error;
 	gint value;
@@ -47,10 +45,6 @@ main (int argc, char *argv[])
 	g_type_init ();
 
 	ohm_debug_init (TRUE);
-
-	ohm_debug ("Tesing confobj");
-	confobj = ohm_confobj_new ();
-	g_object_unref (confobj);
 
 	ohm_debug ("Testing conf");
 	conf = ohm_conf_new ();
