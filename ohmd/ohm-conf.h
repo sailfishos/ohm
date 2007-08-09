@@ -45,13 +45,6 @@ typedef struct
 	GObjectClass	parent_class;
 } OhmConfClass;
 
-/* ABI stable representation suitable for consumption by session apps */
-typedef struct {
-	gchar		*name;
-	gint		 value;
-	gboolean	 public;
-} OhmConfKeyValue;
-
 typedef enum
 {
 	 OHM_CONF_ERROR_INVALID,
@@ -62,16 +55,23 @@ typedef enum
 	 OHM_CONF_ERROR_KEY_LAST
 } OhmConfError;
 
+typedef void (*OhmConfForeachFunc)			(const char *key,
+							 gboolean public,
+							 gint value,
+							 gpointer user_data);
+
 GType		 ohm_conf_get_type			(void);
 GQuark		 ohm_conf_error_quark			(void);
 OhmConf 	*ohm_conf_new				(void);
 
-gboolean	 ohm_conf_get_keys			(OhmConf	*conf,
-							 GSList		**list);
 gboolean	 ohm_conf_get_key			(OhmConf	*conf,
 							 const gchar	*key,
 							 gint		*value,
 							 GError		**error);
+void		 ohm_conf_keys_foreach			(OhmConf	*conf,
+							 OhmConfForeachFunc func,
+							 gpointer	user_data);
+
 gboolean	 ohm_conf_set_key_internal		(OhmConf	*conf,
 							 const gchar	*key,
 							 gint		 value,

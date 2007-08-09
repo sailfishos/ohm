@@ -23,8 +23,6 @@ noinst_PROGRAMS = ohmd-test
 ohmd_test_SOURCES = 						\
 	ohm-debug.c						\
 	ohm-debug.h						\
-	ohm-confobj.c						\
-	ohm-confobj.h						\
 	ohm-conf.c						\
 	ohm-conf.h						\
 	ohm-marshal.h						\
@@ -38,8 +36,6 @@ ohmd_SOURCES = 							\
 	ohm-common.h						\
 	ohm-debug.c						\
 	ohm-debug.h						\
-	ohm-confobj.c						\
-	ohm-confobj.h						\
 	ohm-conf.c						\
 	ohm-conf.h						\
 	ohm-marshal.h						\
