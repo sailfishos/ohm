@@ -466,6 +466,7 @@ ohm_plugin_init (OhmPlugin *plugin)
 	plugin->priv = OHM_PLUGIN_GET_PRIVATE (plugin);
 
 	plugin->priv->hal_udis = g_ptr_array_new ();
+	plugin->priv->conf = ohm_conf_new ();
 }
 
 /**
@@ -476,6 +477,5 @@ ohm_plugin_new (void)
 {
 	OhmPlugin *plugin;
 	plugin = g_object_new (OHM_TYPE_PLUGIN, NULL);
-	plugin->priv->conf = ohm_conf_new ();
 	return OHM_PLUGIN (plugin);
 }
