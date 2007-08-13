@@ -50,6 +50,7 @@ ohmd_SOURCES = 							\
 	ohm-module.h						\
 	ohm-plugin.c						\
 	ohm-plugin.h						\
+	ohm-plugin-internal.h					\
 	ohm-manager.c						\
 	ohm-manager.h						\
 	ohm-main.c
