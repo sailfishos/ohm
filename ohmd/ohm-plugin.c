@@ -43,7 +43,7 @@
 #include <libhal.h>
 
 #include "ohm-debug.h"
-#include "ohm-plugin.h"
+#include "ohm-plugin-internal.h"
 #include "ohm-conf.h"
 #include "ohm-marshal.h"
 

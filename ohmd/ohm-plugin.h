@@ -21,39 +21,9 @@
 #ifndef __OHM_PLUGIN_H
 #define __OHM_PLUGIN_H
 
-#include <glib-object.h>
-
-G_BEGIN_DECLS
-
-#define OHM_TYPE_PLUGIN		(ohm_plugin_get_type ())
-#define OHM_PLUGIN(o)		(G_TYPE_CHECK_INSTANCE_CAST ((o), OHM_TYPE_PLUGIN, OhmPlugin))
-#define OHM_PLUGIN_CLASS(k)	(G_TYPE_CHECK_CLASS_CAST((k), OHM_TYPE_PLUGIN, OhmPluginClass))
-#define OHM_IS_PLUGIN(o)	(G_TYPE_CHECK_INSTANCE_TYPE ((o), OHM_TYPE_PLUGIN))
-#define OHM_IS_PLUGIN_CLASS(k)	(G_TYPE_CHECK_CLASS_TYPE ((k), OHM_TYPE_PLUGIN))
-#define OHM_PLUGIN_GET_CLASS(o)	(G_TYPE_INSTANCE_GET_CLASS ((o), OHM_TYPE_PLUGIN, OhmPluginClass))
-
-typedef struct OhmPluginPrivate OhmPluginPrivate;
 typedef struct OhmPlugin OhmPlugin;
 typedef struct OhmPluginDesc OhmPluginDesc;
-typedef struct OhmPluginClass OhmPluginClass;
 typedef struct OhmPluginKeyIdMap OhmPluginKeyIdMap;
-
-struct OhmPlugin
-{
-	GObject		 parent;
-	const OhmPluginDesc *desc;
-	const OhmPluginKeyIdMap *interested;
-	const char **provides;
-	const char **requires;
-	const char **suggests;
-	const char **prevents;
-	OhmPluginPrivate *priv;
-};
-
-struct OhmPluginClass
-{
-	GObjectClass	parent_class;
-};
 
 struct OhmPluginKeyIdMap {
 	const char	*key_name;
@@ -127,16 +97,6 @@ typedef void (*OhmPluginHalCondition)			(OhmPlugin	*plugin,
 							 const gchar	*name,
 							 const gchar	*detail);
 
-GType		 ohm_plugin_get_type			(void);
-OhmPlugin	*ohm_plugin_new				(void);
-
-gboolean	 ohm_plugin_load			(OhmPlugin      *plugin,
-							 const gchar	*name);
-
-const gchar	*ohm_plugin_get_name			(OhmPlugin	*plugin);
-const gchar	*ohm_plugin_get_version			(OhmPlugin	*plugin);
-const gchar	*ohm_plugin_get_author			(OhmPlugin	*plugin);
-
 /* used by plugin to do crazy stuff */
 gboolean	 ohm_plugin_spawn_async			(OhmPlugin      *plugin,
 							 const gchar	*commandline);
@@ -166,12 +126,6 @@ gchar		*ohm_plugin_hal_get_udi			(OhmPlugin	*plugin,
 							 guint		 id);
 guint		 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 							 const gchar	*capability);
-
-/* used by manager to plugin */
-gboolean	 ohm_plugin_notify			(OhmPlugin      *plugin,
-							 gint		 id,
-							 gint		 value);
-gboolean	 ohm_plugin_initialize			(OhmPlugin      *plugin);
 
 G_END_DECLS
 
