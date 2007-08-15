@@ -21,11 +21,13 @@
 #ifndef __OHM_PLUGIN_H
 #define __OHM_PLUGIN_H
 
-typedef struct OhmPlugin OhmPlugin;
-typedef struct OhmPluginDesc OhmPluginDesc;
-typedef struct OhmPluginKeyIdMap OhmPluginKeyIdMap;
+G_BEGIN_DECLS
 
-struct OhmPluginKeyIdMap {
+typedef struct _OhmPlugin OhmPlugin;
+typedef struct _OhmPluginDesc OhmPluginDesc;
+typedef struct _OhmPluginKeyIdMap OhmPluginKeyIdMap;
+
+struct _OhmPluginKeyIdMap {
 	const char	*key_name;
 	gint		local_key_id;
 };
@@ -51,7 +53,7 @@ typedef enum {
  *          #OHM_PLUGIN_INTERESTED
  * @padding: Padding for future expansion
  */
-struct OhmPluginDesc {
+struct _OhmPluginDesc {
 	const char		*description;
 	const char		*version;
 	const char		*author;

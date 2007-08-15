@@ -33,10 +33,10 @@ G_BEGIN_DECLS
 #define OHM_IS_PLUGIN_CLASS(k)	(G_TYPE_CHECK_CLASS_TYPE ((k), OHM_TYPE_PLUGIN))
 #define OHM_PLUGIN_GET_CLASS(o)	(G_TYPE_INSTANCE_GET_CLASS ((o), OHM_TYPE_PLUGIN, OhmPluginClass))
 
-typedef struct OhmPluginPrivate OhmPluginPrivate;
-typedef struct OhmPluginClass OhmPluginClass;
+typedef struct _OhmPluginPrivate OhmPluginPrivate;
+typedef struct _OhmPluginClass OhmPluginClass;
 
-struct OhmPlugin
+struct _OhmPlugin
 {
 	GObject		 parent;
 	const OhmPluginDesc *desc;
@@ -48,7 +48,7 @@ struct OhmPlugin
 	OhmPluginPrivate *priv;
 };
 
-struct OhmPluginClass
+struct _OhmPluginClass
 {
 	GObjectClass	parent_class;
 };
