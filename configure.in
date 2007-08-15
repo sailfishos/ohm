@@ -351,4 +351,5 @@ echo "
         cflags:                    ${CFLAGS}
         DPMS support:              ${have_dpms}
         Docbook support:           ${enable_docbook_docs}
+        Gtk-doc support:           ${enable_gtk_doc}
 "
