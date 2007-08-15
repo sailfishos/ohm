@@ -325,6 +325,7 @@ docs/Makefile
 docs/index.xml
 docs/reference/Makefile
 docs/reference/ohm-plugin/Makefile
+docs/reference/libohm/Makefile
 libohm/Makefile
 libidletime/Makefile
 tools/Makefile

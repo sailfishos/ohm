@@ -1,1 +1,1 @@
-SUBDIRS = ohm-plugin
+SUBDIRS = ohm-plugin libohm

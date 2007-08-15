@@ -28,7 +28,7 @@ $AUTOMAKE -a ohmd/Makefile || exit 1
 echo "Running gtkdocize..."
 gtkdocize || exit 1
 
-conf_flags=""
+conf_flags="--enable-gtk-doc"
 
 if test x$NOCONFIGURE = x; then
   echo Running $srcdir/configure $conf_flags "$@" ...
