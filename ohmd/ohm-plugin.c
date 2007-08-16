@@ -49,7 +49,7 @@
 
 #define OHM_PLUGIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_PLUGIN, OhmPluginPrivate))
 
-struct OhmPluginPrivate
+struct _OhmPluginPrivate
 {
 	OhmConf			*conf;
 	GModule			*handle;
