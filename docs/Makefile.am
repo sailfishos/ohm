@@ -1,3 +1,5 @@
+SUBDIRS = reference
+
 IMAGE_FILES =				\
 	ohm-logo.png			\
 	ohm-logo.svg			\

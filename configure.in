@@ -29,6 +29,9 @@ AC_PROG_INTLTOOL([0.33.0])
 AM_GLIB_GNU_GETTEXT
 AC_PATH_PROG(GLIB_GENMARSHAL, glib-genmarshal)
 
+
+GTK_DOC_CHECK([1.8])
+
 ALL_LINGUAS="en_GB"
 AC_SUBST(ALL_LINGUAS)
 
@@ -320,6 +323,8 @@ ohmd/Makefile
 po/Makefile.in
 docs/Makefile
 docs/index.xml
+docs/reference/Makefile
+docs/reference/ohm-plugin/Makefile
 libohm/Makefile
 libidletime/Makefile
 tools/Makefile
