@@ -21,12 +21,13 @@ $AUTOCONF || exit 1
 echo "Running $LIBTOOLIZE --automake..."
 $LIBTOOLIZE --automake || exit 1
 
+echo "Running gtkdocize..."
+gtkdocize || exit 1
+
 echo "Running $AUTOMAKE..."
 $AUTOMAKE -a || exit 1
 $AUTOMAKE -a ohmd/Makefile || exit 1
 
-echo "Running gtkdocize..."
-gtkdocize || exit 1
 
 conf_flags="--enable-gtk-doc"
 
