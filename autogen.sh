@@ -29,7 +29,7 @@ $AUTOMAKE -a || exit 1
 $AUTOMAKE -a ohmd/Makefile || exit 1
 
 
-conf_flags="--enable-gtk-doc"
+conf_flags=""
 
 if test x$NOCONFIGURE = x; then
   echo Running $srcdir/configure $conf_flags "$@" ...
