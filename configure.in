@@ -50,7 +50,7 @@ if test "$GCC" = "yes"; then
     #CPPFLAGS="$CPPFLAGS -Wall"
 fi
 
-AC_ARG_WITH(distro, AC_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, gentoo, debian, or slackware]))
+AC_ARG_WITH(distro, AC_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, gentoo, debian, slackware, or none]))
 if test "z$with_distro" = "z"; then
 	AC_CHECK_FILE(/etc/mandrake-release,with_distro="mandrake")
 	AC_CHECK_FILE(/etc/redhat-release,with_distro="redhat")
@@ -64,6 +64,8 @@ with_distro=`echo ${with_distro} | tr '[[:upper:]]' '[[:lower:]]' `
 if test "z$with_distro" = "z"; then
 	echo "Linux distribution autodetection failed, you must specify the distribution to target using --with-distro=DISTRO"
 	exit 1
+elif test "z$with_distro" = "znone"; then
+	echo "No distro specific startup scripts will be built."
 else
 	case $with_distro in
 		redhat|gentoo|debian|slackware) ;;
