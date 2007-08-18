@@ -1,10 +1,6 @@
 LOCAL_LIBIDLETIME_LIBS = $(top_builddir)/libidletime/libidletime.la
 LOCAL_LIBIDLETIME_CFLAGS = -I$(top_srcdir)/libidletime
 
-EXTRA_DIST = $(Data_DATA)
-Datadir = @OHM_PLUGIN_CONF_DIR@
-Data_DATA = idle.ini
-
 plugindir = @OHM_PLUGIN_DIR@
 plugin_LTLIBRARIES = libohm_idle.la
 libohm_idle_la_SOURCES = ohm-plugin-idle.c
