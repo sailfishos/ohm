@@ -1,1 +1,16 @@
-Todo
+OHM Idle Plugin
+---------------
+The OHM Idle plugin is used to discover when there have been varying lengths
+of user input inactivity.
+
+The idle plugin exposes 2 keys:
+ * idle.state
+ * idle.timeout
+
+When there is user activity, idle.state will be set to 0.
+After idle.timeout milliseconds idle.state will be incremented.
+
+If a policy wishes to measure, say 2 different lengths of user inactibity, they
+may set timeout to a new value when idle.state is incremented. When that new timout expires, idle.state will be incremented again, and so on.
+
+See defualt policy module 'timeouts' for an example.
