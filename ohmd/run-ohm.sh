@@ -24,6 +24,7 @@ fi
 if [ "$1" = "--skip-plugin-install" ] ; then
 	shift
 else
+	rm -rf $OHM_TMPDIR
 	make -C ../etc install DESTDIR=$OHM_TMPDIR prefix=/
 	make -C ../plugins install DESTDIR=$OHM_TMPDIR prefix=/
 fi
