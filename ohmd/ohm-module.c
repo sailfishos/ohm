@@ -107,7 +107,7 @@ key_changed_cb (OhmConf     *conf,
 		notif = (OhmModuleNotify *) l->data;
 		name = ohm_plugin_get_name (notif->plugin);
 		ohm_debug ("notify %s with id:%i", name, notif->id);
-		ohm_plugin_notify (notif->plugin, notif->id, value);
+		ohm_plugin_notify (notif->plugin, key, notif->id, value);
 	}
 }
 

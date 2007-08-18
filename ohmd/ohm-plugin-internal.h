@@ -63,6 +63,7 @@ const gchar	*ohm_plugin_get_name			(OhmPlugin	*plugin);
 const gchar	*ohm_plugin_get_version			(OhmPlugin	*plugin);
 const gchar	*ohm_plugin_get_author			(OhmPlugin	*plugin);
 gboolean	 ohm_plugin_notify			(OhmPlugin      *plugin,
+							 const char	*key,
 							 gint		 id,
 							 gint		 value);
 

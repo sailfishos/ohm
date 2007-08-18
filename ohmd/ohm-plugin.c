@@ -59,6 +59,7 @@ struct _OhmPluginPrivate
 	GPtrArray		*hal_udis;
 	OhmPluginHalPropMod	 hal_property_changed_cb;
 	OhmPluginHalCondition	 hal_condition_cb;
+	const char		*key_being_set;
 };
 
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
@@ -154,7 +155,13 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 	gboolean ret;
 	error = NULL;
 
+	/* key_being_set is used to stop a plugin changing a key notifying
+	 * itself if it's interest in that key
+	 */
+	plugin->priv->key_being_set = key;
 	ret = ohm_conf_set_key_internal (plugin->priv->conf, key, value, TRUE, &error);
+	plugin->priv->key_being_set = NULL;
+
 	if (ret == FALSE) {
 		g_error ("Cannot set key: %s", error->message);
 		g_error_free (error);
@@ -164,9 +171,17 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 
 gboolean
 ohm_plugin_notify (OhmPlugin   *plugin,
-			int     id,
-			int     value)
+		   const char *key,
+		   int     id,
+		   int     value)
 {
+	/* check that it wasn't this plugin that changed the key in 
+	 * the first place
+	 */
+	if (plugin->priv->key_being_set &&
+	    strcmp(plugin->priv->key_being_set, key) == 0)
+		return TRUE;
+
 	plugin->desc->notify (plugin, id, value);
 	return TRUE;
 }
