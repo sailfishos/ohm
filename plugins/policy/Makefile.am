@@ -1,6 +1,7 @@
 SUBDIRS = 				\
 	display				\
-	suspend
+	suspend				\
+	timeouts
 
 clean-local:
 	rm -f *~

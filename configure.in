@@ -321,6 +321,7 @@ plugins/glue/xorg/Makefile
 plugins/policy/Makefile
 plugins/policy/display/Makefile
 plugins/policy/suspend/Makefile
+plugins/policy/timeouts/Makefile
 ohmd/Makefile
 po/Makefile.in
 docs/Makefile
