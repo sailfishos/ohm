@@ -29,6 +29,7 @@ static LibIdletime *idletime = NULL;
 
 enum {
 	CONF_XORG_HASXAUTH_CHANGED,
+	CONF_IDLE_TIMEOUT_CHANGED,
 	CONF_LAST
 };
 
@@ -36,16 +37,14 @@ static void
 ohm_alarm_expired_cb (LibIdletime *idletime, guint alarm, gpointer data)
 {
 	OhmPlugin *plugin = (OhmPlugin *) data;
-	if (alarm == 0) {
-		ohm_plugin_conf_set_key (plugin, "idle.momentary", 0);
-		ohm_plugin_conf_set_key (plugin, "idle.powersave", 0);
-		ohm_plugin_conf_set_key (plugin, "idle.powerdown", 0);
-	} else if (alarm == 1) {
-		ohm_plugin_conf_set_key (plugin, "idle.momentary", 1);
-	} else if (alarm == 2) {
-		ohm_plugin_conf_set_key (plugin, "idle.powersave", 1);
-	} else if (alarm == 3) {
-		ohm_plugin_conf_set_key (plugin, "idle.powerdown", 1);
+	gint state;
+
+	if (alarm == 0 ) {
+		/* activity, reset state to 0 */
+		ohm_plugin_conf_set_key (plugin, "idle.state", 0);
+	} else {
+		ohm_plugin_conf_get_key (plugin, "idle.state", &tate);
+		ohm_plugin_conf_set_key (plugin, "idle.state", state+1);
 	}
 	g_print ("[evt %i]\n", alarm);
 }
@@ -54,9 +53,7 @@ static void
 plugin_connect_idletime (OhmPlugin *plugin)
 {
 	gboolean ret;
-	gint momentary;
-	gint powersave;
-	gint powerdown;
+	gint timeout;
 	const gchar *xauth;
 
 	xauth = getenv ("XAUTHORITY");
@@ -69,21 +66,13 @@ plugin_connect_idletime (OhmPlugin *plugin)
 	g_signal_connect (idletime, "alarm-expired",
 			  G_CALLBACK (ohm_alarm_expired_cb), plugin);
 
-	ohm_plugin_conf_get_key (plugin, "idle.timer_momentary", &momentary);
-	ohm_plugin_conf_get_key (plugin, "idle.timer_powersave", &powersave);
-	ohm_plugin_conf_get_key (plugin, "idle.timer_powerdown", &powerdown);
+	ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
+
+	ohm_plugin_conf_set_key (plugin, "idle.state", 0);
 
 	ret = idletime_alarm_set (idletime, 1, momentary);
 	if (ret == FALSE) {
-		g_error ("cannot set alarm 1");
-	}
-	ret = idletime_alarm_set (idletime, 2, powersave);
-	if (ret == FALSE) {
-		g_error ("cannot set alarm 2");
-	}
-	ret = idletime_alarm_set (idletime, 3, powerdown);
-	if (ret == FALSE) {
-		g_error ("cannot set alarm 3");
+		g_error ("cannot set alarm");
 	}
 }
 
@@ -123,6 +112,8 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 		if (value == 1) {
 			plugin_connect_idletime (plugin);
 		}
+	} else if (id == CONF_IDLE_TIMEOUT_CHANGED ) {
+		idletime_alarm_set (idletime, 1, value);
 	}
 }
 static void
@@ -144,6 +135,7 @@ OHM_PLUGIN_DESCRIPTION (
 
 OHM_PLUGIN_REQUIRES ("xorg");
 
-OHM_PLUGIN_PROVIDES ("idle.momentary", "idle.powersave", "idle.powerdown");
+OHM_PLUGIN_PROVIDES ("idle.state", "idle.timeout");
 
 OHM_PLUGIN_INTERESTED ({"xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED});
+OHM_PLUGIN_INTERESTED ({"idle.timeout", CONF_IDLE_TIMEOUT_CHANGED});
