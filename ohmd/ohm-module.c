@@ -448,7 +448,7 @@ ohm_module_init (OhmModule *module)
 		error = NULL;
 		ret = ohm_conf_load_defaults (module->priv->conf, name, &error);
 		if (ret == FALSE) {
-			g_error ("could not load defaults : %s", error->message);
+			ohm_debug ("not defaults for %s: %s", name, error->message);
 			g_error_free (error);
 		}
 	}
