@@ -30,8 +30,8 @@ enum {
 	CONF_BRIGHTNESS_AC_CHANGED,
 	CONF_BRIGHTNESS_BATTERY_CHANGED,
 	CONF_BRIGHTNESS_IDLE_CHANGED,
-	CONF_IDLE_POWERSAVE_CHANGED,
-	CONF_IDLE_MOMENTARY_CHANGED,
+	CONF_TIMEOUTS_POWERSAVE_CHANGED,
+	CONF_TIMEOUTS_MOMENTARY_CHANGED,
 	CONF_LAST
 };
 
@@ -147,7 +147,7 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 	case CONF_BRIGHTNESS_IDLE_CHANGED:
 		reset_brightness (plugin);
 		break;
-	case CONF_IDLE_POWERSAVE_CHANGED:
+	case CONF_TIMEOUTS_POWERSAVE_CHANGED:
 		backlight_powersave (plugin, (value == 1));
 		break;
 	case CONF_LID_STATE_CHANGED:
@@ -164,7 +164,7 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 	case CONF_BACKLIGHT_STATE_CHANGED:
 		reset_brightness (plugin);
 		break;
-	case CONF_IDLE_MOMENTARY_CHANGED:
+	case CONF_TIMEOUTS_MOMENTARY_CHANGED:
 		brightness_momentary (plugin, (value == 1));
 		break;
 	}
@@ -181,7 +181,7 @@ OHM_PLUGIN_DESCRIPTION (
 );
 
 OHM_PLUGIN_SUGGESTS (
-	"idle",
+	"timeouts",
 	"acadapter",
 	"buttons",
 	"xrandr",
@@ -193,8 +193,8 @@ OHM_PLUGIN_INTERESTED (
 	{"backlight.state", CONF_BACKLIGHT_STATE_CHANGED},
 	{"button.lid", CONF_LID_STATE_CHANGED},
 	{"button.tablet", CONF_TABLET_STATE_CHANGED},
-	{"idle.powersave", CONF_IDLE_POWERSAVE_CHANGED},
-	{"idle.momentary", CONF_IDLE_MOMENTARY_CHANGED},
+	{"timeouts.powersave", CONF_TIMEOUTS_POWERSAVE_CHANGED},
+	{"timeouts.momentary", CONF_TIMEOUTS_MOMENTARY_CHANGED},
 	{"display.value_ac", CONF_BRIGHTNESS_AC_CHANGED},
 	{"display.value_battery", CONF_BRIGHTNESS_BATTERY_CHANGED},
 	{"display.value_idle", CONF_BRIGHTNESS_IDLE_CHANGED}

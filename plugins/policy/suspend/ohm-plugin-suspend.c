@@ -30,7 +30,7 @@
 enum {
 	CONF_BUTTON_POWER_CHANGED,
 	CONF_BUTTON_LID_CHANGED,
-	CONF_IDLE_POWERDOWN_CHANGED,
+	CONF_TIMEOUTS_POWERDOWN_CHANGED,
 	CONF_INHIBIT_CHANGED,
 	CONF_LAST
 };
@@ -148,7 +148,7 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 		if (value == 1) {
 			power_button_pressed (plugin);
 		}
-	} else if (id == CONF_IDLE_POWERDOWN_CHANGED) {
+	} else if (id == CONF_TIMEOUTS_POWERDOWN_CHANGED) {
 		/* only match on idle, not reset */
 		if (value == 1) {
 			system_is_idle (plugin);
@@ -167,13 +167,13 @@ OHM_PLUGIN_DESCRIPTION (
 );
 
 OHM_PLUGIN_SUGGESTS (
-	"idle",
+	"timeouts",
 	"buttons"
 );
 
 OHM_PLUGIN_INTERESTED (
 	{"button.power", CONF_BUTTON_POWER_CHANGED},
 	{"button.lid", CONF_BUTTON_LID_CHANGED},
-	{"idle.powerdown", CONF_IDLE_POWERDOWN_CHANGED},
+	{"timeouts.powerdown", CONF_TIMEOUTS_POWERDOWN_CHANGED},
 	{"suspend.fixme_inhibit", CONF_INHIBIT_CHANGED}
 );
