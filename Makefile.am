@@ -43,3 +43,5 @@ MAINTAINERCLEANFILES =	\
 	autom4te.cache/*		\
 	po/$(GETTEXT_PACKAGE).pot	\
 	po/*.bak
+
+DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc --with-xauth-dir=/home/user
