@@ -151,6 +151,7 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 	} else if (id == CONF_TIMEOUTS_POWERDOWN_CHANGED) {
 		/* only match on idle, not reset */
 		if (value == 1) {
+			g_debug ("powerdown is 1, suspending");
 			system_is_idle (plugin);
 		}
 	}
