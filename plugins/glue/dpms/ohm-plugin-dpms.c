@@ -175,8 +175,10 @@ plugin_initalize (OhmPlugin *plugin)
 static void
 plugin_destroy (OhmPlugin *plugin)
 {
-	XCloseDisplay (dpy);
-	dpy = NULL;
+	if (dpy) {
+		XCloseDisplay (dpy);
+		dpy = NULL;
+	}
 }
 
 /**
