@@ -41,29 +41,30 @@ init (OhmPlugin *plugin)
 static void
 notify (OhmPlugin *plugin, gint id, gint value)
 {
-	gint new_timeout, old_timeout;
+	gint new_timeout;
 
 	if (id != CONF_IDLE_STATE_CHANGED)
 		return;
 
 	switch (value) {
 	case 0:
-		ohm_plugin_conf_get_key (plugin, "timeouts.timer_momentary", &new_timeout);
+		ohm_plugin_conf_get_key (plugin, "timeouts.timer_momentary",
+					 &new_timeout);
 		ohm_plugin_conf_set_key (plugin, "idle.timeout", new_timeout);
 		ohm_plugin_conf_set_key (plugin, "timeouts.momentary", 0);
 		ohm_plugin_conf_set_key (plugin, "timeouts.powersave", 0);
 		ohm_plugin_conf_set_key (plugin, "timeouts.powerdown", 0);
 		break;
 	case 1:
-		ohm_plugin_conf_get_key (plugin, "timeouts.timer_powersave", &new_timeout);
-		ohm_plugin_conf_get_key (plugin, "timeouts.timer_momentary", &old_timeout);
-		ohm_plugin_conf_set_key (plugin, "idle.timeout", new_timeout-old_timeout);
+		ohm_plugin_conf_get_key (plugin, "timeouts.timer_powersave",
+					 &new_timeout);
+		ohm_plugin_conf_set_key (plugin, "idle.timeout", new_timeout);
 		ohm_plugin_conf_set_key (plugin, "timeouts.momentary", 1);
 		break;
 	case 2:
-		ohm_plugin_conf_get_key (plugin, "timeouts.timer_powerdown", &new_timeout);
-		ohm_plugin_conf_get_key (plugin, "timeouts.timer_powersave", &old_timeout);
-		ohm_plugin_conf_set_key (plugin, "idle.timeout", new_timeout-old_timeout);
+		ohm_plugin_conf_get_key (plugin, "timeouts.timer_powerdown",
+					 &new_timeout);
+		ohm_plugin_conf_set_key (plugin, "idle.timeout", new_timeout);
 		ohm_plugin_conf_set_key (plugin, "timeouts.powersave", 1);
 		break;
 	case 3:

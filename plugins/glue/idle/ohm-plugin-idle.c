@@ -67,13 +67,15 @@ plugin_connect_idletime (OhmPlugin *plugin)
 	g_signal_connect (idletime, "alarm-expired",
 			  G_CALLBACK (ohm_alarm_expired_cb), plugin);
 
-	ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
-
 	ohm_plugin_conf_set_key (plugin, "idle.state", 0);
 
-	ret = idletime_alarm_set (idletime, 1, timeout);
-	if (ret == FALSE) {
-		g_error ("cannot set alarm");
+	ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
+
+	if (timeout != 0) {
+		ret = idletime_alarm_set (idletime, 1, timeout);
+		if (ret == FALSE) {
+			g_error ("cannot set alarm");
+		}
 	}
 }
 
@@ -114,12 +116,16 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 		if (value == 1) {
 			plugin_connect_idletime (plugin);
 		}
-	} else if (id == CONF_IDLE_TIMEOUT_CHANGED ) {
-		idletime_alarm_set (idletime, 1, value);
-	} else if (id == CONF_IDLE_STATE_CHANGED ) {
-		if (value == 0) {
-			ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
-			idletime_alarm_set (idletime, 1, timeout);
+	}
+	if (idletime) {
+		if (id == CONF_IDLE_TIMEOUT_CHANGED ) {
+			g_debug("setting new timeout %d", value);
+			idletime_alarm_set (idletime, 1, value);
+		} else if (id == CONF_IDLE_STATE_CHANGED ) {
+			if (value == 0) {
+				ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
+				idletime_alarm_set (idletime, 1, timeout);
+			}
 		}
 	}
 }
@@ -142,7 +148,7 @@ OHM_PLUGIN_DESCRIPTION (
 
 OHM_PLUGIN_REQUIRES ("xorg");
 
-OHM_PLUGIN_PROVIDES ("idle.state");
+OHM_PLUGIN_PROVIDES ("idle.state", "idle.timeout");
 
 OHM_PLUGIN_INTERESTED (
 	{"xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED},
