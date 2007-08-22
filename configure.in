@@ -112,6 +112,25 @@ AC_SUBST(OHM_PLUGIN_DIR, "\$(libdir)/ohm")
 AC_SUBST(OHM_PLUGIN_CFLAGS, "-I\$(top_srcdir)/ohmd $GLIB_CFLAGS $DBUS_CFLAGS $GMODULE_CFLAGS")
 AC_SUBST(OHM_PLUGIN_LIBS, "$GLIB_LIBS $DBUS_LIBS $GMODULE_LIBS")
 
+dnl Assume single-user-device for now
+single_user_device="yes"
+
+if test "$single_user_device" = yes; then
+	AC_DEFINE(OHM_SINGLE_USER_DEVICE, 1, [Whether OHM is built for a single-user device with a known .Xauthority location])
+
+	AC_ARG_WITH(xauth-dir,
+		[AC_HELP_STRING([--with-xauth-dir=<dir>],
+			[directory where we can find .Xauthority (for single-user device)]
+			)]
+		)
+
+	if test -z "$with_xauth_dir"; then
+		AC_MSG_ERROR([Must use --with-xauth-dir for a single-user device]) 
+	else
+		AC_DEFINE(OHM_DEVICE_XAUTH_DIR, "$xauth_dir", [Where to find .Xauthority])
+	fi
+fi
+
 dnl ---------------------------------------------------------------------------
 dnl - Where should we put documentation ?
 dnl ---------------------------------------------------------------------------

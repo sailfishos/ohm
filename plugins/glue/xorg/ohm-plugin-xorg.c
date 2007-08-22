@@ -35,20 +35,27 @@ plugin_poll_startup (gpointer data)
 	gboolean ret;
 	const gchar *xauth;
 
-	/* we should search all of home */
-	xauth = "/home/olpc/.Xauthority";
+#ifdef OHM_SINGLE_USER_DEVICE
+	xauth = OHM_DEVICE_XAUTH_DIR "/.Xauthority";
+	g_debug ("xorg: testing %s", xauth);
 	ret = g_file_test (xauth, G_FILE_TEST_EXISTS);
 
-	/* be nice to hughsie... */
+	/* be nice to developers... */
 	if (ret == FALSE) {
-		xauth = "/home/hughsie/.Xauthority";
-		ret = g_file_test (xauth, G_FILE_TEST_EXISTS);
+		const char *home = getenv("HOME");
+		if (home != NULL) {
+			xauth = g_strdup_printf ("%s/.Xauthority", home);
+			g_debug ("xorg: testing %s", xauth);
+			ret = g_file_test (xauth, G_FILE_TEST_EXISTS);
+		}
 	}
 	if (ret == FALSE) {
-		/* not yet */
+		g_debug ("xorg: no .Xauthority found");
 		return TRUE;
 	}
-
+#else
+#error ConsoleKit support not yet implemented
+#endif
 	/* woot! X is alive */
 	g_debug ("Got X!");
 	ohm_plugin_conf_set_key (plugin, "xorg.has_xauthority", 1);
