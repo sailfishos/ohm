@@ -3,6 +3,7 @@ SUBDIRS = reference
 IMAGE_FILES =				\
 	ohm-logo.png			\
 	ohm-logo.svg			\
+	ohm-logo-small.png		\
 	ohm-dbus-access.png		\
 	ohm-dbus-access.svg		\
 	ohm-structure.png		\
