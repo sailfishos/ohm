@@ -21,15 +21,6 @@ SPEC_XML_FILES =			\
 SPEC_HTML_FILES =			\
 	index.html
 
-htmldocdir = $(docdir)
-htmldoc_DATA = index.html
-
-if DOCBOOK_DOCS_ENABLED
-
-index.html : introduction.xml
-	$(XMLTO) html-nochunks -m config.xsl index.xml
-endif # DOCBOOK_DOCS_ENABLED
-
 clean-local:
 	rm -f *~
 	rm -f *.html
@@ -39,5 +30,16 @@ EXTRA_DIST = 				\
 	config.xsl			\
 	docbook.css			\
 	$(SPEC_XML_FILES)		\
-	$(IMAGE_FILES)			\
-	$(SPEC_HTML_FILES)
+	$(IMAGE_FILES)
+
+if DOCBOOK_DOCS_ENABLED
+
+htmldocdir = $(docdir)
+htmldoc_DATA = index.html
+
+index.html : introduction.xml
+	$(XMLTO) html-nochunks -m config.xsl index.xml
+
+EXTRA_DIST += $(SPEC_HTML_FILES)
+
+endif #DOCBOOK_DOCS_ENABLED
