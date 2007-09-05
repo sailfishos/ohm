@@ -159,6 +159,7 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 	 * itself if it's interest in that key
 	 */
 	plugin->priv->key_being_set = key;
+	ohm_debug ("plugin %s setting key %s to %d", plugin->priv->name, key, value);
 	ret = ohm_conf_set_key_internal (plugin->priv->conf, key, value, TRUE, &error);
 	plugin->priv->key_being_set = NULL;
 
