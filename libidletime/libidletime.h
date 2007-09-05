@@ -55,9 +55,11 @@ void		 idletime_alarm_reset_all		(LibIdletime	*idletime);
 guint		 idletime_alarm_get			(LibIdletime	*idletime);
 gboolean	 idletime_alarm_set			(LibIdletime	*idletime,
 							 guint		 id,
-							 guint		 timeout);
+							 gint64		 timeout);
 gboolean	 idletime_alarm_remove			(LibIdletime	*idletime,
 							 guint		 id);
+
+gint64		 idletime_get_current_idle		(LibIdletime *idletime);
 
 G_END_DECLS
 

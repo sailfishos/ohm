@@ -41,6 +41,21 @@ static void     idletime_finalize   (GObject       *object);
 
 #define LIBIDLETIME_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), LIBIDLETIME_TYPE, LibIdletimePrivate))
 
+inline gint64
+xsyncvalue_to_int64 (XSyncValue *value)
+{
+	return ((guint64) XSyncValueHigh32 (*value)) << 32
+		| (guint64) XSyncValueLow32 (*value);
+}
+
+inline XSyncValue
+int64_to_xsyncvalue (gint64 value)
+{
+	XSyncValue ret;
+	XSyncIntsToValue (&ret, value, ((guint64)value) >> 32);
+	return ret;
+}
+
 struct LibIdletimePrivate
 {
 	int			 sync_event;
@@ -268,7 +283,7 @@ idletime_alarm_get (LibIdletime *idletime)
  * idletime_alarm_set:
  */
 gboolean
-idletime_alarm_set (LibIdletime *idletime, guint id, guint timeout)
+idletime_alarm_set (LibIdletime *idletime, guint id, gint64 timeout)
 {
 	LibIdletimeAlarm *alarm;
 	if (id == 0) {
@@ -294,7 +309,7 @@ idletime_alarm_set (LibIdletime *idletime, guint id, guint timeout)
 	}
 
 	/* set the timeout */
-	XSyncIntToValue (&alarm->timeout, timeout);
+	alarm->timeout = int64_to_xsyncvalue(timeout);
 
 	/* set, and start the timer */
 	idletime_xsync_alarm_set (idletime, alarm, TRUE);
@@ -329,6 +344,22 @@ idletime_alarm_remove (LibIdletime *idletime, guint id)
 	}
 	idletime_alarm_free (idletime, alarm);
 	return TRUE;
+}
+
+/**
+ * idletime_get_current_idle:
+ * @idletime: An #LibIdletime instantiation
+ * 
+ * Returns the current number of milliseconds idle
+ */
+gint64
+idletime_get_current_idle (LibIdletime *idletime)
+{
+	XSyncValue value;
+	if (XSyncQueryCounter (idletime->priv->dpy, idletime->priv->idle_counter, &value))
+		return xsyncvalue_to_int64 (&value);
+	else
+		return 0LL;
 }
 
 /**

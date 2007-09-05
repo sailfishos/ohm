@@ -26,11 +26,12 @@
 #include <stdlib.h>
 
 static LibIdletime *idletime = NULL;
+static gint64 timeout_offset = 0;
 
 enum {
 	CONF_XORG_HASXAUTH_CHANGED,
 	CONF_IDLE_TIMEOUT_CHANGED,
-	CONF_IDLE_STATE_CHANGED,
+	CONF_IDLE_RESET,
 	CONF_LAST
 };
 
@@ -43,6 +44,7 @@ ohm_alarm_expired_cb (LibIdletime *idletime, guint alarm, gpointer data)
 	if (alarm == 0 ) {
 		/* activity, reset state to 0 */
 		ohm_plugin_conf_set_key (plugin, "idle.state", 0);
+		timeout_offset = 0;
 	} else {
 		ohm_plugin_conf_get_key (plugin, "idle.state", &state);
 		ohm_plugin_conf_set_key (plugin, "idle.state", state+1);
@@ -68,6 +70,7 @@ plugin_connect_idletime (OhmPlugin *plugin)
 			  G_CALLBACK (ohm_alarm_expired_cb), plugin);
 
 	ohm_plugin_conf_set_key (plugin, "idle.state", 0);
+	ohm_plugin_conf_set_key (plugin, "idle.reset", 0);
 
 	ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
 
@@ -111,6 +114,7 @@ plugin_initalize (OhmPlugin *plugin)
 static void
 plugin_notify (OhmPlugin *plugin, gint id, gint value)
 {
+	g_debug ("idle got notify, id = %d, value = %d", id, value);
 	gint timeout;
 	if (id == CONF_XORG_HASXAUTH_CHANGED) {
 		if (value == 1) {
@@ -120,12 +124,20 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 	if (idletime) {
 		if (id == CONF_IDLE_TIMEOUT_CHANGED ) {
 			g_debug("setting new timeout %d", value);
-			idletime_alarm_set (idletime, 1, value);
-		} else if (id == CONF_IDLE_STATE_CHANGED ) {
-			if (value == 0) {
-				ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
-				idletime_alarm_set (idletime, 1, timeout);
-			}
+			idletime_alarm_set (idletime, 1, timeout_offset+value);
+		} else if (id == CONF_IDLE_RESET && value == 1) {
+			timeout_offset = idletime_get_current_idle (idletime);
+			ohm_plugin_conf_get_key (plugin, "idle.timeout", &timeout);
+			g_debug ("idle plugin reset. current timeout = %d, timeout-offset = %lld", timeout, timeout_offset);
+
+			/* most of the time this isn't needed as the below set
+			 * of idle.state will result in a timout change,
+			 * but just incase it doesn't happen. or the
+			 * new timeout is the same as the old..
+			 */
+			idletime_alarm_set (idletime, 1, timeout_offset+timeout);
+			ohm_plugin_conf_set_key (plugin, "idle.reset", 0);
+			ohm_plugin_conf_set_key (plugin, "idle.state", 0);
 		}
 	}
 }
@@ -148,9 +160,9 @@ OHM_PLUGIN_DESCRIPTION (
 
 OHM_PLUGIN_REQUIRES ("xorg");
 
-OHM_PLUGIN_PROVIDES ("idle.state", "idle.timeout");
+OHM_PLUGIN_PROVIDES ("idle.state", "idle.timeout", "idle.reset");
 
 OHM_PLUGIN_INTERESTED (
 	{"xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED},
 	{"idle.timeout", CONF_IDLE_TIMEOUT_CHANGED},
-	{"idle.state", CONF_IDLE_STATE_CHANGED});
+	{"idle.reset", CONF_IDLE_RESET});
