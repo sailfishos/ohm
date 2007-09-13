@@ -118,16 +118,26 @@ single_user_device="yes"
 if test "$single_user_device" = yes; then
 	AC_DEFINE(OHM_SINGLE_USER_DEVICE, 1, [Whether OHM is built for a single-user device with a known .Xauthority location])
 
+	AC_ARG_WITH(xauth,
+		[AC_HELP_STRING([--without-xauth],
+			[Whether xauth is needed to access the Xserver.]
+			)],
+		[with_xauth="$withval"], [with_xauth="yes"]
+		)
+
+
 	AC_ARG_WITH(xauth-dir,
 		[AC_HELP_STRING([--with-xauth-dir=<dir>],
 			[directory where we can find .Xauthority (for single-user device)]
 			)]
 		)
 
-	if test -z "$with_xauth_dir"; then
-		AC_MSG_ERROR([Must use --with-xauth-dir for a single-user device]) 
+	if test "x$with_xauth" = "xno"; then
+		AC_DEFINE(OHM_DEVICE_NO_XAUTH, 1, [No Xauth needed for Xserver access])
+	elif test -z "$with_xauth_dir"; then
+		AC_MSG_ERROR([Must use --without-xauth or --with-xauth-dir for a single-user device])
 	else
-		AC_DEFINE(OHM_DEVICE_XAUTH_DIR, "$xauth_dir", [Where to find .Xauthority])
+		AC_DEFINE_UNQUOTED(OHM_DEVICE_XAUTH_DIR, "$with_xauth_dir", [Where to find .Xauthority])
 	fi
 fi
 
