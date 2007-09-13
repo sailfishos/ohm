@@ -82,7 +82,7 @@ plugin_initialize (OhmPlugin *plugin)
 
 	/* naive try... we might be running under X */
 	ret = plugin_poll_startup (plugin);
-	if (ret == FALSE) {
+	if (ret == TRUE) {
 		/* we failed to connect to X - maybe X is not alive yet? */
 		g_debug ("Could not connect to X, polling until we can");
 		g_timeout_add (2000, plugin_poll_startup, plugin);
