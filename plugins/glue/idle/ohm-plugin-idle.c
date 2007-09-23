@@ -83,27 +83,6 @@ plugin_connect_idletime (OhmPlugin *plugin)
 }
 
 /**
- * plugin_initalize:
- * @plugin: This class instance
- *
- * Coldplug, i.e. read and set the initial state of the plugin.
- * We can assume all the required modules have been loaded, although it's
- * dangerous to assume the key values are anything other than the defaults.
- */
-static void
-plugin_initalize (OhmPlugin *plugin)
-{
-	gint value;
-
-	/* check system inhibit - this is broken as any client can unref all */
-	ohm_plugin_conf_get_key (plugin, "xorg.has_xauthority", &value);
-	if (value == 1) {
-		plugin_connect_idletime (plugin);
-	}
-
-}
-
-/**
  * plugin_notify:
  * @plugin: This class instance
  *
@@ -153,9 +132,9 @@ OHM_PLUGIN_DESCRIPTION (
 	"0.0.1",			/* version */
 	"richard@hughsie.com",		/* author */
 	OHM_LICENSE_LGPL,		/* license */
-	plugin_initalize,		/* initalize */
+	NULL,				/* initalize */
 	plugin_destroy,			/* destroy */
-	plugin_notify		/* notify */
+	plugin_notify			/* notify */
 );
 
 OHM_PLUGIN_REQUIRES ("xorg");
