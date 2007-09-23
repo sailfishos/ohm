@@ -95,7 +95,7 @@ backlight_powersave (OhmPlugin *plugin, gboolean is_idle)
 	gint state;
 
 	ohm_plugin_conf_get_key (plugin, "backlight.state", &state);
-	if (state == 0) {
+	if (is_idle && state == 0) {
 		/* work round a idletime bugs */
 		return;
 	}
@@ -109,6 +109,7 @@ backlight_powersave (OhmPlugin *plugin, gboolean is_idle)
 
 	/* if not idle any more */
 	if (is_idle == FALSE) {
+		ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
 		reset_brightness (plugin);
 		return;
 	}
