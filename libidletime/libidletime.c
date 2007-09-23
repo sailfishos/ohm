@@ -240,6 +240,7 @@ idletime_x_event_filter (GdkXEvent *gdkxevent, GdkEvent *event, gpointer data)
 		/* save the last state we triggered */
 		idletime->priv->last_event = alarm->id;
 
+		g_debug ("%s: alarm %d fired, idle time = %lld", G_STRFUNC, alarm->id, xsyncvalue_to_int64(&alarm_event->counter_value));
 		/* do the signal */
 		if (alarm->id != 0) {
 			idletime_timeout (idletime, alarm);
