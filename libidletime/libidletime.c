@@ -159,20 +159,6 @@ idletime_timeout (LibIdletime *idletime, LibIdletimeAlarm *alarm)
 }
 
 /**
- * idletime_xsync_value_add_one:
- *
- * Just adds one to a XSyncValue. I love X.
- */
-static void
-idletime_xsync_value_add_one (XSyncValue *from, XSyncValue *to)
-{
-	int overflow;
-	XSyncValue add;
-	XSyncIntToValue (&add, -1);
-	XSyncValueAdd (to, *from, add, &overflow);
-}
-
-/**
  * idletime_alarm_find_id:
  */
 static LibIdletimeAlarm *
@@ -202,7 +188,7 @@ idletime_x_set_reset (LibIdletime *idletime, XSyncAlarmNotifyEvent *alarm_event)
 	if (idletime->priv->reset_set == FALSE) {
 		/* don't match on the current value because
 		 * XSyncNegativeComparison means less or equal. */
-		idletime_xsync_value_add_one (&alarm_event->counter_value, &alarm->timeout);
+		alarm->timeout = int64_to_xsyncvalue (xsyncvalue_to_int64 (&alarm_event->counter_value) - 1LL);
 
 		/* set the reset alarm to fire the next time
 		 * idletime->priv->idle_counter < the current counter value */
