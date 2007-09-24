@@ -62,6 +62,8 @@ backlight_set_brightness (OhmPlugin *plugin, guint brightness)
 					   HAL_DBUS_SERVICE, udi,
 					   HAL_DBUS_INTERFACE_LAPTOP_PANEL);
 
+	g_debug ("%s: Calling " HAL_DBUS_INTERFACE_LAPTOP_PANEL ".SetBrightness %d", G_STRFUNC, brightness);
+
 	/* get the brightness from HAL */
 	error = NULL;
 	ret = dbus_g_proxy_call (proxy, "SetBrightness", &error,
@@ -148,6 +150,9 @@ plugin_initalize (OhmPlugin *plugin)
 
 	/* get the only device with capability and watch it */
 	num = ohm_plugin_hal_add_device_capability (plugin, "laptop_panel");
+
+	g_debug ("%s: Got %d devices with laptop_panel capability", G_STRFUNC, num);
+
 	if (num > 1) {
 		g_warning ("not tested with not one laptop_panel");
 	}
@@ -155,6 +160,8 @@ plugin_initalize (OhmPlugin *plugin)
 	if (num != 0) {
 		/* get levels that the adapter supports -- this does not change ever */
 		ohm_plugin_hal_get_int (plugin, 0, "laptop_panel.num_levels", &data.levels);
+		g_debug ("%s: data.levels = %d", G_STRFUNC, data.levels);
+
 		if (data.levels == 0) {
 			g_error ("levels zero!");
 			return;
