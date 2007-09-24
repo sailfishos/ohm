@@ -45,6 +45,7 @@
 struct OhmConfPrivate
 {
 	GHashTable		*keys;
+	gboolean		initializing;
 };
 
 enum {
@@ -60,7 +61,8 @@ G_DEFINE_TYPE (OhmConf, ohm_conf, G_TYPE_OBJECT)
 typedef struct ConfValue ConfValue;
 struct ConfValue
 {
-	gboolean public;
+	gboolean public:1;
+	gboolean touched:1;
 	gint value;
 };
 
@@ -88,6 +90,40 @@ ohm_conf_error_quark (void)
 		quark = g_quark_from_static_string ("ohm_conf_error");
 	}
 	return quark;
+}
+static void
+emit_touched (gpointer key,
+	      gpointer value,
+	      gpointer user_data)
+{
+	OhmConf *conf = (OhmConf*) user_data;
+	ConfValue *cv = (ConfValue *)value;
+	cv->touched = 0;
+	g_signal_emit (conf, signals [KEY_CHANGED], 0, key, cv->value);
+}
+
+/**
+ * ohm_conf_set_initializing
+ * @conf: an #OhmConf
+ * @state: OhmConf initialistion state
+ *
+ * Set or clear the conf object's initialisation state.
+ * When in initialisation state, no 'key-changed' signals are emitted and
+ * touched keys are just flagged. On switching from initialisation to normal,
+ * signals are emitted for all touched keys and the touched flags are cleared.
+ */
+
+void
+ohm_conf_set_initializing (OhmConf *conf,
+			   gboolean state)
+{
+	if (state) {
+		conf->priv->initializing = TRUE;
+	} else {
+		conf->priv->initializing = FALSE;
+		g_hash_table_foreach (conf->priv->keys, emit_touched, conf);
+	}
+
 }
 
 /**
@@ -175,6 +211,7 @@ ohm_conf_add_key (OhmConf     *conf,
 	cv = new_conf_value();
 
 	cv->public = public;
+	cv->touched = 0;
 	cv->value = value;
 
 	/* we need to create new objects in the store for each added user */
@@ -272,8 +309,13 @@ ohm_conf_set_key_internal (OhmConf     *conf,
 	/* Only force signal if different */
 	if (cv->value != value) {
 		cv->value = value;
-		ohm_debug ("emit key-changed : %s", key);
-		g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
+		if (conf->priv->initializing){
+			ohm_debug ("initializing, setting %s to touched", key);
+			cv->touched = 1;
+		} else{
+			ohm_debug ("emit key-changed : %s", key);
+			g_signal_emit (conf, signals [KEY_CHANGED], 0, key, value);
+		}
 	}
 
 	return TRUE;

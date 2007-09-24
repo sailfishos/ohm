@@ -62,8 +62,9 @@ typedef void (*OhmConfForeachFunc)			(const char *key,
 
 GType		 ohm_conf_get_type			(void);
 GQuark		 ohm_conf_error_quark			(void);
-OhmConf 	*ohm_conf_new				(void);
+OhmConf		*ohm_conf_new				(void);
 
+void		 ohm_conf_set_initializing		(OhmConf *conf, gboolean state);
 gboolean	 ohm_conf_get_key			(OhmConf	*conf,
 							 const gchar	*key,
 							 gint		*value,

@@ -453,6 +453,7 @@ ohm_module_init (OhmModule *module)
 		}
 	}
 
+	ohm_conf_set_initializing (module->priv->conf, TRUE);
 	/* initialize each plugin */
 	ohm_debug ("starting plugin initialization");
 	for (l=module->priv->plugins; l != NULL; l=l->next) {
@@ -461,6 +462,7 @@ ohm_module_init (OhmModule *module)
 		ohm_debug ("initialize %s", name);
 		ohm_plugin_initialize (plugin);
 	}
+	ohm_conf_set_initializing (module->priv->conf, FALSE);
 }
 
 /**
