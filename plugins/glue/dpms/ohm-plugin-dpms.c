@@ -37,6 +37,7 @@ static Display *dpy;
 
 enum {
 	CONF_BACKLIGHT_STATE_CHANGED,
+	CONF_XORG_HASXAUTH_CHANGED,
 	CONF_LAST
 };
 
@@ -109,11 +110,8 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 	CARD16 state;
 	OhmDpmsMode current_mode;
 
-	/* FIXME: why is dpy NULL if we don't do this? */ 
-	dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
-	
 	if (dpy == NULL) {
-		g_debug ("cannot open display");
+		g_debug ("display not open");
 		return FALSE;
 	}
 
@@ -146,7 +144,6 @@ ohm_dpms_set_mode (OhmDpmsMode mode)
 	}
 
 	XSync (dpy, FALSE);
-	XCloseDisplay(dpy); 
 	return TRUE;
 }
 
@@ -163,8 +160,6 @@ plugin_initalize (OhmPlugin *plugin)
 	/* we can assume DPMS is on */
 	ohm_plugin_conf_set_key (plugin, "backlight.state", 1);
 
-	/* open display, need to free using XCloseDisplay */
-	dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
 }
 
 /**
@@ -197,6 +192,9 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 		} else {
 			ohm_dpms_set_mode (OHM_DPMS_MODE_ON);
 		}
+	} else if (id == CONF_XORG_HASXAUTH_CHANGED && value == 1) {
+		/* open display, need to free using XCloseDisplay */
+		dpy = XOpenDisplay (":0"); /* fixme: don't assume :0 */
 	}
 }
 
@@ -210,6 +208,8 @@ OHM_PLUGIN_DESCRIPTION (
 	plugin_notify		/* notify */
 );
 
-OHM_PLUGIN_INTERESTED ({"backlight.state", CONF_BACKLIGHT_STATE_CHANGED});
+OHM_PLUGIN_INTERESTED (
+	{"backlight.state", CONF_BACKLIGHT_STATE_CHANGED},
+	{"xorg.has_xauthority", CONF_XORG_HASXAUTH_CHANGED});
 
 OHM_PLUGIN_REQUIRES ("backlight");
