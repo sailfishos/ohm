@@ -66,11 +66,20 @@ backlight_set_brightness (OhmPlugin *plugin, guint brightness)
 
 	/* get the brightness from HAL */
 	error = NULL;
+#ifdef HAL_SET_BRIGHTNESS_UNSIGNED
 	ret = dbus_g_proxy_call (proxy, "SetBrightness", &error,
 				 G_TYPE_INT, (int)brightness,
 				 G_TYPE_INVALID,
 				 G_TYPE_UINT, &retval,
 				 G_TYPE_INVALID);
+#else
+	ret = dbus_g_proxy_call (proxy, "SetBrightness", &error,
+				 G_TYPE_INT, (int)brightness,
+				 G_TYPE_INVALID,
+				 G_TYPE_INT, &retval,
+				 G_TYPE_INVALID);
+#endif
+
 	if (error != NULL) {
 		g_printerr ("Error: %s\n", error->message);
 		g_error_free (error);

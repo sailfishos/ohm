@@ -101,6 +101,10 @@ PKG_CHECK_MODULES(HAL, hal >= 0.5.7)
 AC_SUBST(HAL_CFLAGS)
 AC_SUBST(HAL_LIBS)
 
+if pkg-config --atleast-version=0.5.10 hal; then
+	AC_DEFINE(HAL_SET_BRIGHTNESS_UNSIGNED, 1, [org.freedesktop.Hal.Device.LaptopPanel.SetBrightness returns UINT32])
+fi
+
 PKG_CHECK_MODULES(GDK, gdk-2.0 >= 2.10.0 gdk-x11-2.0 >= 2.10.0)
 AC_SUBST(GDK_CFLAGS)
 AC_SUBST(GDK_LIBS)
