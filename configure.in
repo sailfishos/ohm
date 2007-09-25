@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(ohm, 0.1.1)
+AC_INIT(ohm, 0.1.2)
 AC_CONFIG_SRCDIR(ohmd)
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 AM_CONFIG_HEADER(config.h)
@@ -15,7 +15,7 @@ AC_SUBST(VERSION_PATCH)
 #
 # See http://sources.redhat.com/autobook/autobook/autobook_91.html#SEC91 for details
 #
-LT_CURRENT=1
+LT_CURRENT=2
 LT_REVISION=0
 LT_AGE=0
 AC_SUBST(LT_CURRENT)
