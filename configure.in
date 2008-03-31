@@ -415,6 +415,7 @@ plugins/glue/acadapter/Makefile
 plugins/glue/dpms/Makefile
 plugins/glue/idle/Makefile
 plugins/glue/buttons/Makefile
+plugins/glue/headset/Makefile
 plugins/glue/powerstatus/Makefile
 plugins/glue/timeremaining/Makefile
 plugins/glue/backlight/Makefile
