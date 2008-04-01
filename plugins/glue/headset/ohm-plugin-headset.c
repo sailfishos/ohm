@@ -17,14 +17,16 @@ hal_property_changed_cb (OhmPlugin   *plugin,
 
     ohm_debug("id: '%u', key: '%s'\n", id, key);
 
+    /* setting an uninitialized key causes an error */
+
     if (strcmp(key, HEADPHONE_INSTALLED) == 0) {
-        ohm_plugin_hal_get_int (plugin, id, HEADPHONE_INSTALLED, &value);
-        ohm_plugin_conf_set_key (plugin, HEADPHONE_INSTALLED, value);
+        if (ohm_plugin_hal_get_int (plugin, id, HEADPHONE_INSTALLED, &value))
+            ohm_plugin_conf_set_key (plugin, HEADPHONE_INSTALLED, value);
     }
     
     if (strcmp(key, HEADSET_TYPE) == 0) {
-        ohm_plugin_hal_get_int (plugin, id, HEADSET_TYPE, &value);
-        ohm_plugin_conf_set_key (plugin, HEADSET_TYPE, value);
+        if (ohm_plugin_hal_get_int (plugin, id, HEADSET_TYPE, &value))
+            ohm_plugin_conf_set_key (plugin, HEADSET_TYPE, value);
     }
 
     return;
@@ -33,15 +35,28 @@ hal_property_changed_cb (OhmPlugin   *plugin,
 static void
 plugin_initialize (OhmPlugin *plugin)
 {
+    guint value, num, i;
+
 	ohm_plugin_hal_init (plugin);
+    ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);
+    num = ohm_plugin_hal_add_device_capability (plugin, "headset");
+	
+    if (num == 0) {
+        ohm_debug("No headset device(s) found.");
+    }
+    else {
+        for (i = 0; i < num; i++) {
+            /* set the initial values during the initialization */
 
-	/* we want this function to get the property modified events for all devices */
-	ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);
+            if (ohm_plugin_hal_get_int (plugin, i, HEADPHONE_INSTALLED, &value))
+                ohm_plugin_conf_set_key (plugin, HEADPHONE_INSTALLED, value);
 
-	/* hal capability: listens only to headset events */
-	ohm_plugin_hal_add_device_capability (plugin, "headset");
-    
-    /* TODO: should set initial values during the initialization */
+            if (ohm_plugin_hal_get_int (plugin, i, HEADSET_TYPE, &value))
+                ohm_plugin_conf_set_key (plugin, HEADSET_TYPE, value);
+        }
+
+        ohm_debug("%i headset devices found", num);
+    }
 
     return;
 }
