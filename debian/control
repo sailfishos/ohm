@@ -1,0 +1,42 @@
+Source: ohm
+Section: utils
+Priority: optional
+Maintainer: Krisztian Litkey <krisztian.litkey@nokia.com>
+Standards-Version: 3.7.2
+Build-Depends: cdbs, debhelper (>= 4.1.0)
+
+Package: ohm
+Architecture: any
+Depends: ${shlibs:Depends}, swi-prolog (>= 5.6.35)
+Description: Open Hardware Manager with Nokia policy add-ons.
+ OHM with Nokia policy add-ons.
+ .
+ OHM with Nokia policy add-ons.
+
+Package: ohm-plugins
+Architecture: any
+Section: utils
+Description: Open Hardware Manager plugins.
+ .
+ Plugins from the basic OHM distribution.
+
+Package: ohm-nokia-plugins
+Architecture: any
+Section: utils
+Description: Nokia plugins for the Open Hardware Manager.
+ .
+ Nokia plugins for OHM distribution.
+
+Package: ohm-dev
+Architecture: any
+Section: libdevel
+Description: Open Hardware Manager client library.
+ .
+ A primitive client library to query/manipulate OHM over DBUS.
+
+Package: ohm-utils
+Architecture: any
+Section: utils
+Description: Open Hardware Manager command line utilities.
+ .
+ Simple command line utilities for OHM.

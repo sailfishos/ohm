@@ -1,0 +1,6 @@
+debian/tmp/usr/lib/ohm/libohm_accessories.so /usr/lib/ohm
+debian/tmp/usr/lib/ohm/libohm_cscall.so /usr/lib/ohm
+debian/tmp/usr/lib/ohm/libohm_profiles.so /usr/lib/ohm
+debian/tmp/usr/lib/ohm/libohm_policy.so /usr/lib/ohm
+debian/tmp/usr/lib/ohm/libohm_headset.so /usr/lib/ohm
+debian/tmp/usr/lib/ohm/libohm_audioroute.so /usr/lib/ohm
