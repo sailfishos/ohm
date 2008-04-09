@@ -94,6 +94,30 @@ struct _OhmPluginDesc {
 #define OHM_PLUGIN_PREVENTS(...) \
 	G_MODULE_EXPORT const gchar *ohm_plugin_prevents[] = {__VA_ARGS__,NULL}
 
+
+typedef struct {
+  int         type;                             /* imported/exported */
+  const char *name;                             /* method name */
+  const char *signature;                        /* method signature */
+  void       *ptr;                              /* method pointer */
+} ohm_plugin_method_t;
+
+#define OHM_PLUGIN_METHODS_END { 0, NULL, NULL, NULL }
+
+#define OHM_PLUGIN_PROVIDES_METHODS(...) \
+  G_MODULE_EXPORT ohm_plugin_method_t ohm_plugin_provides_methods[] = { \
+    __VA_ARGS__,							\
+    OHM_PLUGIN_METHODS_END						\
+  }
+
+#define OHM_PLUGIN_REQUIRES_METHODS(...) \
+  G_MODULE_EXPORT ohm_plugin_method_t ohm_plugin_requires_methods[] = { \
+    __VA_ARGS__,							\
+    OHM_PLUGIN_METHODS_END						\
+  }
+
+
+
 #define OHM_PLUGIN_DBUS_METHODS(...)				  \
   G_MODULE_EXPORT ohm_dbus_method_t ohm_plugin_dbus_methods[] = { \
     __VA_ARGS__,						  \

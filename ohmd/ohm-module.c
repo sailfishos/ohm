@@ -359,6 +359,99 @@ ohm_module_read_defaults (OhmModule *module)
 
 
 static gboolean
+ohm_check_method_signature(const gchar *required, const char *provided)
+{
+  /* XXX TODO: implement me... */
+
+  /* Na-ah, we don't need it, everything will be just fine... KA-BOOM */
+  return TRUE;
+}
+
+
+static gboolean
+ohm_module_resolve_methods(OhmModule *module)
+{
+  ohm_plugin_method_t *method, *m;
+    
+  GSList       *l;
+  OhmPlugin    *plugin;
+  GHashTable   *symtable;
+  const gchar  *name;
+  gchar        *key;
+  int           plen, slen, failed;
+  
+  
+  /* construct a symbol table of exported methods */
+  symtable = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+  if (symtable == NULL)
+    g_error("Failed to allocate method symbol table.");
+  
+  for (l = module->priv->plugins; l != NULL; l = l->next) {
+    plugin = (OhmPlugin *)l->data;
+    name   = ohm_plugin_get_name(plugin);
+    plen   = strlen(name);
+
+    for (method = plugin->provided_methods; method && method->name; method++) {
+      if (strchr(method->name, '.') != NULL) {
+	g_warning("Invalid exported method name %s from plugin %s.",
+		  method->name, name);
+	continue;
+      }
+
+      slen = plen + 1 + strlen(method->name);
+      key  = g_new0(gchar, slen + 1);
+      if (key == NULL)
+	g_error("Failed to allocate method symbol table key.");
+      sprintf(key, "%s.%s", name, method->name);
+
+      if (g_hash_table_lookup(symtable, key) != NULL)
+	g_error("Method %s multiply defined.", key);
+      
+      g_hash_table_insert(symtable, key, method);
+      printf("%s: method %s exported as %p\n", name, method->name, method->ptr);
+    }
+  }
+  
+  /* resolve required methods */
+  failed = FALSE;
+  for (l = module->priv->plugins; l != NULL; l = l->next) {
+    plugin = (OhmPlugin *)l->data;
+    name   = ohm_plugin_get_name(plugin);
+    plen   = strlen(name);
+
+    for (method = plugin->required_methods; method && method->ptr; method++) {
+      if ((key = (gchar *)method->name) == NULL) {
+	g_warning("plugin %s tries to require a NULL method", name);
+	continue;
+      }
+
+      if ((m = g_hash_table_lookup(symtable, key)) == NULL) {
+	g_warning("Could not resolve method %s.", key);
+	failed = TRUE;
+      }
+      
+      if (!ohm_check_method_signature(method->signature, m->signature)) {
+	g_warning("Incompatible signatures for method %s.", m->name);
+	failed = TRUE;
+	continue;
+      }
+      
+      *(void **)method->ptr = m->ptr;
+      printf("%s: method %s resolved to %p...\n", name, key, m->ptr);
+    }
+  }
+
+  /* we could free the symbol table here: g_hash_table_destory(symtable) */
+  
+  if (failed)
+    g_error("Fatal method resolving errors encountered.");
+  
+  return TRUE;
+}
+
+
+
+static gboolean
 ohm_module_dbus_setup(OhmModule *module)
 {
   ohm_dbus_method_t *m;
@@ -479,6 +572,9 @@ ohm_module_init (OhmModule *module)
 	g_strfreev (module->priv->modules_required);
 	g_strfreev (module->priv->modules_suggested);
 	g_strfreev (module->priv->modules_banned);
+
+	/* resolve method cross-references */
+	ohm_module_resolve_methods(module);
 
 	/* set up DBUS methods and signals */
 	ohm_module_dbus_setup(module);

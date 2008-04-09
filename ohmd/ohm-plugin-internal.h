@@ -48,6 +48,8 @@ struct _OhmPlugin
 	const char **suggests;
 	const char **prevents;
 
+        ohm_plugin_method_t *provided_methods;
+        ohm_plugin_method_t *required_methods;
         ohm_dbus_method_t   *dbus_methods;
         ohm_dbus_signal_t   *dbus_signals;
 
