@@ -21,6 +21,9 @@
 #ifndef __OHM_PLUGIN_H
 #define __OHM_PLUGIN_H
 
+#include <dbus/dbus.h>
+#include "ohm-dbus.h"
+
 G_BEGIN_DECLS
 
 typedef struct _OhmPlugin OhmPlugin;
@@ -91,6 +94,19 @@ struct _OhmPluginDesc {
 #define OHM_PLUGIN_PREVENTS(...) \
 	G_MODULE_EXPORT const gchar *ohm_plugin_prevents[] = {__VA_ARGS__,NULL}
 
+#define OHM_PLUGIN_DBUS_METHODS(...)				  \
+  G_MODULE_EXPORT ohm_dbus_method_t ohm_plugin_dbus_methods[] = { \
+    __VA_ARGS__,						  \
+    OHM_DBUS_METHODS_END,					  \
+  }
+
+#define OHM_PLUGIN_DBUS_SIGNALS(...) \
+  G_MODULE_EXPORT ohm_dbus_signal_t ohm_plugin_dbus_signals[] = { \
+    __VA_ARGS__,						  \
+    OHM_DBUS_SIGNALS_END					  \
+  }
+
+
 typedef void (*OhmPluginHalPropMod)			(OhmPlugin	*plugin,
 							 guint		 id,
 							 const gchar	*key);
@@ -128,6 +144,28 @@ gchar		*ohm_plugin_hal_get_udi			(OhmPlugin	*plugin,
 							 guint		 id);
 guint		 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 							 const gchar	*capability);
+
+
+/* used by plugin for non-HAL DBUS access */
+
+DBusConnection *ohm_plugin_dbus_get_connection(void);
+
+int ohm_plugin_dbus_add_method(const char *path, const char *member,
+			       DBusObjectPathMessageFunction handler,
+			       void *data);
+
+int ohm_plugin_dbus_del_method(const char *path, const char *member,
+			       DBusObjectPathMessageFunction handler,
+			       void *data);
+
+int ohm_plugin_dbus_add_signal(const char *sender, const char *interface,
+			       const char *sig, const char *path,
+			       DBusObjectPathMessageFunction handler,
+			       void *data);
+void ohm_plugin_dbus_del_signal(const char *sender, const char *interface,
+				const char *sig, const char *path,
+				DBusObjectPathMessageFunction handler,
+				void *data);
 
 G_END_DECLS
 

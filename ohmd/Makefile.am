@@ -49,6 +49,8 @@ ohmd_SOURCES = 							\
 	ohm-plugin-internal.h					\
 	ohm-manager.c						\
 	ohm-manager.h						\
+	ohm-dbus.c						\
+	ohm-dbus.h						\
 	ohm-main.c
 ohmd_LDADD = $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 

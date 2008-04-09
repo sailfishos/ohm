@@ -23,6 +23,8 @@
 
 #include <glib-object.h>
 #include "ohm-plugin.h"
+#include "ohm-dbus.h"
+
 
 G_BEGIN_DECLS
 
@@ -45,6 +47,10 @@ struct _OhmPlugin
 	const char **requires;
 	const char **suggests;
 	const char **prevents;
+
+        ohm_dbus_method_t   *dbus_methods;
+        ohm_dbus_signal_t   *dbus_signals;
+
 	OhmPluginPrivate *priv;
 };
 

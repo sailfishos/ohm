@@ -34,6 +34,7 @@
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-dbus-manager.h"
+#include "ohm-dbus.h"
 
 static GMainLoop *loop;
 
@@ -170,6 +171,11 @@ main (int argc, char *argv[])
 			 "the dbus system service.");
 	}
 
+	ohm_debug("Initializing DBUS helper");
+	if (!ohm_dbus_init(connection))
+	  g_error("%s failed to start.", OHM_NAME);
+	
+
 	ohm_debug ("Creating manager");
 	manager = ohm_manager_new ();
 	if (!ohm_object_register (connection, G_OBJECT (manager))) {
@@ -188,6 +194,8 @@ main (int argc, char *argv[])
 		g_main_loop_run (loop);
 	}
 
+	
+	ohm_dbus_exit();
 	g_object_unref (manager);
 	dbus_g_connection_unref (connection);
 	/*free memory used by dbus*/

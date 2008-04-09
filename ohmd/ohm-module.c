@@ -357,6 +357,45 @@ ohm_module_read_defaults (OhmModule *module)
 	g_key_file_free (keyfile);
 }
 
+
+static gboolean
+ohm_module_dbus_setup(OhmModule *module)
+{
+  ohm_dbus_method_t *m;
+  ohm_dbus_signal_t *s;
+
+  GSList       *l;
+  OhmPlugin    *plugin;
+  const gchar  *name;
+
+  for (l = module->priv->plugins; l != NULL; l = l->next) {
+    plugin = (OhmPlugin *)l->data;
+    name   = ohm_plugin_get_name(plugin);
+    
+    for (m = plugin->dbus_methods; m && m->name; m++)
+      if (!ohm_dbus_add_method(m->path, m->name, m->handler, m->data))
+	g_error("Failed to register DBUS method %s for plugin %s.",
+		m->name, name);
+
+    for (s = plugin->dbus_signals; s && s->signal; s++)
+      if (!ohm_dbus_add_signal(s->sender, s->interface, s->signal,
+			       s->path,
+			       s->handler, s->data))
+	g_error("Failed to register DBUS signal handler %s for plugin %s.",
+		s->signal, name);
+  }
+  
+  return TRUE;
+}
+
+
+static gboolean
+ohm_module_dbus_cleanup(OhmModule *module)
+{
+  return TRUE;         /* XXX TODO: implement me */
+}
+
+
 static void
 ohm_module_finalize (GObject *object)
 {
@@ -367,6 +406,9 @@ ohm_module_finalize (GObject *object)
 	g_return_if_fail (object != NULL);
 	g_return_if_fail (OHM_IS_MODULE (object));
 	module = OHM_MODULE (object);
+
+	/* clean up DBUS methods and signals */
+	ohm_module_dbus_cleanup(module);
 
 	g_hash_table_foreach_remove (module->priv->interested, (GHRFunc) free_notify_list, NULL);
 	g_hash_table_destroy (module->priv->interested);
@@ -382,6 +424,7 @@ ohm_module_finalize (GObject *object)
 	g_return_if_fail (module->priv != NULL);
 	G_OBJECT_CLASS (ohm_module_parent_class)->finalize (object);
 }
+
 
 /**
  * ohm_module_class_init:
@@ -436,6 +479,9 @@ ohm_module_init (OhmModule *module)
 	g_strfreev (module->priv->modules_required);
 	g_strfreev (module->priv->modules_suggested);
 	g_strfreev (module->priv->modules_banned);
+
+	/* set up DBUS methods and signals */
+	ohm_module_dbus_setup(module);
 
 	/* add defaults for each plugin before the initialization*/
 	ohm_debug ("loading plugin defaults");

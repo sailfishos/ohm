@@ -46,6 +46,7 @@
 #include "ohm-plugin-internal.h"
 #include "ohm-conf.h"
 #include "ohm-marshal.h"
+#include "ohm-dbus.h"
 
 #define OHM_PLUGIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_PLUGIN, OhmPluginPrivate))
 
@@ -101,6 +102,9 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	g_module_symbol (handle, "ohm_plugin_requires", (gpointer) &plugin->requires);
 	g_module_symbol (handle, "ohm_plugin_suggests", (gpointer) &plugin->suggests);
 	g_module_symbol (handle, "ohm_plugin_prevents", (gpointer) &plugin->prevents);
+	g_module_symbol (handle, "ohm_plugin_dbus_methods", (gpointer) &plugin->dbus_methods);
+	g_module_symbol (handle, "ohm_plugin_dbus_signals", (gpointer) &plugin->dbus_signals);
+	
 	plugin->priv->handle = handle;
 	plugin->priv->name = g_strdup (name);
 	return TRUE;
@@ -422,6 +426,63 @@ ohm_plugin_free_hal_table (OhmPlugin *plugin)
 		g_free (temp_udi);
 	}
 }
+
+
+/**
+ * ohm_plugin_dbus_get_connection:
+ **/
+DBusConnection *
+ohm_plugin_dbus_get_connection(void)
+{
+  return ohm_dbus_get_connection();
+}
+
+
+/**
+ * ohm_plugin_dbus_add_method:
+ **/
+int
+ohm_plugin_dbus_add_method(const char *path, const char *name,
+			   DBusObjectPathMessageFunction handler, void *data)
+{
+  return ohm_dbus_add_method(path, name, handler, data);
+}
+
+
+/**
+ * ohm_plugin_dbus_del_method:
+ **/
+int
+ohm_plugin_dbus_del_method(const char *path, const char *member,
+			   DBusObjectPathMessageFunction handler, void *data)
+{
+  return ohm_dbus_del_method(path, member, handler, data);
+}
+
+
+/**
+ * ohm_plugin_dbus_add_signal:
+ **/
+int
+ohm_plugin_dbus_add_signal(const char *sender, const char *interface,
+			   const char *sig, const char *path,
+			   DBusObjectPathMessageFunction handler, void *data)
+{
+  return ohm_dbus_add_signal(sender, interface, sig, path, handler, data);
+}
+
+
+/**
+ * ohm_plugin_dbus_del_signal:
+ **/
+void
+ohm_plugin_dbus_del_signal(const char *sender, const char *interface,
+			   const char *sig, const char *path,
+			   DBusObjectPathMessageFunction handler, void *data)
+{
+  return ohm_dbus_del_signal(sender, interface, sig, path, handler, data);
+}
+
 
 /**
  * ohm_plugin_finalize:
