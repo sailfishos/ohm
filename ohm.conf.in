@@ -7,10 +7,23 @@
                 <allow send_destination="org.freedesktop.ohm"/>
 		<allow send_interface="org.freedesktop.ohm.Keystore"/>
 		<allow send_interface="org.freedesktop.ohm.Manager"/>
+		<allow send_interface="org.freedesktop.ohm.Policy"/>
         </policy>
         <policy context="default">
                 <deny own="org.freedesktop.ohm"/>
+                <allow send_destination="org.freedesktop.ohm"/>
 		<allow send_interface="org.freedesktop.ohm.Keystore"/>
 		<deny send_interface="org.freedesktop.ohm.Manager"/>
         </policy>
+        <policy context="default">
+                <allow own="org.freedesktop.ohm.Policy"/>
+                <allow send_destination="org.freedesktop.ohm.Policy"/>
+                <allow send_interface="org.freedesktop.ohm.Policy"/>
+        </policy>
+        <policy context="default">
+                <allow own="com.nokia.policy"/>
+                <allow send_destination="com.nokia.policy"/>
+                <allow send_interface="com.nokia.policy"/>
+        </policy>
 </busconfig>
+
