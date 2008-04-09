@@ -1,6 +1,7 @@
 SUBDIRS = 				\
 	glue				\
-	policy
+	policy				\
+	nokia
 
 clean-local:
 	rm -f *~
