@@ -49,8 +49,9 @@ typedef struct {
 
 static DBusHandlerResult plugin_ack(DBusConnection *c,
                                     DBusMessage *msg, void *data);
+#if 0
 static void plugin_prolog_prompt(void);
-
+#endif
 
 static int transaction_start(DBusMessage *msg, char ***actions, uint32_t txid);
 static int transaction_end(transaction_t *transaction, int status,
@@ -176,8 +177,7 @@ plugin_exit(OhmPlugin *plugin)
 /**
  * plugin_request:
  **/
-int
-plugin_request(char *entity, char *request)
+OHM_EXPORTABLE(int, plugin_request, (char *entity, char *request))
 {
     return policy_request(entity, request);
 }
@@ -196,8 +196,7 @@ action_notify(gpointer cbptr, gpointer data)
 /**
  * plugin_actions:
  **/
-int
-plugin_actions(DBusMessage *msg, int full)
+OHM_EXPORTABLE(int, plugin_actions, (DBusMessage *msg, int full))
 {
     static uint32_t next = 1;
     dbus_uint32_t   txid = next++;
@@ -334,8 +333,7 @@ plugin_ack(DBusConnection *c, DBusMessage *msg, void *data)
 /**
  * plugin_subscribe:
  **/
-static int
-plugin_subscribe(void (*callback)(char ***))
+OHM_EXPORTABLE(int, plugin_subscribe, (void (*callback)(char ***)))
 {
     subscribed = g_list_append(subscribed, (gpointer)callback);
     return TRUE;
@@ -345,8 +343,7 @@ plugin_subscribe(void (*callback)(char ***))
 /**
  * plugin_prolog_prompt:
  **/
-static void
-plugin_prolog_prompt(void)
+OHM_EXPORTABLE(void, plugin_prolog_prompt, (void))
 {
     prolog_prompt();
 }
@@ -545,8 +542,7 @@ transaction_peers(transaction_t *transaction)
 /**
  * plugin_set_insert:
  **/
-static int
-plugin_set_insert(char *name, char *item)
+OHM_EXPORTABLE(int, plugin_set_insert, (char *name, char *item))
 {
     set_t *set;
     
@@ -560,8 +556,7 @@ plugin_set_insert(char *name, char *item)
 /**
  * plugin_set_delete:
  **/
-static int
-plugin_set_delete(char *name, char *item)
+OHM_EXPORTABLE(int, plugin_set_delete, (char *name, char *item))
 {
     set_t *set;
     
@@ -574,8 +569,7 @@ plugin_set_delete(char *name, char *item)
 /**
  * plugin_set_reset:
  **/
-static void
-plugin_set_reset(char *name)
+OHM_EXPORTABLE(void, plugin_set_reset, (char *name))
 {
     set_t *set;
     
@@ -590,8 +584,7 @@ plugin_set_reset(char *name)
 /**
  * plugin_relation_insert:
  **/
-static int
-plugin_relation_insert(char *name, char **items)
+OHM_EXPORTABLE(int, plugin_relation_insert, (char *name, char **items))
 {
     relation_t *r;
     
@@ -605,8 +598,7 @@ plugin_relation_insert(char *name, char **items)
 /**
  * plugin_relation_delete:
  **/
-static int
-plugin_relation_delete(char *name, char **items)
+OHM_EXPORTABLE(int, plugin_relation_delete, (char *name, char **items))
 {
     relation_t *r;
     
@@ -619,8 +611,7 @@ plugin_relation_delete(char *name, char **items)
 /**
  * plugin_relation_reset:
  **/
-static void
-plugin_relation_reset(char *name)
+OHM_EXPORTABLE(void, plugin_relation_reset, (char *name))
 {
     relation_t *r;
     
@@ -640,24 +631,25 @@ OHM_PLUGIN_DESCRIPTION("policy",
                        plugin_exit,
                        NULL);
 
-OHM_PLUGIN_PROVIDES_METHODS(
-    { 0, "request",         NULL, (void *)plugin_request         },
-    { 0, "actions",         NULL, (void *)plugin_actions         },
-    { 0, "subscribe",       NULL, (void *)plugin_subscribe       },
-    { 0, "prolog_prompt",   NULL, (void *)plugin_prolog_prompt   },
-    { 0, "set_insert",      NULL, (void *)plugin_set_insert      },
-    { 0, "set_delete",      NULL, (void *)plugin_set_delete      },
-    { 0, "set_reset",       NULL, (void *)plugin_set_reset       },
-    { 0, "relation_insert", NULL, (void *)plugin_relation_insert },
-    { 0, "relation_delete", NULL, (void *)plugin_relation_delete },
-    { 0, "relation_reset",  NULL, (void *)plugin_relation_reset  }
-);
+OHM_PLUGIN_PROVIDES_METHODS(policy, 10,
+    OHM_EXPORT(plugin_request,   "request"),
+    OHM_EXPORT(plugin_actions,   "actions"),
+    OHM_EXPORT(plugin_subscribe, "subscribe"),
+
+    OHM_EXPORT(plugin_set_insert, "set_insert"),
+    OHM_EXPORT(plugin_set_delete, "set_delete"),
+    OHM_EXPORT(plugin_set_reset , "set_reset"),
+
+    OHM_EXPORT(plugin_relation_insert, "relation_insert"),
+    OHM_EXPORT(plugin_relation_delete, "relation_delete"),
+    OHM_EXPORT(plugin_relation_reset , "relation_reset"),
+
+    OHM_EXPORT(plugin_prolog_prompt, "prolog_prompt"));
 
 
 OHM_PLUGIN_DBUS_SIGNALS(
     { NULL, DBUS_INTERFACE_POLICY, "status", NULL, plugin_ack, NULL });
                             
-
 
 /* 
  * Local Variables:

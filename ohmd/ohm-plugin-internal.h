@@ -48,8 +48,6 @@ struct _OhmPlugin
 	const char **suggests;
 	const char **prevents;
 
-        ohm_plugin_method_t *provided_methods;
-        ohm_plugin_method_t *required_methods;
         ohm_dbus_method_t   *dbus_methods;
         ohm_dbus_signal_t   *dbus_signals;
 
@@ -76,6 +74,9 @@ gboolean	 ohm_plugin_notify			(OhmPlugin      *plugin,
 							 gint		 value);
 
 gboolean	 ohm_plugin_initialize			(OhmPlugin      *plugin);
+
+ohm_method_t *ohm_plugin_exports (OhmPlugin *plugin);
+ohm_method_t *ohm_plugin_imports (OhmPlugin *plugin);
 
 G_END_DECLS
 

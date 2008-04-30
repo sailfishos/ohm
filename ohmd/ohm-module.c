@@ -358,20 +358,233 @@ ohm_module_read_defaults (OhmModule *module)
 }
 
 
-static gboolean
-ohm_check_method_signature(const gchar *required, const char *provided)
-{
-  /* XXX TODO: implement me... */
 
-  /* Na-ah, we don't need it, everything will be just fine... KA-BOOM */
-  return TRUE;
+static char *
+normalize_signature(const char *src, const char *dst)
+{
+
+
+  /*
+   * LEVEL 5 SPAGHETTI WARNING...
+   */
+
+
+
+  static const char *qualifiers[] = {
+    "const " , "volatile " , "static " , "signed " , "unsigned " ,
+    "const\t", "volatile\t", "static\t", "signed\t", "unsigned\t",
+    "const*" , "volatile*" , "static*" , "signed*" , "unsigned*" ,
+    NULL
+  };
+
+  enum {
+    NO    = 0,
+    YES   = 1,
+    MAYBE = 2,
+  };
+
+#define SKIP_QUALIFIERS(p) ({			\
+      int i, l, __skip = 0;			\
+      for (i = 0; qualifiers[i]; i++) {		\
+	l = strlen(qualifiers[i]);		\
+	if (!strncmp((p), qualifiers[i], l)) {	\
+	  (p) += l - 1;				\
+	  __skip = 1;				\
+	  break;				\
+	}					\
+      }						\
+      __skip;					\
+    })
+  
+  int   space, pointer, comma, brace;
+  char *s, *d;
+
+  s = (char *)src;
+  d = (char *)dst;
+
+  space   = 1;
+  pointer = brace = comma = 0;
+  while (*s) {
+    switch (*s) {
+    case ' ':
+    case '\t':
+      if (space)
+	s++;
+      else {
+	space = MAYBE;
+	s++;
+      }
+      break;
+      
+    case '(':
+    case ')':
+      space = comma = 0;
+      brace = (*s == '(');
+      *d++  = *s++;
+      break;
+
+    case '*':
+      if (!pointer && !brace)
+	*d++ = ' ';
+      pointer = 1;
+      space = comma = brace = 0;
+      *d++  = *s++;
+      break;
+
+    case ',':
+      space = brace = 0;
+      comma = 1;
+      *d++  = *s++;
+      break;
+
+    default:
+      if (space || brace || comma) {
+	if (!SKIP_QUALIFIERS(s)) {
+	  if (space == MAYBE && !pointer && !comma && !brace)
+	    *d++ = ' ';
+	  space = comma = brace = pointer = 0;
+	}
+      }
+      else {
+	*d++ = *s++;
+	space = comma = brace = pointer = 0;
+      }
+    }
+  }
+  
+  *d = '\0';
+  return (char *)dst;
+}
+
+
+static gboolean
+ohm_check_method_signature(const char *required, const char *provided)
+{
+#define SKIP_WHITESPACE(p) ({			\
+      int __space = 0;				\
+      while (*p == ' ' || *p == '\t')	{	\
+	p++;					\
+	__space = 1;				\
+      }						\
+      __space;					\
+    })
+
+#define NAME_START(c)				\
+  (('a' <= (c) && (c) <= 'z') ||		\
+   ('A' <= (c) && (c) <= 'Z') || (c) == '_')
+
+#define NAME_CHAR(c)				\
+  (('a' <= (c) && (c) <= 'z') ||		\
+   ('A' <= (c) && (c) <= 'Z') ||		\
+   ('0' <= (c) && (c) <= '0') || (c) == '_')
+  
+#define SKIP_NAME(p) do {			\
+    SKIP_WHITESPACE(p);				\
+    if (('0' <= (*(p)) && *(p) <= '9'))		\
+      break;					\
+    while (*(p) && NAME_CHAR(*(p)))		\
+      (p)++;					\
+  } while (0)
+
+
+  char  rbuf[256], pbuf[256], *r, *p, *ra, *pa;
+  int   n;
+  
+  /* NULL means skip checks */
+  if (required == NULL || provided == NULL)
+    return TRUE;
+
+  /* normalize signatures for easier comparison */
+  r = ra = normalize_signature(required, rbuf);
+  p = pa = normalize_signature(provided, pbuf);
+
+  /* find the beginning of each argument list */
+  while (*ra != '\0')
+    ra++;
+  while (*ra != ')' && ra > r)
+    ra--;
+  if (*ra == ')') {
+    n = 1;
+    while (ra > r && n > 0) {
+      ra--;
+      switch (*ra) {
+      case ')': n++; break;
+      case '(': n--; break;
+      }
+    }
+  }
+
+  while (*pa != '\0')
+    pa++;
+  while (*pa != ')' && pa > p)
+    pa--;
+  if (*pa == ')') {
+    n = 1;
+    while (pa > p && n > 0) {
+      pa--;
+      switch (*pa) {
+      case ')': n++; break;
+      case '(': n--; break;
+      }
+    }
+  }
+  
+  /*
+    printf("argument list for %s is '%s'\n", r, ra);
+    printf("argument list for %s is '%s'\n", p, pa);
+  */
+
+  /* compare return types accepting only an exact match */
+  n = (int)((unsigned long)ra - (unsigned long)r) + 1;
+  if (n != ((int)((unsigned long)pa - (unsigned long)p) + 1) ||
+      strncmp(ra, pa, n))
+    return FALSE;
+
+  
+  /* compare argument lists */
+  r = ra;
+  p = pa;
+  while (*r && *p) {
+    SKIP_WHITESPACE(r);
+    SKIP_WHITESPACE(p);
+    
+    /* scan until a mismatch */
+    if (*r && *r == *p) {
+      r++, p++;
+      continue;
+    }      
+    
+    if (!*r || !*p)
+      return FALSE;
+
+    /*printf("before p: '%s', r: '%s'\n", p, r);*/
+
+    /* skip potential/probable variable names */
+    /* notes: we cannot handle if both has variable names (that mismatch) */
+    if (NAME_START(*p) && !NAME_START(*r) && 
+	(r[-1] == ' ' || r[-1] == '*' || *r == ')'))
+      SKIP_NAME(p);
+    else if (NAME_START(*r) && !NAME_START(*p) &&
+	     (p[-1] == ' ' || p[-1] == '*' || *p == ')'))
+      SKIP_NAME(r);
+
+    /*printf("after p: '%s', r: '%s'\n", p, r);*/
+
+    if (*r != *p)
+      return FALSE;
+  }
+  
+  if (!*r && !*p)
+    return TRUE;
+  else
+    return FALSE;
 }
 
 
 static gboolean
 ohm_module_resolve_methods(OhmModule *module)
 {
-  ohm_plugin_method_t *method, *m;
+  ohm_method_t *method, *m;
     
   GSList       *l;
   OhmPlugin    *plugin;
@@ -391,7 +604,7 @@ ohm_module_resolve_methods(OhmModule *module)
     name   = ohm_plugin_get_name(plugin);
     plen   = strlen(name);
 
-    for (method = plugin->provided_methods; method && method->name; method++) {
+    for (method = ohm_plugin_exports(plugin); method && method->name; method++) {
       if (strchr(method->name, '.') != NULL) {
 	g_warning("Invalid exported method name %s from plugin %s.",
 		  method->name, name);
@@ -419,7 +632,7 @@ ohm_module_resolve_methods(OhmModule *module)
     name   = ohm_plugin_get_name(plugin);
     plen   = strlen(name);
 
-    for (method = plugin->required_methods; method && method->ptr; method++) {
+    for (method = ohm_plugin_imports(plugin); method && method->ptr; method++) {
       if ((key = (gchar *)method->name) == NULL) {
 	g_warning("plugin %s tries to require a NULL method", name);
 	continue;
@@ -431,7 +644,9 @@ ohm_module_resolve_methods(OhmModule *module)
       }
       
       if (!ohm_check_method_signature(method->signature, m->signature)) {
-	g_warning("Incompatible signatures for method %s.", m->name);
+	g_warning("Incompatible signatures for method %s expected by %s.",
+		  m->name, name);
+	g_warning("%s vs. %s", method->signature, m->signature);
 	failed = TRUE;
 	continue;
       }

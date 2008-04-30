@@ -16,15 +16,13 @@
 
 #define DBUS_INTERFACE_POLICY "com.nokia.policy"
 
-static char ***(*policy_actions)(DBusMessage *, int);
-
-static int     (*set_insert)(char *, char *);
-static int     (*set_delete)(char *, char *);
-static void    (*set_reset) (char *);
-
-static int     (*relation_insert)(char *, char **);
-static int     (*relation_delete)(char *, char **);
-static void    (*relation_reset) (char *);
+OHM_IMPORTABLE(int , policy_actions  , (DBusMessage *, int));
+OHM_IMPORTABLE(int , set_insert      , (char *, char *));
+OHM_IMPORTABLE(int , set_delete      , (char *, char *));
+OHM_IMPORTABLE(void, set_reset       , (char *));
+OHM_IMPORTABLE(int , relation_insert , (char *, char **));
+OHM_IMPORTABLE(int , relation_delete , (char *, char **));
+OHM_IMPORTABLE(void, relation_reset  , (char *));
 
 
 static void
@@ -79,7 +77,6 @@ profile_changed(DBusConnection *c, DBusMessage *msg, void *data)
 }
 
 
-
 OHM_PLUGIN_DESCRIPTION("profiles",
                        "0.0.0",
                        "krisztian.litkey@nokia.com",
@@ -88,20 +85,21 @@ OHM_PLUGIN_DESCRIPTION("profiles",
                        plugin_exit,
                        NULL);
 
-OHM_PLUGIN_REQUIRES_METHODS(
-    { 0, "policy.actions"  , NULL, (void *)&policy_actions },
-    { 0, "policy.set_insert", NULL, (void *)&set_insert  },
-    { 0, "policy.set_delete", NULL, (void *)&set_delete  },
-    { 0, "policy.set_reset" , NULL, (void *)&set_reset   },
-    { 0, "policy.relation_insert", NULL, (void *)&relation_insert },
-    { 0, "policy.relation_delete", NULL, (void *)&relation_delete },
-    { 0, "policy.relation_reset" , NULL, (void *)&relation_reset  });
+OHM_PLUGIN_REQUIRES_METHODS(profiles, 7,
+    OHM_IMPORT("policy.actions"        , policy_actions),
+    OHM_IMPORT("policy.set_insert"     , set_insert),
+    OHM_IMPORT("policy.set_delete"     , set_delete),
+    OHM_IMPORT("policy.set_reset"      , set_reset),
+    OHM_IMPORT("policy.relation_insert", relation_insert),
+    OHM_IMPORT("policy.relation_delete", relation_delete),
+    OHM_IMPORT("policy.relation_reset" , relation_reset));
 
 
 
 OHM_PLUGIN_DBUS_SIGNALS(
     { NULL, DBUS_INTERFACE_POLICY, "profile_changed", NULL,
             profile_changed, NULL });
+
 
 
 /* 

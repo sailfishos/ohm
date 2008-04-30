@@ -65,12 +65,14 @@ struct _OhmPluginPrivate
 
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
 
+
 gboolean
 ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 {
 	gchar *path;
 	GModule *handle;
 	gchar *filename;
+	char buf[128];
 
 	g_return_val_if_fail (name != NULL, FALSE);
 
@@ -91,19 +93,28 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	}
 	g_free (path);
 
-	if (!g_module_symbol (handle, "ohm_plugin_desc", (gpointer) &plugin->desc)) {
-		g_module_close (handle);
-		ohm_debug ("could not find description in plugin %s, not loading", name);
-		return FALSE;
-	}
+	
+#define SYMBOL(descr, sym, field, required) do {			\
+	  if (!g_module_symbol((handle), sym, (gpointer)&plugin->field) && \
+	      required)	{						\
+	    ohm_debug("could not find %s in plugin %s, not loading",	\
+		      (descr), sym);					\
+	    g_module_close(handle);					\
+	    return FALSE;						\
+	  }								\
+	} while (0)
 
-	g_module_symbol (handle, "ohm_plugin_interested", (gpointer) &plugin->interested);
-	g_module_symbol (handle, "ohm_plugin_provides", (gpointer) &plugin->provides);
-	g_module_symbol (handle, "ohm_plugin_requires", (gpointer) &plugin->requires);
-	g_module_symbol (handle, "ohm_plugin_suggests", (gpointer) &plugin->suggests);
-	g_module_symbol (handle, "ohm_plugin_prevents", (gpointer) &plugin->prevents);
-	g_module_symbol (handle, "ohm_plugin_dbus_methods", (gpointer) &plugin->dbus_methods);
-	g_module_symbol (handle, "ohm_plugin_dbus_signals", (gpointer) &plugin->dbus_signals);
+	SYMBOL("description", "ohm_plugin_desc"      , desc      , 1);
+	SYMBOL("interested" , "ohm_plugin_interested", interested, 0);
+	SYMBOL("provides"   , "ohm_plugin_provides"  , provides  , 0);
+	SYMBOL("requires"   , "ohm_plugin_requires"  , requires  , 0);
+	SYMBOL("suggests"   , "ohm_plugin_suggests"  , suggests  , 0);
+	SYMBOL("prevents"   , "ohm_plugin_prevents"  , prevents  , 0);
+	
+	snprintf(buf, sizeof(buf), "%s%s", name, OHM_EXPORT_VAR);
+	SYMBOL("exports", buf, desc->exports, 0);
+	snprintf(buf, sizeof(buf), "%s%s", name, OHM_IMPORT_VAR);
+	SYMBOL("imports", buf, desc->imports, 0);
 	
 	plugin->priv->handle = handle;
 	plugin->priv->name = g_strdup (name);
@@ -197,6 +208,24 @@ ohm_plugin_initialize (OhmPlugin   *plugin)
 	if (plugin->desc->initialize)
 		plugin->desc->initialize (plugin);
 	return TRUE;
+}
+
+ohm_method_t *
+ohm_plugin_exports (OhmPlugin *plugin)
+{
+  if (plugin->desc->exports)
+    return plugin->desc->exports;
+  else
+    return NULL;
+}
+
+ohm_method_t *
+ohm_plugin_imports (OhmPlugin *plugin)
+{
+  if (plugin->desc->imports)
+    return plugin->desc->imports;
+  else
+    return NULL;
 }
 
 /* only use this when required */

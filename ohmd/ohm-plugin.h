@@ -21,6 +21,11 @@
 #ifndef __OHM_PLUGIN_H
 #define __OHM_PLUGIN_H
 
+#ifndef __USE_GNU
+#define __USE_GNU 1                      /* we want Dl_info, dladdr, et al... */
+#endif
+#include <dlfcn.h>
+
 #include <dbus/dbus.h>
 #include "ohm-dbus.h"
 
@@ -44,6 +49,15 @@ typedef enum {
 	OHM_LICENSE_FREE_OTHER
 } OhmLicenseType;
 
+typedef struct {
+  const char *name;                             /* method name */
+  const char *signature;                        /* method signature */
+  void       *ptr;                              /* method pointer */
+} ohm_method_t;
+
+#define OHM_PLUGIN_METHODS_END { NULL, NULL, NULL }
+
+
 /**
  * OhmPluginDesc:
  * @description: Plugin description
@@ -61,10 +75,13 @@ struct _OhmPluginDesc {
 	const char		*version;
 	const char		*author;
 	OhmLicenseType	license;
-	void		(*initialize)			(OhmPlugin *plugin);
-	void		(*destroy)			(OhmPlugin *plugin);
-	void		(*notify)			(OhmPlugin *plugin, gint id, gint value);
-	gpointer padding[8];
+	void		 (*initialize)(OhmPlugin *plugin);
+	void		 (*destroy)   (OhmPlugin *plugin);
+	void		 (*notify)    (OhmPlugin *plugin, gint id, gint value);
+
+  	ohm_method_t      *exports;
+  	ohm_method_t      *imports;
+	gpointer padding[6];
 };
 
 #define OHM_PLUGIN_DESCRIPTION(description, version, author, license, initialize, destroy, notify) \
@@ -76,6 +93,8 @@ struct _OhmPluginDesc {
 		initialize, \
 		destroy, \
 		notify, \
+		NULL, \
+		NULL, \
 		{0} \
 	}
 
@@ -95,28 +114,50 @@ struct _OhmPluginDesc {
 	G_MODULE_EXPORT const gchar *ohm_plugin_prevents[] = {__VA_ARGS__,NULL}
 
 
-typedef struct {
-  int         type;                             /* imported/exported */
-  const char *name;                             /* method name */
-  const char *signature;                        /* method signature */
-  void       *ptr;                              /* method pointer */
-} ohm_plugin_method_t;
+#define OHM_EXPORTABLE(return_type, name, arguments)		 \
+  static const char *name##_SIGNATURE = #return_type #arguments; \
+  static return_type name arguments
 
-#define OHM_PLUGIN_METHODS_END { 0, NULL, NULL, NULL }
+#define OHM_EXPORT(name, public_name)		\
+    { public_name, name##_SIGNATURE, name }
 
-#define OHM_PLUGIN_PROVIDES_METHODS(...) \
-  G_MODULE_EXPORT ohm_plugin_method_t ohm_plugin_provides_methods[] = { \
-    __VA_ARGS__,							\
-    OHM_PLUGIN_METHODS_END						\
+#define OHM_EXPORT_VAR "_plugin_exports"
+#define OHM_PLUGIN_PROVIDES_METHODS(plugin, n, ...)			\
+  G_MODULE_EXPORT ohm_method_t plugin##_plugin_exports[(n)+1] = {	\
+    [0 ... (n)] = OHM_PLUGIN_METHODS_END };				\
+  static void __attribute__((constructor)) plugin_init_exports(void)	\
+  {									\
+    G_MODULE_EXPORT ohm_method_t exports[] = {				\
+      __VA_ARGS__,							\
+      OHM_PLUGIN_METHODS_END						\
+    };									\
+    int i;								\
+    for (i = 0; exports[i].name; i++)					\
+      plugin##_plugin_exports[i] = exports[i];				\
   }
 
-#define OHM_PLUGIN_REQUIRES_METHODS(...) \
-  G_MODULE_EXPORT ohm_plugin_method_t ohm_plugin_requires_methods[] = { \
-    __VA_ARGS__,							\
-    OHM_PLUGIN_METHODS_END						\
+
+#define OHM_IMPORTABLE(return_type, name, arguments)			\
+    static const char *name##_SIGNATURE = #return_type #arguments;	\
+    static return_type (*name) arguments
+
+#define OHM_IMPORT(public_name, name)			\
+    { public_name, name##_SIGNATURE, (void *)&name }
+    
+#define OHM_IMPORT_VAR "_plugin_imports"
+#define OHM_PLUGIN_REQUIRES_METHODS(plugin, n, ...)			\
+  G_MODULE_EXPORT ohm_method_t plugin##_plugin_imports[(n)+1] = {	\
+    [0 ... (n)] = OHM_PLUGIN_METHODS_END };				\
+  static void __attribute__((constructor)) plugin_init_imports(void)	\
+  {									\
+    G_MODULE_EXPORT ohm_method_t imports[] = {				\
+      __VA_ARGS__,							\
+      OHM_PLUGIN_METHODS_END						\
+    };									\
+    int i;								\
+    for (i = 0; imports[i].name; i++)					\
+      plugin##_plugin_imports[i] = imports[i];				\
   }
-
-
 
 #define OHM_PLUGIN_DBUS_METHODS(...)				  \
   G_MODULE_EXPORT ohm_dbus_method_t ohm_plugin_dbus_methods[] = { \

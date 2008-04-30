@@ -18,8 +18,6 @@ debian/tmp/usr/lib/ohm/libohm_timeouts.so /usr/lib/ohm
 debian/tmp/etc/ohm/plugins.d/timeouts.ini /etc/ohm/plugins.d
 debian/tmp/usr/lib/ohm/libohm_powerstatus.so /usr/lib/ohm
 debian/tmp/etc/ohm/plugins.d/powerstatus.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_headset.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/headset.ini /etc/ohm/plugins.d
 debian/tmp/usr/lib/ohm/libohm_dpms.so /usr/lib/ohm
 debian/tmp/etc/ohm/plugins.d/dpms.ini /etc/ohm/plugins.d
 debian/tmp/usr/lib/ohm/libohm_backlight.so /usr/lib/ohm

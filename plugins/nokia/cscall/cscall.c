@@ -63,17 +63,14 @@ static DBusHandlerResult call_progress(DBusConnection *c,
                                        DBusMessage *msg, void *data);
 
 
-static int     (*policy_request)(char *, char *);
-static char ***(*policy_actions)(DBusMessage *, int);
-
-static int     (*set_insert)(char *, char *);
-static int     (*set_delete)(char *, char *);
-static void    (*set_reset) (char *);
-
-static int     (*relation_insert)(char *, char **);
-static int     (*relation_delete)(char *, char **);
-static void    (*relation_reset) (char *);
-
+OHM_IMPORTABLE(int     , policy_request  , (char *, char *));
+OHM_IMPORTABLE(int     , policy_actions  , (DBusMessage *, int));
+OHM_IMPORTABLE(int     , set_insert      , (char *, char *));
+OHM_IMPORTABLE(int     , set_delete      , (char *, char *));
+OHM_IMPORTABLE(void    , set_reset       , (char *));
+OHM_IMPORTABLE(int     , relation_insert , (char *, char **));
+OHM_IMPORTABLE(int     , relation_delete , (char *, char **));
+OHM_IMPORTABLE(void    , relation_reset  , (char *));
 
 static int ringing   (void);
 static int connect   (void);
@@ -250,16 +247,15 @@ OHM_PLUGIN_DESCRIPTION("cscall",
                        plugin_exit,
                        NULL);
 
-OHM_PLUGIN_REQUIRES_METHODS(
-    { 0, "policy.request", NULL, (void *)&policy_request },
-    { 0, "policy.actions", NULL, (void *)&policy_actions },
-    { 0, "policy.set_insert", NULL, (void *)&set_insert  },
-    { 0, "policy.set_delete", NULL, (void *)&set_delete  },
-    { 0, "policy.set_reset" , NULL, (void *)&set_reset   },
-    { 0, "policy.relation_insert", NULL, (void *)&relation_insert },
-    { 0, "policy.relation_delete", NULL, (void *)&relation_delete },
-    { 0, "policy.relation_reset" , NULL, (void *)&relation_reset  });
-
+OHM_PLUGIN_REQUIRES_METHODS(cscall, 8,
+    OHM_IMPORT("policy.request"        , policy_request),
+    OHM_IMPORT("policy.actions"        , policy_actions),
+    OHM_IMPORT("policy.set_insert"     , set_insert),
+    OHM_IMPORT("policy.set_delete"     , set_delete),
+    OHM_IMPORT("policy.set_reset"      , set_reset),
+    OHM_IMPORT("policy.relation_insert", relation_insert),
+    OHM_IMPORT("policy.relation_delete", relation_delete),
+    OHM_IMPORT("policy.relation_reset" , relation_reset));
 
 OHM_PLUGIN_DBUS_METHODS(
     { DBUS_PATH_POLICY, METHOD_CALL_PROGRESS, call_progress, NULL });

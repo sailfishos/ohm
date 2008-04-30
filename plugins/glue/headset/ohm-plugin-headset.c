@@ -13,7 +13,7 @@ hal_property_changed_cb (OhmPlugin   *plugin,
 			 guint        id,
 			 const gchar *key)
 {
-    guint value;
+    gint value;
 
     ohm_debug("id: '%u', key: '%s'\n", id, key);
 
@@ -35,7 +35,8 @@ hal_property_changed_cb (OhmPlugin   *plugin,
 static void
 plugin_initialize (OhmPlugin *plugin)
 {
-    guint value, num, i;
+    guint num, i;
+    gint  value;
 
 	ohm_plugin_hal_init (plugin);
     ohm_plugin_hal_use_property_modified (plugin, hal_property_changed_cb);

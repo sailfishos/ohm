@@ -28,11 +28,10 @@ enum {
     ID_NODEV      = 0xff
 };
 
-static char ***(*policy_actions)(DBusMessage *, int);
-
-static int     (*set_insert)(char *, char *);
-static int     (*set_delete)(char *, char *);
-static void    (*set_reset) (char *);
+OHM_IMPORTABLE(int , policy_actions  , (DBusMessage *, int));
+OHM_IMPORTABLE(int , set_insert      , (char *, char *));
+OHM_IMPORTABLE(int , set_delete      , (char *, char *));
+OHM_IMPORTABLE(void, set_reset       , (char *));
 
 static void    update_device(void);
 
@@ -116,7 +115,6 @@ plugin_notify (OhmPlugin *plugin, gint id, gint value)
 }
 
 
-
 OHM_PLUGIN_DESCRIPTION("accessories",
                        "0.0.0",
                        "krisztian.litkey@nokia.com",
@@ -125,15 +123,16 @@ OHM_PLUGIN_DESCRIPTION("accessories",
                        plugin_exit,
                        plugin_notify);
 
-OHM_PLUGIN_REQUIRES_METHODS(
-    { 0, "policy.actions"  , NULL, (void *)&policy_actions },
-    { 0, "policy.set_insert", NULL, (void *)&set_insert    },
-    { 0, "policy.set_delete", NULL, (void *)&set_delete    },
-    { 0, "policy.set_reset" , NULL, (void *)&set_reset     });
+OHM_PLUGIN_REQUIRES_METHODS(accessories, 4,
+    OHM_IMPORT("policy.actions"   , policy_actions),
+    OHM_IMPORT("policy.set_insert", set_insert),
+    OHM_IMPORT("policy.set_delete", set_delete),
+    OHM_IMPORT("policy.set_reset" , set_reset));
 
 OHM_PLUGIN_REQUIRES("headset");
 
 OHM_PLUGIN_INTERESTED({ "headset.headset_type", CONF_HEADSET_TYPE });
+
 
 
 
