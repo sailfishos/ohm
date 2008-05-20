@@ -1,13 +1,8 @@
-SUBDIRS = 				\
-	cscall				\
-	audioroute			\
-	accessories			\
-	profiles
-
-if HAVE_POLICY
-SUBDIRS += policy
-endif
-
+SUBDIRS = 	  \
+	prolog    \
+	dres      \
+	signaling \
+	console
 
 clean-local:
 	rm -f *~
