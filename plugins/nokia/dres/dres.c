@@ -21,6 +21,7 @@
 OHM_IMPORTABLE(int , prolog_setup , (char **extensions, char **files));
 OHM_IMPORTABLE(void, prolog_free  , (void *retval));
 OHM_IMPORTABLE(void, prolog_dump  , (void *retval));
+OHM_IMPORTABLE(void, prolog_shell , (void));
 
 OHM_IMPORTABLE(prolog_predicate_t *, prolog_lookup ,
                (char *name, int arity));
@@ -34,8 +35,9 @@ OHM_IMPORTABLE(int                 , prolog_ainvoke,
 OHM_IMPORTABLE(int, console_open , (char *address,
                                     void (*cb)(int, char *, void *),
                                     void *cb_data, int multiple));
-OHM_IMPORTABLE(int, console_close, (int id));
-OHM_IMPORTABLE(int, console_write, (int id, char *buf, size_t size));
+OHM_IMPORTABLE(int, console_close , (int id));
+OHM_IMPORTABLE(int, console_write , (int id, char *buf, size_t size));
+OHM_IMPORTABLE(int, console_printf, (int id, char *fmt, ...));
 
 static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
@@ -489,7 +491,7 @@ set_fact(int cid, char *buf)
                         *q = p[-2] = 0;
                         selfld = q + 1;
                         if ((p = strchr(selfld, ':')) == NULL) {
-                            printf("Invalid syntax: [%s]\n", selfld);
+                            console_printf(cid, "Invalid input: %s\n", selfld);
                             continue;
                             }
                         else {
@@ -500,21 +502,20 @@ set_fact(int cid, char *buf)
                     
                     gval = ohm_value_from_string(value);
                     
-                    printf("*** %s[%s]\n", name, selector);
                     if ((n = find_facts(name, selector, facts, n)) < 0)
-                        printf("could not find facts matching %s[%s]\n",
-                               name, selector ?: "");
+                        console_printf(cid, "no fact matches %s[%s]\n",
+                                       name, selector ?: "");
                     else {
                         int i;
                         for (i = 0; i < n; i++) {
                             ohm_fact_set(facts[i], member, &gval);
-                            printf("%s:%s = %s\n", name, member, value);
+                            console_printf(cid, "%s:%s = %s\n", name,
+                                           member, value);
                         }
                     }
                 }
             }
         }
-        
     }
 }
 
@@ -541,8 +542,12 @@ console_handler(int id, char *input, void *data)
         set_fact(id, input + 4);
     else if (!strncmp(input, "dres ", 5))
         dres_goal(id, input + 5);
+    else if (!strcmp(input, "prolog"))
+        prolog_shell();
     else
-        console_write(id, "unknown command\n", 0);
+        console_printf(id, "unknown command \"%s\"\n", input);
+
+    console_printf(id, "ohm-dres> ");
 }
 
 
@@ -561,7 +566,7 @@ OHM_PLUGIN_PROVIDES_METHODS(dres, 1,
     OHM_EXPORT(update_goal, "dres")
 );
 
-OHM_PLUGIN_REQUIRES_METHODS(dres, 10,
+OHM_PLUGIN_REQUIRES_METHODS(dres, 12,
     OHM_IMPORT("prolog.setup"         , prolog_setup),
     OHM_IMPORT("prolog.lookup"        , prolog_lookup),
     OHM_IMPORT("prolog.call"          , prolog_invoke),
@@ -569,9 +574,11 @@ OHM_PLUGIN_REQUIRES_METHODS(dres, 10,
     OHM_IMPORT("prolog.acall"         , prolog_ainvoke),
     OHM_IMPORT("prolog.free_retval"   , prolog_free),
     OHM_IMPORT("prolog.dump_retval"   , prolog_dump),
+    OHM_IMPORT("prolog.shell"         , prolog_shell),
     OHM_IMPORT("console.open"         , console_open),
     OHM_IMPORT("console.close"        , console_close),
-    OHM_IMPORT("console.write"        , console_write)
+    OHM_IMPORT("console.write"        , console_write),
+    OHM_IMPORT("console.printf"       , console_printf)
 );
     
 

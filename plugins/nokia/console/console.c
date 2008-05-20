@@ -298,6 +298,40 @@ OHM_EXPORTABLE(int, console_write, (int id, char *buf, size_t size))
 }
 
 
+/********************
+ * console_printf
+ ********************/
+OHM_EXPORTABLE(int, console_printf, (int id, char *fmt, ...))
+{
+#define MAX_SIZE 16384
+    console_t *c = lookup_console(id);
+    char       default_buf[1024], *buf;
+    int        len, size;
+    va_list    ap;
+    
+    buf  = default_buf;
+    size = sizeof(default_buf);
+    
+    va_start(ap, fmt);
+    while ((len = vsnprintf(buf, size-1, fmt, ap)) >= size) {
+        if (buf != default_buf) {
+            free(buf);
+            buf = NULL;
+        }
+        if (size >= MAX_SIZE || (buf = malloc(size *= 2)) == NULL)
+            break;
+    }
+    va_end(ap);
+
+    if (size < MAX_SIZE && len < size)
+        write(c->sock, buf, len);
+    
+    if (buf && buf != default_buf)
+        free(buf);
+    
+    return len;
+}
+
 /*****************************************************************************
  *                       *** misc. helper functions ***                      *
  *****************************************************************************/
@@ -439,10 +473,11 @@ OHM_PLUGIN_DESCRIPTION("console",
                        plugin_exit,
                        NULL);
 
-OHM_PLUGIN_PROVIDES_METHODS(console, 3,
-    OHM_EXPORT(console_open , "open" ),
-    OHM_EXPORT(console_close, "close"),
-    OHM_EXPORT(console_write, "write")
+OHM_PLUGIN_PROVIDES_METHODS(console, 4,
+    OHM_EXPORT(console_open  , "open"  ),
+    OHM_EXPORT(console_close , "close" ),
+    OHM_EXPORT(console_write , "write" ),
+    OHM_EXPORT(console_printf, "printf")
 );
 
 
