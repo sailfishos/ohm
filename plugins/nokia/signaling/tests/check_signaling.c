@@ -450,11 +450,7 @@ START_TEST (test_signaling_timeout)
     register_enforcement_point("external", FALSE);
     register_enforcement_point("external-2", FALSE);
 
-<<<<<<< HEAD:plugins/nokia/signaling/tests/check_signaling.c
-    o = queue_decision(NULL, TRUE, 2000);
-=======
     test_transaction_object = queue_decision(NULL, 0, TRUE, 2000);
->>>>>>> 0d60614b7a9bd4dc479d5ee61213798ca5dd13e0:plugins/nokia/signaling/tests/check_signaling.c
 
     /* Register the signal handlers */
 
