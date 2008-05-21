@@ -681,12 +681,10 @@ dres_goal(int cid, char *cmd)
     for (i = 0, sep="";  args[i] != NULL;  i += 2, sep = " ") {
         p += snprintf(p, e-p, "%s%s %s", sep, args[i], args[i+1]);
     }
-    snprintf(p, e-p, " <null>'");
+    snprintf(p, e-p, "%s<null>'", sep);
     DEBUG("%s", dbgstr);
 
-#if 0
     dres_update_goal(dres, goal);
-#endif
 
     return;
 
@@ -752,10 +750,10 @@ int signal_changed(char *signame, int transid, int factc, char**factv,
 {
     int i;
 
-    DEBUG("signal(%s, %d,  %d, %p, %p, %lu)\n",
-          signame, transid, factc, factv, callback, timeout);
+    DEBUG("called as %s(%s, %d,  %d, %p, %p, %lu)",
+          __FUNCTION__, signame, transid, factc, factv, callback, timeout);
     for (i = 0;  i < factc;  i++) {
-        DEBUG("   fact[%d]: '%s'\n", i, factv[i]);
+        DEBUG("   fact[%d]: '%s'", i, factv[i]);
     }
 
     return TRUE;

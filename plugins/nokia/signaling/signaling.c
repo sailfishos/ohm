@@ -155,7 +155,7 @@ OHM_PLUGIN_DESCRIPTION("signaling",
         OHM_LICENSE_NON_FREE, plugin_init, plugin_exit,
         NULL);
 
-OHM_PLUGIN_PROVIDES_METHODS(signaling, 4,
+OHM_PLUGIN_PROVIDES_METHODS(signaling, 5,
         OHM_EXPORT(register_internal_enforcement_point, "register_enforcement_point"),
         OHM_EXPORT(unregister_internal_enforcement_point, "unregister_enforcement_point"),
         OHM_EXPORT(signal, "signal"),
