@@ -100,11 +100,11 @@ START_TEST (test_signaling_internal_ep_1)
     key_changed_count = 0;
     decision_count = 0;
 
-    queue_decision(NULL, FALSE, 0);
+    queue_decision(NULL, 0, FALSE, 0);
     
     g_main_loop_run(loop);
     
-    test_transaction_object = queue_decision(NULL, TRUE, 2000);
+    test_transaction_object = queue_decision(NULL, 0, TRUE, 2000);
     g_object_unref(test_transaction_object);
 
     g_main_loop_run(loop);
@@ -183,7 +183,7 @@ START_TEST (test_signaling_internal_ep_2)
     key_changed_count = 0;
     decision_count = 0;
 
-    test_transaction_object = queue_decision(NULL, TRUE, 2000);
+    test_transaction_object = queue_decision(NULL, 0, TRUE, 2000);
 
     g_signal_connect(test_transaction_object, "on-transaction-complete", G_CALLBACK(test_internal_2_complete), NULL);
 
@@ -341,8 +341,8 @@ START_TEST (test_signaling_register_unregister)
     register_enforcement_point("internal", TRUE);
     register_enforcement_point("internal-2", TRUE);
 
-    queue_decision(NULL, FALSE, 0);
-    test_transaction_object = queue_decision(NULL, TRUE, 2000);
+    queue_decision(NULL, 0, FALSE, 0);
+    test_transaction_object = queue_decision(NULL, 0, TRUE, 2000);
 
     /* Register the signal handlers */
 
@@ -450,7 +450,11 @@ START_TEST (test_signaling_timeout)
     register_enforcement_point("external", FALSE);
     register_enforcement_point("external-2", FALSE);
 
+<<<<<<< HEAD:plugins/nokia/signaling/tests/check_signaling.c
     o = queue_decision(NULL, TRUE, 2000);
+=======
+    test_transaction_object = queue_decision(NULL, 0, TRUE, 2000);
+>>>>>>> 0d60614b7a9bd4dc479d5ee61213798ca5dd13e0:plugins/nokia/signaling/tests/check_signaling.c
 
     /* Register the signal handlers */
 

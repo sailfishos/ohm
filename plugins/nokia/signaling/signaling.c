@@ -9,6 +9,9 @@
 #include "signaling.h"
 #include <ohm-plugin.h>
 
+/* completion cb type */
+typedef void (*completion_cb_t)(int txid, int success);
+
 /* public API (inside OHM) */
 
 OHM_EXPORTABLE(EnforcementPoint *, register_internal_enforcement_point, (gchar *uri))
@@ -30,17 +33,103 @@ OHM_EXPORTABLE(gboolean, unregister_internal_enforcement_point, (EnforcementPoin
     return ret;
 }
 
-OHM_EXPORTABLE(Transaction *, queue_policy_decision, (char ***actions, guint timeout))
+OHM_EXPORTABLE(Transaction *, queue_policy_decision, (GSList *facts, guint timeout))
 {
-    return queue_decision(actions, TRUE, timeout);
+    return queue_decision(facts, 0, TRUE, timeout);
 }
 
-OHM_EXPORTABLE(void, queue_key_change, (char ***actions))
+OHM_EXPORTABLE(void, queue_key_change, (GSList *facts))
 {
-    queue_decision(actions, FALSE, 0);
+    queue_decision(facts, 0, FALSE, 0);
     return;
 }
 
+/* simple wrapper: just return true or false to the caller */
+static void complete(Transaction *t, gpointer data)
+{
+    completion_cb_t cb = data;
+
+    guint txid;
+    GSList *nacked, *not_answered, *i;
+
+    /* get the data from the transaction */
+
+    g_object_get(t,
+            "txid",
+            &txid,
+            "nacked",
+            &nacked,
+            "not_answered",
+            &not_answered,
+            NULL);
+
+    if (g_slist_length(not_answered) || g_slist_length(nacked)) {
+        /* failure */
+        cb(txid, 0);
+    }
+    else {
+        /* success */
+        cb(txid, 1);
+    }
+
+    /* free memory */
+    
+    for (i = nacked; i != NULL; i = g_slist_next(i)) {
+        g_free(i->data);
+    }
+    for (i = not_answered; i != NULL; i = g_slist_next(i)) {
+        g_free(i->data);
+    }
+
+    g_slist_free(nacked);
+    g_slist_free(not_answered);
+
+    g_object_unref(t);
+}
+
+/* simple wrapper: hide the GObject interface */
+OHM_EXPORTABLE(int, signal, (char *signame, int txid, int factc, char **factv, completion_cb_t cb, unsigned long timeout))
+{
+
+    OhmFactStore *fs;
+    Transaction *t = NULL;
+    GSList *facts = NULL;
+    int i;
+
+    /* Get facts to a list */
+
+    fs = ohm_fact_store_get_fact_store();
+    if (fs == NULL)
+        goto error;
+
+    for (i = 0; i < factc; i++) {
+        GSList *tmp = ohm_fact_store_get_facts_by_name(fs, factv[i]);
+        if (tmp != NULL) {
+            fact *f = g_new(fact, 1);
+            f->key = g_strdup(factv[i]);
+            f->values = tmp;
+            facts = g_slist_prepend(facts, f);
+        }
+    }
+
+    if (cb == NULL) {
+        queue_decision(facts, 0, FALSE, 0);
+    }
+    else {
+        t = queue_decision(facts, txid, TRUE, timeout);
+        if (t == NULL) {
+            goto error;
+        }
+        g_signal_connect(t, "on-transaction-complete", G_CALLBACK(complete), cb);
+    }
+
+    return 1;
+
+error:
+
+    /* free stuff, unref factstore */
+    return 0;
+}
 
 /* init and exit */
 
@@ -69,6 +158,7 @@ OHM_PLUGIN_DESCRIPTION("signaling",
 OHM_PLUGIN_PROVIDES_METHODS(signaling, 4,
         OHM_EXPORT(register_internal_enforcement_point, "register_enforcement_point"),
         OHM_EXPORT(unregister_internal_enforcement_point, "unregister_enforcement_point"),
+        OHM_EXPORT(signal, "signal"),
         OHM_EXPORT(queue_policy_decision, "queue_policy_decision"),
         OHM_EXPORT(queue_key_change, "queue_key_change"));
 

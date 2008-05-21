@@ -56,8 +56,7 @@ static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
-static int  retval_to_facts(char *name, char ***objects,
-                            OhmFact **facts, int max);
+static int  retval_to_facts(char ***objects, OhmFact **facts, int max);
 static void console_handler(int id, char *buf, void *data);
 
 
@@ -130,6 +129,8 @@ plugin_init(OhmPlugin *plugin)
         dres = NULL;
     }
     exit(1);
+
+#undef FAIL
 }
 
 
@@ -182,77 +183,54 @@ OHM_EXPORTABLE(int, update_goal, (char *goal, ...))
  * prolog_handler
  ********************/
 static int
-prolog_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
+prolog_handler(dres_t *dres, char *actname, dres_action_t *action, void **ret)
 {
-#define MAX_FACTS 128
-    struct {
-        dres_array_t    head;
-        OhmFact        *facts[MAX_FACTS];
-    } arrbuf = { head: { len: 0 } };
-    dres_array_t       *facts = &arrbuf.head;
-    dres_variable_t    *var;
-    char                buf[64], factname[128];
-
-    char                pred_name[64];
+#define FAIL(ec) do { err = ec; goto fail; } while (0)
+#define MAX_FACTS 63
     prolog_predicate_t *predicate;
-    char   ***retval;
-    int       i;
+    char                name[64];
+    char             ***retval;
+    OhmFact           **facts = NULL;
+    int                 nfact, err;
     
     if (action->nargument < 1)
         return EINVAL;
 
+    name[0] = '\0';
+    dres_name(dres, action->arguments[0], name, sizeof(name));
     
-    pred_name[0] = '\0';
-    dres_name(dres, action->arguments[0], pred_name, sizeof(pred_name));
-    
-    if ((predicate = prolog_lookup(pred_name, action->nargument)) == NULL)
-        return ENOENT;
+    if ((predicate = prolog_lookup(name, action->nargument)) == NULL)
+        FAIL(ENOENT);
     
     if (!prolog_invoke(predicate, &retval))
-        return EINVAL;
+        FAIL(EINVAL);
     
-    DEBUG("%s%s%s/%d gave the following result:",
-          predicate->module ?: "", predicate->module ? ":" : "",
-          predicate->name, predicate->arity);
+    DEBUG("rule engine gave the following results:");
     prolog_dump(retval);
-    
-    if (DRES_ID_TYPE(action->lvalue.variable) == DRES_TYPE_FACTVAR) {
-        facts->len = retval_to_facts("foo", retval,
-                                     (OhmFact **)facts->fact, MAX_FACTS);
-        if (facts->len < 0)
-            goto fail;
-        
-        dres_name(dres, action->lvalue.variable, buf, sizeof(buf));
-        snprintf(factname, sizeof(factname), "%s%s",
-                 dres_get_prefix(dres), buf + 1);
-        
-        if (action->lvalue.field != NULL) {
-            /* uh-oh... */
-            DEBUG("uh-oh... should set lvalue.field");
-            goto fail;
-        }
-        
-        if ((var = dres_lookup_variable(dres, action->lvalue.variable)) == NULL)
-            goto fail;
-        
-        if (!dres_var_set(var->var, action->lvalue.selector,
-                          VAR_FACT_ARRAY, facts))
-            goto fail;
-        prolog_free(retval);
-        
-        for (i = 0; i < facts->len; i++)
-            g_object_unref(facts->fact[i]);
-        printf("***** inserted new fact %s\n", factname);
-    }
 
+    if ((facts = ALLOC_ARR(OhmFact *, MAX_FACTS + 1)) == NULL)
+        FAIL(ENOMEM);
+
+    if ((nfact = retval_to_facts(retval, facts, MAX_FACTS)) < 0)
+        FAIL(EINVAL);
+    
+    facts[nfact] = NULL;
+    
+    if (ret == NULL)
+        FAIL(0);                     /* kludge: free facts and return 0 */
+    
+    *ret = facts;
     return 0;
-
-        
- fail:
-    for (i = 0; i < facts->len; i++)
-        g_object_unref(facts->fact[i]);
     
-    return EINVAL;
+ fail:
+    if (facts) {
+        int i;
+        for (i = 0; i < nfact; i++)
+            g_object_unref(facts[i]);
+        FREE(facts);
+    }
+    
+    return err;
 
 #undef MAX_FACTS
 }
@@ -405,13 +383,13 @@ object_to_fact(char *name, char **object)
  * retval_to_facts
  ********************/
 static int
-retval_to_facts(char *name, char ***objects, OhmFact **facts, int max)
+retval_to_facts(char ***objects, OhmFact **facts, int max)
 {
     char **object;
     int    i;
     
     for (i = 0; (object = objects[i]) != NULL && i < max; i++) {
-        if ((facts[i] = object_to_fact(name, object)) == NULL)
+        if ((facts[i] = object_to_fact("foo", object)) == NULL)
             return -EINVAL;
     }
     
@@ -431,6 +409,9 @@ dump_fact_store(int cid)
 
 
 
+/*
+ * copy-paste code from variables.c in dres...
+ */
 typedef struct {
     char              *name;
     char              *value;
@@ -790,3 +771,89 @@ int signal_changed(char *signame, int transid, int factc, char**factv,
  * vim:set expandtab shiftwidth=4:
  */
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if 0
+
+    
+    
+
+    facts->fact[facts->len] = NULL;
+
+    DEBUG("%s%s%s/%d gave the following result:",
+          predicate->module ?: "", predicate->module ? ":" : "",
+          predicate->name, predicate->arity);
+    prolog_dump(retval);
+
+
+
+
+
+    struct {
+        dres_array_t    head;
+        OhmFact        *facts[MAX_FACTS+1];
+    } arrbuf = { head: { len: 0 } };
+    dres_array_t       *facts = &arrbuf.head;
+    dres_variable_t    *var;
+    char                buf[64], factname[128];
+
+    char                pred_name[64];
+    prolog_predicate_t *predicate;
+
+    int       i;
+    
+    
+
+    if (DRES_ID_TYPE(action->lvalue.variable) == DRES_TYPE_FACTVAR) {
+        facts->len = retval_to_facts(retval,(OhmFact **)facts->fact, MAX_FACTS);
+        if (facts->len < 0)
+            goto fail;
+        
+        dres_name(dres, action->lvalue.variable, buf, sizeof(buf));
+        snprintf(factname, sizeof(factname), "%s%s",
+                 dres_get_prefix(dres), buf + 1);
+        
+        if (action->lvalue.field != NULL) {
+            /* uh-oh... */
+            DEBUG("uh-oh... should set lvalue.field");
+            goto fail;
+        }
+        
+        if ((var = dres_lookup_variable(dres, action->lvalue.variable)) == NULL)
+            goto fail;
+        
+        if (!dres_var_set(var->var, action->lvalue.selector,
+                          VAR_FACT_ARRAY, facts))
+            goto fail;
+        prolog_free(retval);
+        
+        for (i = 0; i < facts->len; i++)
+            g_object_unref(facts->fact[i]);
+        printf("***** inserted new fact %s\n", factname);
+    }
+
+    return 0;
+
+        
+ fail:
+    for (i = 0; i < facts->len; i++)
+        g_object_unref(facts->fact[i]);
+    
+    return EINVAL;
+
+
+#endif
