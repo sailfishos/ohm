@@ -180,21 +180,19 @@ prolog_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     char   ***retval;
     int       i;
     
-    
+
     pred_name[0] = '\0';
     dres_name(dres, action->arguments[0], pred_name, sizeof(pred_name));
     
     if ((predicate = prolog_lookup(pred_name, -1)) == NULL)
         return ENOENT;
     
-    DEBUG("%s maps to %s%s%s/%d (%p)", pred_name,
-          predicate->module ?: "", predicate->module ? ":" : "",
-          predicate->name, predicate->arity, predicate->predicate);
-    
     if (!prolog_invoke(predicate, &retval))
         return EINVAL;
     
-    DEBUG("rule engine gave the following result:");
+    DEBUG("%s%s%s/%d gave the following result:",
+          predicate->module ?: "", predicate->module ? ":" : "",
+          predicate->name, predicate->arity);
     prolog_dump(retval);
     
     if (DRES_ID_TYPE(action->lvalue.variable) == DRES_TYPE_FACTVAR) {

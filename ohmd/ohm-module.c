@@ -67,6 +67,10 @@ typedef struct {
 
 G_DEFINE_TYPE (OhmModule, ohm_module, G_TYPE_OBJECT)
 
+
+static GHashTable *symtable;
+
+
 static gboolean
 free_notify_list (const gchar *key, GSList *list, gpointer userdata)
 {
@@ -585,10 +589,8 @@ static gboolean
 ohm_module_resolve_methods(OhmModule *module)
 {
   ohm_method_t *method, *m;
-    
   GSList       *l;
   OhmPlugin    *plugin;
-  GHashTable   *symtable;
   const gchar  *name;
   gchar        *key;
   int           plen, slen, failed;
@@ -604,7 +606,7 @@ ohm_module_resolve_methods(OhmModule *module)
     name   = ohm_plugin_get_name(plugin);
     plen   = strlen(name);
 
-    for (method = ohm_plugin_exports(plugin); method && method->name; method++) {
+    for (method=ohm_plugin_exports(plugin); method && method->name; method++) {
       if (strchr(method->name, '.') != NULL) {
 	g_warning("Invalid exported method name %s from plugin %s.",
 		  method->name, name);
@@ -656,12 +658,67 @@ ohm_module_resolve_methods(OhmModule *module)
     }
   }
 
-  /* we could free the symbol table here: g_hash_table_destory(symtable) */
-  
   if (failed)
     g_error("Fatal method resolving errors encountered.");
   
   return TRUE;
+}
+
+
+/**
+ * find_matching_method
+ **/
+static gboolean
+find_matching_method(gpointer key, gpointer value, gpointer data)
+{
+  char         *name   = (char *)key;
+  ohm_method_t *method = (ohm_method_t *)value;
+  ohm_method_t *req    = (ohm_method_t *)data;
+  char         *base   = strchr(name, '.');
+  
+  if (base != NULL)
+    base++;
+
+  if (!strcmp(name, req->name) || (base != NULL && !strcmp(name, base))) {
+    if (req->signature == NULL ||
+	ohm_check_method_signature(method->signature, req->signature)) {
+      
+      req->ptr  = method->ptr;
+      req->name = method->name;
+      
+      if (!req->signature)
+	req->signature = method->signature;
+      
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+
+/**
+ * ohm_module_find_method:
+ **/
+gboolean
+ohm_module_find_method(char *name, char **sigptr, void **methptr)
+{
+  ohm_method_t method;
+
+  method.name      = name;
+  method.signature = (sigptr && *sigptr ? *sigptr : NULL);
+  method.ptr       = NULL;
+
+  if (g_hash_table_find(symtable, find_matching_method, (gpointer)&method)) {
+    if (methptr != NULL)
+      *methptr = method.ptr;
+    if (sigptr != NULL)
+      *sigptr = (char *)method.signature;
+
+    return TRUE;
+  }
+  
+  return FALSE;
 }
 
 
