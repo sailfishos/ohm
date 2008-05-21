@@ -12,6 +12,7 @@
 
 #include <dres/dres.h>
 #include <prolog/prolog.h>
+#include <signaling.h>
 #include <prolog/ohm-fact.h>           /* XXX */
 
 #include <ohm-plugin.h>
@@ -31,6 +32,9 @@ OHM_IMPORTABLE(int                 , prolog_vinvoke,
 OHM_IMPORTABLE(int                 , prolog_ainvoke,
                (prolog_predicate_t *pred, void *retval,void **args, int narg));
 
+OHM_IMPORTABLE(Transaction *, signal,
+               (char *signal, int factc, char **factv, guint timeout));
+
 OHM_IMPORTABLE(int, console_open , (char *address,
                                     void (*cb)(int, char *, void *),
                                     void *cb_data, int multiple));
@@ -38,6 +42,8 @@ OHM_IMPORTABLE(int, console_close, (int id));
 OHM_IMPORTABLE(int, console_write, (int id, char *buf, size_t size));
 
 static int  prolog_handler (dres_t *dres,
+                            char *name, dres_action_t *action, void **ret);
+static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  retval_to_facts(char *name, char ***objects,
                             OhmFact **facts, int max);
@@ -91,6 +97,9 @@ plugin_init(OhmPlugin *plugin)
     
     if (dres_register_handler(dres, "prolog", prolog_handler) != 0)
         FAIL("failed to register DRES prolog handler");
+
+    if (dres_register_handler(dres, "signal_changed", signal_handler) != 0)
+        FAIL("failed to register DRES signal_changed handler");
 
     if (dres_parse_file(dres, DRES_RULE_PATH))
         FAIL("failed to parse DRES rule file \"%s\"", DRES_RULE_PATH);
@@ -178,11 +187,13 @@ prolog_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     char   ***retval;
     int       i;
     
+    if (action->nargument < 1)
+        return EINVAL;
     
     pred_name[0] = '\0';
     dres_name(dres, action->arguments[0], pred_name, sizeof(pred_name));
     
-    if ((predicate = prolog_lookup(pred_name, -1)) == NULL)
+    if ((predicate = prolog_lookup(pred_name, action->nargument)) == NULL)
         return ENOENT;
     
     DEBUG("%s maps to %s%s%s/%d (%p)", pred_name,
@@ -232,6 +243,55 @@ prolog_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
         g_object_unref(facts->fact[i]);
     
     return EINVAL;
+
+#undef MAX_FACTS
+}
+
+
+/********************
+ * signal_handler
+ ********************/
+static int
+signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
+{
+#define MAX_FACTS 128
+#define MAX_LENGTH 64
+    Transaction   *trans;
+    int            factc;
+    char           signal_name[MAX_LENGTH];
+    char           callback_name[MAX_LENGTH];
+    char          *factv[MAX_FACTS + 1];
+    char        ***retval;
+    char           buf[MAX_FACTS * MAX_LENGTH];
+    char          *p;
+    int            i;
+    
+    factc = action->nargument - 2;
+
+    if (factc < 1 || factc > MAX_FACTS)
+        return EINVAL;
+    
+    signal_name[0] = callback_name[0] = '\0';
+    dres_name(dres, action->arguments[0], signal_name, MAX_LENGTH);
+    dres_name(dres, action->arguments[1], callback_name, MAX_LENGTH);
+    
+    for (p = buf, i = 0;   i < factc;   i++, p += strlen(p)) {
+        dres_name(dres, action->arguments[i+2], p, MAX_LENGTH);
+        factv[i] = p;
+    }
+    factv[factc] = NULL;
+
+
+    if ((transact = signal(signal_name, factc,factv, 5 * 1000)) == NULL) {
+        /* call the completion_callback with an error */
+    }
+    else {
+    }
+
+    return 0;
+
+#undef MAX_LENGTH
+#undef MAX_FACTS
 }
 
 
@@ -562,19 +622,36 @@ OHM_PLUGIN_PROVIDES_METHODS(dres, 1,
 );
 
 OHM_PLUGIN_REQUIRES_METHODS(dres, 10,
-    OHM_IMPORT("prolog.setup"         , prolog_setup),
-    OHM_IMPORT("prolog.lookup"        , prolog_lookup),
-    OHM_IMPORT("prolog.call"          , prolog_invoke),
-    OHM_IMPORT("prolog.vcall"         , prolog_vinvoke),
-    OHM_IMPORT("prolog.acall"         , prolog_ainvoke),
-    OHM_IMPORT("prolog.free_retval"   , prolog_free),
-    OHM_IMPORT("prolog.dump_retval"   , prolog_dump),
-    OHM_IMPORT("console.open"         , console_open),
-    OHM_IMPORT("console.close"        , console_close),
-    OHM_IMPORT("console.write"        , console_write)
+    OHM_IMPORT("prolog.setup"                   , prolog_setup),
+    OHM_IMPORT("prolog.lookup"                  , prolog_lookup),
+    OHM_IMPORT("prolog.call"                    , prolog_invoke),
+    OHM_IMPORT("prolog.vcall"                   , prolog_vinvoke),
+    OHM_IMPORT("prolog.acall"                   , prolog_ainvoke),
+    OHM_IMPORT("prolog.free_retval"             , prolog_free),
+    OHM_IMPORT("prolog.dump_retval"             , prolog_dump),
+#if 0
+    OHM_IMPORT("signaling.queue_policy_decision", signaling),
+#endif
+    OHM_IMPORT("console.open"                   , console_open),
+    OHM_IMPORT("console.close"                  , console_close),
+    OHM_IMPORT("console.write"                  , console_write)
 );
     
+#if 1
+Transaction *signal(char *signame, int factc, char**factv, guint timeout)
+{
+    static Transaction t;
 
+    int i;
+
+    DEBUG("signal(%s, %d, %p, %lu)\n", signame, factc, factv, timeout);
+    for (i = 0;  i < factc;  i++) {
+        DEBUG("   fact[%03d]: '%s'\n", i, factv[i]);
+    }
+
+    return &t;
+}
+#endif
                             
 
 /* 
