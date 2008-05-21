@@ -24,6 +24,8 @@
 
 #include "signaling_marshal.h"
 
+#include "prolog/ohm-fact.h"
+
 #define DBUS_INTERFACE_POLICY    "com.nokia.policy"
 #define DBUS_INTERFACE_FDO       "org.freedesktop.DBus"
 #define DBUS_PATH_POLICY         "/com/nokia/policy"
@@ -82,7 +84,7 @@ typedef struct _Transaction {
     guint           timeout; /* in milliseconds */
     guint           timeout_id; /* g_source */
     gboolean        built_ready;
-    char         ***actions;
+    GSList         *facts;
 
 } Transaction;
 
@@ -116,6 +118,11 @@ void            transaction_add_ep(Transaction *t, EnforcementPoint *ep);
 void            transaction_remove_ep(Transaction *t, EnforcementPoint *ep);
 void            transaction_ack_ep(Transaction *t, EnforcementPoint *ep, gboolean ack);
 
+typedef struct _fact {
+    gchar *key;
+    GSList *values;
+} fact;
+
 /*
  * The implemented strategies 
  */
@@ -138,7 +145,7 @@ typedef struct _ExternalEPStrategyClass {
 } ExternalEPStrategyClass;
 
 typedef struct _pending_signal {
-    char ***actions;
+    GSList *facts;
     guint txid;
     ExternalEPStrategyClass *klass;
 } pending_signal;
@@ -169,7 +176,7 @@ EnforcementPoint * register_enforcement_point(const gchar * uri, gboolean intern
 
 gboolean unregister_enforcement_point(const gchar *uri);
 
-Transaction * queue_decision(char ***actions, gboolean need_transaction, guint timeout);
+Transaction * queue_decision(GSList *facts, int txid, gboolean need_transaction, guint timeout);
 
 gboolean init_signaling();
 

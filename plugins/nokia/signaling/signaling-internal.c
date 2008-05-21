@@ -54,6 +54,35 @@ deinit_signaling()
 
 /* copy-paste from policy library */
 
+void free_facts(GSList *facts) 
+{
+
+    GSList *i;
+
+    for (i = facts; i != NULL; i = g_slist_next(i)) {
+        fact *e = i->data;
+        g_free(e->key);
+        /* FIXME; unref the OhmFacts? */
+        g_slist_free(e->values);
+    }
+
+    g_slist_free(facts);
+    return;
+}
+
+GSList *copy_facts(GSList *facts)
+{
+
+    GSList *new_facts = NULL, *i = NULL;
+
+    for (i = facts; i != NULL; i = g_slist_next(i)) {
+        new_facts = g_slist_prepend(new_facts, g_slist_copy(i->data));
+    }
+
+    return new_facts;
+}
+
+#if 0
     void
 free_actions(char ***actions)
 {
@@ -111,6 +140,8 @@ copy_actions(char ***actions)
     return new_actions;
 }
 
+#endif
+
 /* GObject stuff */
 
 enum {
@@ -134,7 +165,7 @@ enum {
     PROP_ACKED,
     PROP_NACKED,
     PROP_NOT_ANSWERED,
-    PROP_ACTIONS
+    PROP_FACTS
 };
 
     static GSList *
@@ -180,9 +211,9 @@ transaction_get_property(GObject *object,
         case PROP_NOT_ANSWERED:
             g_value_set_pointer(value, result_list(t->not_answered));
             break;
-        case PROP_ACTIONS:
+        case PROP_FACTS:
             /* FIXME: pass a copy? To be refactored with OhmFacts */
-            g_value_set_pointer(value, t->actions);
+            g_value_set_pointer(value, t->facts);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -238,9 +269,9 @@ transaction_set_property(GObject *object,
         case PROP_TIMEOUT:
             t->timeout = g_value_get_uint(value);
             break;
-        case PROP_ACTIONS:
-            free_actions(t->actions);
-            t->actions = copy_actions(g_value_get_pointer(value));
+        case PROP_FACTS:
+            free_facts(t->facts);
+            t->facts = copy_facts(g_value_get_pointer(value));
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -381,7 +412,7 @@ send_ipc_signal(gpointer data)
 
     dbus_uint32_t   txid = signal->txid;
 
-    char         ***actions = signal->actions;
+    GSList         *facts = signal->facts, *i, *j;
     char           *path = DBUS_PATH_POLICY "/decision";
     char           *interface = DBUS_INTERFACE_POLICY;
 
@@ -389,8 +420,6 @@ send_ipc_signal(gpointer data)
     DBusMessageIter msgit,
                     arrit,
                     actit;
-    int             a,
-                    p;
 
     g_print("emitting policy action D-Bus signal\n");
 
@@ -406,15 +435,26 @@ send_ipc_signal(gpointer data)
     if (!dbus_message_iter_open_container(&msgit, DBUS_TYPE_ARRAY,
                 "as", &arrit))
         goto fail;
-    if (actions) {
-        for (a = 0; actions[a]; a++) {
-            if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_ARRAY,
-                        "s", &actit))
+
+    for (i = facts; i != NULL; i = g_slist_next(i)) {
+        fact *f = i->data;
+        if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_ARRAY,
+                    "s", &actit)) {
+            goto fail;
+        }
+        if (!dbus_message_iter_append_basic
+                (&actit, DBUS_TYPE_STRING, f->key)) {
+            goto fail;
+        }
+        for (j = f->values; j != NULL; j = g_slist_next(j)) {
+
+            OhmFact *of = j->data;
+            GValue *gval = ohm_fact_get(of, f->key);
+            const gchar *value = g_value_get_string(gval);
+
+            if (!dbus_message_iter_append_basic
+                    (&actit, DBUS_TYPE_STRING, value))
                 goto fail;
-            for (p = 0; actions[a][p]; p++)
-                if (!dbus_message_iter_append_basic
-                        (&actit, DBUS_TYPE_STRING, actions[a] + p))
-                    goto fail;
             dbus_message_iter_close_container(&arrit, &actit);
         }
     }
@@ -449,13 +489,13 @@ external_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
     pending_signal *signal = NULL;
     gboolean        found = FALSE;
     guint           txid;
-    gchar ***actions;
+    GSList         *facts;
 
     g_object_get(transaction,
             "txid",
             &txid,
-            "actions",
-            &actions,
+            "facts",
+            &facts,
             NULL);
 
     g_print("External EP send decision, txid '%u'\n", txid);
@@ -476,7 +516,7 @@ external_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
          * an IPC signal needs to be sent 
          */
         pending_signal *signal = g_new0(pending_signal, 1);
-        signal->actions = actions;
+        signal->facts = facts;
         signal->txid = txid;
         signal->klass = k;
         k->pending_signals = g_slist_append(k->pending_signals, signal);
@@ -673,8 +713,8 @@ transaction_dispose(GObject *object) {
         g_object_unref(ep);
     }
     
-    free_actions(self->actions);
-    self->actions = NULL;
+    free_facts(self->facts);
+    self->facts = NULL;
 }
 
     static void
@@ -751,13 +791,13 @@ transaction_class_init(gpointer g_class, gpointer class_data) {
             PROP_NOT_ANSWERED,
             param_spec);
 
-    param_spec = g_param_spec_pointer ("actions",
-            "actions",
+    param_spec = g_param_spec_pointer ("facts",
+            "facts",
             "Policy decision or key change",
             G_PARAM_READWRITE);
 
     g_object_class_install_property (gobject,
-            PROP_ACTIONS,
+            PROP_FACTS,
             param_spec);
 
     signals [ON_TRANSACTION_COMPLETE] =
@@ -1401,7 +1441,7 @@ get_txid()
  * return the Transaction, NULL if no need for real transaction
  */
     Transaction *
-queue_decision(char ***actions, gboolean need_transaction, guint timeout)
+queue_decision(GSList *facts, gint proposed_txid, gboolean need_transaction, guint timeout)
 {
     /*
      * Puts a policy decision to the decision queue and asks the
@@ -1423,14 +1463,18 @@ queue_decision(char ***actions, gboolean need_transaction, guint timeout)
     /* init the transaction with the txid, 0 means that enforcement
      * points don't need to reply */
 
-    if (need_transaction)
-        txid = get_txid();
+    if (need_transaction) {
+        if (proposed_txid == 0)
+            txid = get_txid();
+        else
+            txid = proposed_txid;
+    }
 
     g_object_set(G_OBJECT(transaction),
             "txid",
             txid,
-            "actions",
-            actions,
+            "facts",
+            facts,
             "timeout",
             timeout,
             NULL);
