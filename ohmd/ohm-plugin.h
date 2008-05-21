@@ -232,6 +232,10 @@ void ohm_plugin_dbus_del_signal(const char *sender, const char *interface,
 				DBusObjectPathMessageFunction handler,
 				void *data);
 
+/* used by plugin for dynamically resolve exported plugin methods */
+gboolean ohm_module_find_method(char *name, char **sigptr, void **methptr);
+
+
 G_END_DECLS
 
 #endif /* __OHM_PLUGIN_H */
