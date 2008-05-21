@@ -12,11 +12,12 @@
 
 #include <dres/dres.h>
 #include <prolog/prolog.h>
-#include <signaling.h>
 #include <prolog/ohm-fact.h>           /* XXX */
 
 #include <ohm-plugin.h>
 
+
+typedef void (*completion_cb_t)(int transid, int success);
 
 /* imported functions */
 OHM_IMPORTABLE(int , prolog_setup , (char **extensions, char **files));
@@ -33,8 +34,14 @@ OHM_IMPORTABLE(int                 , prolog_vinvoke,
 OHM_IMPORTABLE(int                 , prolog_ainvoke,
                (prolog_predicate_t *pred, void *retval,void **args, int narg));
 
-OHM_IMPORTABLE(Transaction *, signal,
-               (char *signal, int factc, char **factv, guint timeout));
+#if 0
+OHM_IMPORTABLE(int, signal_changed,(char *signal, int transid,
+                                    int factc, char **factv,
+                                    completion_cb_t callback,
+                                    unsigned long timeout));
+#else
+int signal_changed(char *, int, int, char**, completion_cb_t, unsigned long);
+#endif
 
 OHM_IMPORTABLE(int, console_open , (char *address,
                                     void (*cb)(int, char *, void *),
@@ -42,6 +49,8 @@ OHM_IMPORTABLE(int, console_open , (char *address,
 OHM_IMPORTABLE(int, console_close , (int id));
 OHM_IMPORTABLE(int, console_write , (int id, char *buf, size_t size));
 OHM_IMPORTABLE(int, console_printf, (int id, char *fmt, ...));
+
+OHM_IMPORTABLE(void, completion_cb, (int transid, int success));
 
 static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
@@ -192,18 +201,6 @@ prolog_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     if (action->nargument < 1)
         return EINVAL;
 
-#if 0
-    {
-        char *name      = "printf";
-        char *signature = (char *)console_printf_SIGNATURE;
-        void *ptr;
-
-        if (ohm_module_find_method(name, &signature, &ptr))
-            printf("***** %s %s resolved to %p\n", name, signature, ptr);
-        else
-            printf("***** %s could NOT be resolved\n", name);
-    }
-#endif
     
     pred_name[0] = '\0';
     dres_name(dres, action->arguments[0], pred_name, sizeof(pred_name));
@@ -269,39 +266,103 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 {
 #define MAX_FACTS 128
 #define MAX_LENGTH 64
-    Transaction   *trans;
-    int            factc;
-    char           signal_name[MAX_LENGTH];
-    char           callback_name[MAX_LENGTH];
-    char          *factv[MAX_FACTS + 1];
-    char        ***retval;
-    char           buf[MAX_FACTS * MAX_LENGTH];
-    char          *p;
-    int            i;
+    static int        transid = 1;
+
+    dres_variable_t  *var;
+    char             *signature;
+    unsigned long     timeout;
+    int               factc;
+    char              signal_name[MAX_LENGTH];
+    char             *cb_name;
+    char             *factv[MAX_FACTS + 1];
+    char              buf[MAX_FACTS * MAX_LENGTH];
+    char              namebuf[MAX_LENGTH];
+    char             *p;
+    int               i;
+    int               offs;
+    int               success;
     
+    *ret = NULL;
+
     factc = action->nargument - 2;
 
     if (factc < 1 || factc > MAX_FACTS)
         return EINVAL;
     
-    signal_name[0] = callback_name[0] = '\0';
+    signal_name[0] = '\0';
     dres_name(dres, action->arguments[0], signal_name, MAX_LENGTH);
-    dres_name(dres, action->arguments[1], callback_name, MAX_LENGTH);
+
+    namebuf[0] = '\0';
+    dres_name(dres, action->arguments[1], namebuf, MAX_LENGTH);
+
+    switch (namebuf[0]) {
+
+    case '$':
+        cb_name = "";
+        break;
+
+    case '&':
+        cb_name = "";
+        if (!(var = dres_lookup_variable(dres, action->arguments[1]))) {
+            dres_var_get_field(var->var, "value",NULL, VAR_STRING, &cb_name);
+        }
+        break;
+
+    default:
+        cb_name = namebuf;
+        break;
+    }
+    DEBUG("%s(): cb_name='%s'\n", __FUNCTION__, cb_name);
+
     
-    for (p = buf, i = 0;   i < factc;   i++, p += strlen(p)) {
+    timeout = 5 * 1000;
+
+    for (p = buf, i = 0;   i < factc;   i++) {
+
         dres_name(dres, action->arguments[i+2], p, MAX_LENGTH);
-        factv[i] = p;
+            
+        switch (p[0]) {
+
+        case '$':
+            offs = 1;
+            goto copy_string_arg;
+
+        case '&':
+            factv[i] = "";
+
+            if (!(var = dres_lookup_variable(dres, action->arguments[i+2]))) {
+                dres_var_get_field(var->var, "value", NULL,
+                                   VAR_STRING, &factv[i]);
+            }
+            break;
+
+        default:
+            offs = 0;
+            /* intentional fall trough */
+
+        copy_string_arg:
+            factv[i] = p + offs;
+            p += strlen(p) + 1;
+            break;
+        }
     }
     factv[factc] = NULL;
 
-
-    if ((transact = signal(signal_name, factc,factv, 5 * 1000)) == NULL) {
-        /* call the completion_callback with an error */
-    }
+    if (cb_name[0] == '\0')
+        success = signal_changed(signal_name, 0, factc,factv, NULL, timeout);
     else {
+        signature = (char *)completion_cb_SIGNATURE;
+
+        if (ohm_module_find_method(cb_name, &signature,(void *)&completion_cb))
+            success = signal_changed(signal_name, transid++, factc,factv,
+                                     completion_cb, timeout);
+        else {
+            DEBUG("Could not resolve signal.\n");
+            success = FALSE;
+        }
     }
 
-    return 0;
+    return success ? 0 : EINVAL;
 
 #undef MAX_LENGTH
 #undef MAX_FACTS
@@ -595,9 +656,61 @@ set_fact(int cid, char *buf)
  * dres_goal
  ********************/
 static void
-dres_goal(int cid, char *goal)
+dres_goal(int cid, char *cmd)
 {
+#define MAX_ARGS  32
+    char  buf[2048];
+    char *goal;
+    char *varname;
+    char *value;
+    char *args[MAX_ARGS * 2 + 1];
+    int   i;
+    char  dbgstr[MAX_ARGS * 32];
+    char *p, *e, *sep;
+
+    if (!cmd || !*cmd) 
+        goto syntax_error;
+
+    strncpy(buf, cmd, sizeof(buf));
+    buf[sizeof(buf)-1] = '\0';
+
+    goal = value = buf;
+    i = 0;
+
+    if ((varname = strchr(value, ' ')) != NULL) {
+        *varname++ = '\0';
+
+        while ((value = strchr(varname, '=')) != NULL) {
+            *value++ = '\0';
+
+            args[i++] = varname;
+            args[i++] = value;
+            
+            if (i >= MAX_ARGS * 2 || (varname = strchr(value, ' ')) == NULL)
+                break;
+            *varname++ = '\0';
+       }
+    }
+
+    args[i] = NULL;
+
+    p  = dbgstr;
+    e  = p + sizeof(dbgstr);
+    p += snprintf(p, e-p, "building goal '%s' with arguments '", goal);
+    for (i = 0, sep="";  args[i] != NULL;  i += 2, sep = " ") {
+        p += snprintf(p, e-p, "%s%s %s", sep, args[i], args[i+1]);
+    }
+    snprintf(p, e-p, " <null>'");
+    DEBUG("%s", dbgstr);
+
+#if 0
     dres_update_goal(dres, goal);
+#endif
+
+    return;
+
+ syntax_error:
+    console_printf(cid, "invalid dres arguments \"%s\"\n", cmd);
 }
 
 
@@ -653,18 +766,18 @@ OHM_PLUGIN_REQUIRES_METHODS(dres, 12,
 );
     
 #if 1
-Transaction *signal(char *signame, int factc, char**factv, guint timeout)
+int signal_changed(char *signame, int transid, int factc, char**factv,
+                   completion_cb_t callback, unsigned long timeout)
 {
-    static Transaction t;
-
     int i;
 
-    DEBUG("signal(%s, %d, %p, %lu)\n", signame, factc, factv, timeout);
+    DEBUG("signal(%s, %d,  %d, %p, %p, %lu)\n",
+          signame, transid, factc, factv, callback, timeout);
     for (i = 0;  i < factc;  i++) {
-        DEBUG("   fact[%03d]: '%s'\n", i, factv[i]);
+        DEBUG("   fact[%d]: '%s'\n", i, factv[i]);
     }
 
-    return &t;
+    return TRUE;
 }
 #endif
                             

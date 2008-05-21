@@ -373,6 +373,8 @@ static void test_timeout_ack(Transaction *t, gchar *uri, guint ack, gpointer dat
     return;
 }
 
+GObject *o;
+
 static void test_timeout_complete(Transaction *t, gpointer data) {
 
     guint txid;
@@ -448,13 +450,13 @@ START_TEST (test_signaling_timeout)
     register_enforcement_point("external", FALSE);
     register_enforcement_point("external-2", FALSE);
 
-    test_transaction_object = queue_decision(NULL, TRUE, 2000);
+    o = queue_decision(NULL, TRUE, 2000);
 
     /* Register the signal handlers */
 
-    g_signal_connect(test_transaction_object, "on-ack-received", G_CALLBACK(test_timeout_ack), NULL);
+    g_signal_connect(o, "on-ack-received", G_CALLBACK(test_timeout_ack), NULL);
 
-    g_signal_connect(test_transaction_object, "on-transaction-complete", G_CALLBACK(test_timeout_complete), NULL);
+    g_signal_connect(o, "on-transaction-complete", G_CALLBACK(test_timeout_complete), NULL);
 
     g_main_loop_run(loop);
 
