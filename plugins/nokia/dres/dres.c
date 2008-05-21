@@ -180,7 +180,17 @@ prolog_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     char   ***retval;
     int       i;
     
+    {
+        char *name      = "printf";
+        char *signature = (char *)console_printf_SIGNATURE;
+        void *ptr;
 
+        if (ohm_module_find_method(name, &signature, &ptr))
+            printf("***** %s %s resolved to %p\n", name, signature, ptr);
+        else
+            printf("***** %s could NOT be resolved\n", name);
+    }
+    
     pred_name[0] = '\0';
     dres_name(dres, action->arguments[0], pred_name, sizeof(pred_name));
     

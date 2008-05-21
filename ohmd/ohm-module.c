@@ -679,7 +679,7 @@ find_matching_method(gpointer key, gpointer value, gpointer data)
   if (base != NULL)
     base++;
 
-  if (!strcmp(name, req->name) || (base != NULL && !strcmp(name, base))) {
+  if (!strcmp(name, req->name) || (base != NULL && !strcmp(base, req->name))) {
     if (req->signature == NULL ||
 	ohm_check_method_signature(method->signature, req->signature)) {
       
@@ -701,20 +701,24 @@ find_matching_method(gpointer key, gpointer value, gpointer data)
  * ohm_module_find_method:
  **/
 gboolean
-ohm_module_find_method(char *name, char **sigptr, void **methptr)
+ohm_module_find_method(char *name, char **sigptr, void **funcptr)
 {
-  ohm_method_t method;
+  ohm_method_t *m, method;
 
-  method.name      = name;
-  method.signature = (sigptr && *sigptr ? *sigptr : NULL);
-  method.ptr       = NULL;
-
-  if (g_hash_table_find(symtable, find_matching_method, (gpointer)&method)) {
-    if (methptr != NULL)
-      *methptr = method.ptr;
+  if ((m = g_hash_table_lookup(symtable, name)) == NULL) {
+    method.name      = name;
+    method.signature = (sigptr && *sigptr ? *sigptr : NULL);
+    
+    if (g_hash_table_find(symtable, find_matching_method, (gpointer)&method))
+      m = &method;
+  }
+   
+  if (m != NULL) {
+    if (funcptr != NULL)
+      *funcptr = m->ptr;
     if (sigptr != NULL)
-      *sigptr = (char *)method.signature;
-
+      *sigptr = (char *)m->signature;
+    
     return TRUE;
   }
   
