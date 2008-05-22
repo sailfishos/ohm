@@ -38,7 +38,7 @@ OHM_IMPORTABLE(int                 , prolog_vinvoke,
 OHM_IMPORTABLE(int                 , prolog_ainvoke,
                (prolog_predicate_t *pred, void *retval,void **args, int narg));
 
-#if 0
+#if 1
 OHM_IMPORTABLE(int, signal_changed,(char *signal, int transid,
                                     int factc, char **factv,
                                     completion_cb_t callback,
@@ -874,7 +874,7 @@ OHM_PLUGIN_PROVIDES_METHODS(dres, 1,
     OHM_EXPORT(update_goal, "dres")
 );
 
-OHM_PLUGIN_REQUIRES_METHODS(dres, 12,
+OHM_PLUGIN_REQUIRES_METHODS(dres, 13,
     OHM_IMPORT("prolog.setup"         , prolog_setup),
     OHM_IMPORT("prolog.lookup"        , prolog_lookup),
     OHM_IMPORT("prolog.call"          , prolog_invoke),
@@ -886,10 +886,11 @@ OHM_PLUGIN_REQUIRES_METHODS(dres, 12,
     OHM_IMPORT("console.open"         , console_open),
     OHM_IMPORT("console.close"        , console_close),
     OHM_IMPORT("console.write"        , console_write),
-    OHM_IMPORT("console.printf"       , console_printf)
+    OHM_IMPORT("console.printf"       , console_printf),
+    OHM_IMPORT("signaling.signal_changed", signal_changed)
 );
     
-#if 1
+#if 0
 int signal_changed(char *signame, int transid, int factc, char**factv,
                    completion_cb_t callback, unsigned long timeout)
 {
