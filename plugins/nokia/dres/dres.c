@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 
 #include <glib.h>
 #include <gmodule.h>
@@ -16,10 +17,12 @@
 
 #include <ohm-plugin.h>
 
+#define CONSOLE_PROMPT "ohm-dres> "
+
 
 typedef void (*completion_cb_t)(int transid, int success);
 
-/* imported functions */
+/* rule engine methods */
 OHM_IMPORTABLE(int , prolog_setup , (char **extensions, char **files));
 OHM_IMPORTABLE(void, prolog_free  , (void *retval));
 OHM_IMPORTABLE(void, prolog_dump  , (void *retval));
@@ -43,9 +46,13 @@ OHM_IMPORTABLE(int, signal_changed,(char *signal, int transid,
 int signal_changed(char *, int, int, char**, completion_cb_t, unsigned long);
 #endif
 
+
+/* console methods */
 OHM_IMPORTABLE(int, console_open , (char *address,
-                                    void (*cb)(int, char *, void *),
-                                    void *cb_data, int multiple));
+                                    void (*opened)(int, struct sockaddr *, int),
+                                    void (*closed)(int),
+                                    void (*input)(int, char *, void *),
+                                    void  *data, int multiple));
 OHM_IMPORTABLE(int, console_close , (int id));
 OHM_IMPORTABLE(int, console_write , (int id, char *buf, size_t size));
 OHM_IMPORTABLE(int, console_printf, (int id, char *fmt, ...));
@@ -57,7 +64,10 @@ static int  prolog_handler (dres_t *dres,
 static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  retval_to_facts(char ***objects, OhmFact **facts, int max);
-static void console_handler(int id, char *buf, void *data);
+
+static void console_opened (int id, struct sockaddr *peer, int peerlen);
+static void console_closed (int id);
+static void console_input  (int id, char *buf, void *data);
 
 
 
@@ -117,7 +127,9 @@ plugin_init(OhmPlugin *plugin)
     if (prolog_setup(extensions, rules) != 0)
         FAIL("failed to load extensions and rules to prolog interpreter");
 
-    console = console_open("127.0.0.1:2000", console_handler, NULL, FALSE);
+    console = console_open("127.0.0.1:2000",
+                           console_opened, console_closed, console_input,
+                           NULL, FALSE);
     if (console < 0)
         g_warning("DRES plugin, %s: failed to open console", __FUNCTION__);
     
@@ -394,17 +406,6 @@ retval_to_facts(char ***objects, OhmFact **facts, int max)
     }
     
     return i;
-}
-
-
-/********************
- * dump_fact_store
- ********************/
-static void
-dump_fact_store(int cid)
-{
-    char *dump = ohm_fact_store_to_string(ohm_fact_store_get_fact_store());
-    console_write(cid, dump, 0);
 }
 
 
@@ -693,24 +694,152 @@ dres_goal(int cid, char *cmd)
 }
 
 
+
 /********************
- * console_handler
+ * console_opened
  ********************/
 static void
-console_handler(int id, char *input, void *data)
+console_opened(int id, struct sockaddr *peer, int peerlen)
 {
+    printf("***** console 0x%x opened.\n", id);
+
+    console_printf(id, "Welcome to the OHMng Dependency Resolver Console.\n");
+    console_printf(id, "Type help to get a list of available commands.\n\n");
+    console_printf(id, CONSOLE_PROMPT);
+}
+
+/********************
+ * console_closed
+ ********************/
+static void
+console_closed(int id)
+{
+    printf("***** console 0x%x closed.\n", id);
+}
+
+
+/********************
+ * command_help
+ ********************/
+static void
+command_help(int id, char *input)
+{
+    console_printf(id, "helpyourselfish...\n");
+}
+
+
+/********************
+ * command_bye
+ ********************/
+static void
+command_bye(int id, char *input)
+{
+    console_close(id);
+}
+
+
+/********************
+ * command_dump
+ ********************/
+static void
+command_dump(int id, char *input)
+{
+    char *dump = ohm_fact_store_to_string(ohm_fact_store_get_fact_store());
+    console_write(id, dump, 0);
+}
+
+
+/********************
+ * command_set
+ ********************/
+static void
+command_set(int id, char *input)
+{
+    set_fact(id, input + 4);    
+}
+
+
+/********************
+ * command_dres
+ ********************/
+static void
+command_dres(int id, char *input)
+{
+    dres_goal(id, input + 5);
+}
+
+
+/********************
+ * command_prolog
+ ********************/
+static void
+command_prolog(int id, char *input)
+{
+    prolog_shell();
+}
+
+ 
+/********************
+ * console_input
+ ********************/
+static void
+console_input(int id, char *input, void *data)
+{
+#define NULCMD(n) { command: #n, len: 0             , handler: command_##n }
+#define ARGCMD(n) { command: #n, len: sizeof(#n) - 1, handler: command_##n }
+
+    static struct {
+        char  *command;
+        int    len;
+        void (*handler)(int, char *);
+    } *c, commands[] = {
+        ARGCMD(help),
+        ARGCMD(dump),
+        ARGCMD(set),
+        ARGCMD(dres),
+        ARGCMD(prolog),
+        NULCMD(bye),
+        { command: NULL }
+    };
+    void (*handler)(int, char *);
+
+
+    handler = NULL;
+    for (c = commands; c->command; c++) {
+        if ((c->len && !strncmp(input, c->command, c->len) &&
+             (input[c->len] == ' ' || input[c->len] == '\0')) ||
+            (!c->len && !strcmp(input, c->command))) {
+            handler = c->handler;
+            break;
+        }
+    }
+    
+    if (handler != NULL)
+        handler(id, input);
+    else
+        console_printf(id, "unknown command \"%s\"\n", input);
+    
+    console_printf(id, CONSOLE_PROMPT);
+
+    
+#if 0
     if (!strcmp(input, "dump"))
         dump_fact_store(id);
     else if (!strncmp(input, "set ", 4))
-        set_fact(id, input + 4);
+        set_fact(id, input + 4);        
     else if (!strncmp(input, "dres ", 5))
         dres_goal(id, input + 5);
     else if (!strcmp(input, "prolog"))
         prolog_shell();
+    else if (!strcmp(input, "quit")) {
+        console_close(id);
+        return;
+    }
     else
         console_printf(id, "unknown command \"%s\"\n", input);
 
-    console_printf(id, "ohm-dres> ");
+    console_printf(id, CONSOLE_PROMPT);
+#endif
 }
 
 
