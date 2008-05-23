@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -744,8 +745,43 @@ command_bye(int id, char *input)
 static void
 command_dump(int id, char *input)
 {
-    char *dump = ohm_fact_store_to_string(ohm_fact_store_get_fact_store());
-    console_write(id, dump, 0);
+    OhmFactStore *fs = ohm_fact_store_get_fact_store();;
+    OhmFact      *fact;
+    GSList       *list;
+
+    char factname[128], fullname[128], *name, *p, *q, *dump;
+    
+    p = input + 4;
+    if (!*p)
+        p = "all";
+    while (*p) {
+        while (*p == ' ' || *p == ',')
+            p++;
+        for (q = factname; isalnum(*p) || *p == '_' || *p == '.'; *q++ = *p++)
+            ;
+        *q = '\0';
+        if (!strcmp(factname, "all")) {
+            dump = ohm_fact_store_to_string(fs);
+            console_printf(id, "fact store: %s\n", dump);
+            g_free(dump);
+        }
+        else {
+            if (!strchr(factname, '.')) {
+                sprintf(fullname, "com.nokia.policy.%s", factname);
+                name = fullname;
+            }
+            else
+                name = factname;
+            for (list = ohm_fact_store_get_facts_by_name(fs, name);
+                 list != NULL;
+                 list = g_slist_next(list)) {
+                fact = (OhmFact *)list->data;
+                dump = ohm_structure_to_string(OHM_STRUCTURE(fact));
+                console_printf(id, "%s\n", dump ?: "");
+                g_free(dump);
+            }
+        }
+    }
 }
 
 
@@ -820,26 +856,6 @@ console_input(int id, char *input, void *data)
         console_printf(id, "unknown command \"%s\"\n", input);
     
     console_printf(id, CONSOLE_PROMPT);
-
-    
-#if 0
-    if (!strcmp(input, "dump"))
-        dump_fact_store(id);
-    else if (!strncmp(input, "set ", 4))
-        set_fact(id, input + 4);        
-    else if (!strncmp(input, "dres ", 5))
-        dres_goal(id, input + 5);
-    else if (!strcmp(input, "prolog"))
-        prolog_shell();
-    else if (!strcmp(input, "quit")) {
-        console_close(id);
-        return;
-    }
-    else
-        console_printf(id, "unknown command \"%s\"\n", input);
-
-    console_printf(id, CONSOLE_PROMPT);
-#endif
 }
 
 
