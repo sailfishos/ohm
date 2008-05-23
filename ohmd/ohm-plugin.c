@@ -115,6 +115,9 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 	SYMBOL("exports", buf, desc->exports, 0);
 	snprintf(buf, sizeof(buf), "%s%s", name, OHM_IMPORT_VAR);
 	SYMBOL("imports", buf, desc->imports, 0);
+
+	SYMBOL("dbus methods", "ohm_plugin_dbus_methods", dbus_methods, 0);
+	SYMBOL("dbus signals", "ohm_plugin_dbus_signals", dbus_signals, 0);
 	
 	plugin->priv->handle = handle;
 	plugin->priv->name = g_strdup (name);
