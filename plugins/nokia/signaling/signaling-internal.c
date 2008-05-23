@@ -1267,7 +1267,7 @@ update_external_enforcement_points(DBusConnection * c, DBusMessage * msg,
     gchar *sender = NULL, *before = NULL, *after = NULL;
     gboolean ret;
 
-    g_print("> update_external_enforcement_points");
+    g_print("> update_external_enforcement_points\n");
 
     ret = dbus_message_get_args(msg,
             NULL,

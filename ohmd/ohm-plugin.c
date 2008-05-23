@@ -477,6 +477,7 @@ int
 ohm_plugin_dbus_add_method(const char *path, const char *name,
 			   DBusObjectPathMessageFunction handler, void *data)
 {
+    ohm_debug("\n\nAdded method '%s', '%s'\n\n", path, name);
   return ohm_dbus_add_method(path, name, handler, data);
 }
 
