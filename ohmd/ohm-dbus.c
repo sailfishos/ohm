@@ -103,6 +103,8 @@ ohm_dbus_add_method(const char *path, const char *name,
             g_free(object);
             return FALSE;
         }
+
+        g_hash_table_insert(dbus_objects, (gpointer)path, object);
     }
     
     if (g_hash_table_lookup(object->methods, name) != NULL ||
