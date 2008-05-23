@@ -14,9 +14,29 @@
 
 #include <ohm-plugin.h>
 
+#define BUSY_MESSAGE "Only a single console allowed and is already active.\n"
+
 #define INVALID_ID   -1
 #define BUFFER_CHUNK 128
 
+#define CALLBACK(c, cb, args...) do {               \
+        if ((c)->cb != NULL) {                      \
+            (c)->active++;                          \
+            (c)->cb((c)->gid, ## args);             \
+            (c)->active--;                          \
+        }                                           \
+    } while (0)
+
+#define CLOSED(c) (!(c)->active && (c)->flags & CONSOLE_CLOSED)
+
+
+#ifndef ALLOC
+#undef ALLOC
+#undef ALLOC_OBJ
+#undef ALLOC_ARR
+#undef REALLOC_ARR
+#undef STRDUP
+#undef FREE
 
 #define ALLOC(type) ({                            \
             type   *__ptr;                        \
@@ -57,18 +77,20 @@
             char *__s = s;                              \
             __s = ((s) ? strdup(s) : strdup(""));       \
             __s; })
+#endif
+
 
 #define DEBUG(fmt, args...) do {                                        \
-        if (depth > 0)                                                  \
-            printf("%*.*s ", depth*2, depth*2, "                  ");   \
         printf("[%s] "fmt"\n", __FUNCTION__, ## args);                  \
     } while (0)
 
 
 
 enum {
-    CONSOLE_NONE     = 0x0,
-    CONSOLE_MULTIPLE = 0x1,
+    CONSOLE_NONE     = 0x00,
+    CONSOLE_SINGLE   = 0x00,
+    CONSOLE_MULTIPLE = 0x01,
+    CONSOLE_CLOSED   = 0x02,
 };
 
 typedef struct console_s console_t;
@@ -78,6 +100,7 @@ struct console_s {
     console_t *parent;                   /* where we got accept(2)ed */
     int        nchild;                   /* number of children */
     int        flags;                    /* misc. flags */
+    int        active;
 
     char      *endpoint;                 /* address:port to listen(2) on */
     int        sock;                     /* socket */
@@ -85,10 +108,12 @@ struct console_s {
     size_t     size;                     /* buffer size */
     size_t     used;                     /* buffer used */
     
-    void   (*callback)(int, char *, void *); /* input callback */
-    void    *data;                           /* opaque callback data */
+    void (*opened)(int, struct sockaddr *, int); /* open callback */
+    void (*closed)(int);                         /* close callback */
+    void (*input) (int, char *, void *);         /* input callback */
+    void  *data;                                 /* opaque callback data */
 
-    GIOChannel *gio;                     /* associated channel */
+    GIOChannel *gio;                     /* associated I/O channel */
     guint       gid;                     /* glib source id */
 };
 
@@ -136,8 +161,10 @@ new_console(void)
     for (i = 0; i < nconsole; i++)
         if (consoles[i] == NULL)
             return ALLOC_OBJ(consoles[i]);
-        else if(consoles[i]->sock < 0)
+        else if(consoles[i]->sock < 0) {
+            memset(consoles[i], 0, sizeof(*consoles[i]));
             return consoles[i];
+        }
     
     if (REALLOC_ARR(consoles, nconsole, nconsole + 1) == NULL)
         return NULL;
@@ -154,7 +181,7 @@ static void
 del_console(console_t *c)
 {
     int i;
-    
+
     FREE(c->endpoint);
     close(c->sock);
     
@@ -165,12 +192,16 @@ del_console(console_t *c)
 
     if (c->nchild > 0) {
         for (i = 0; i < nconsole; i++) {
-            if (consoles[i] && consoles[i]->parent == c) {
+            if (consoles[i] == NULL || consoles[i]->sock < 0)
+                continue;
+            if (consoles[i]->parent == c) {
                 consoles[i]->parent = NULL;
                 c->nchild--;
             }
         }
     }
+    if (c->parent != NULL)
+        c->parent->nchild--;
 }
 
 
@@ -198,8 +229,10 @@ lookup_console(int id)
  * console_open
  ********************/
 OHM_EXPORTABLE(int, console_open, (char *address,
-                                   void (*cb)(int, char *, void *),
-                                   void *cb_data, int multiple))
+                                   void (*opened)(int, struct sockaddr *, int),
+                                   void (*closed)(int),
+                                   void (*input)(int, char *, void *),
+                                   void  *data, int multiple))
 {
     console_t          *c = NULL;
     struct sockaddr_in  sin;
@@ -229,11 +262,12 @@ OHM_EXPORTABLE(int, console_open, (char *address,
 
     c->sock     = socket(sin.sin_family, SOCK_STREAM, 0);
     c->endpoint = STRDUP(address);
-    c->callback = cb;
-    c->data     = cb_data;
-    c->flags    = multiple ? CONSOLE_MULTIPLE : CONSOLE_NONE;
+    c->opened   = opened;
+    c->closed   = closed;
+    c->input    = input;
+    c->data     = data;
+    c->flags    = multiple ? CONSOLE_MULTIPLE : CONSOLE_SINGLE;
     
-
     reuse = 1;
     setsockopt(c->sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
     
@@ -263,6 +297,17 @@ OHM_EXPORTABLE(int, console_open, (char *address,
 
 
 /********************
+ * shutdown_console
+ ********************/
+static void
+shutdown_console(console_t *c)
+{
+    g_source_remove(c->gid);
+    g_io_channel_unref(c->gio);
+    del_console(c);
+}
+
+/********************
  * console_close
  ********************/
 OHM_EXPORTABLE(int, console_close, (int id))
@@ -271,11 +316,11 @@ OHM_EXPORTABLE(int, console_close, (int id))
 
     if (c == NULL)
         return EINVAL;
-    
-    g_source_remove(c->gid);
-    g_io_channel_unref(c->gio);
-    
-    del_console(c);
+
+    if (!c->active)
+        shutdown_console(c);
+    else
+        c->flags |= CONSOLE_CLOSED;
     
     return 0;
 }
@@ -348,7 +393,6 @@ console_accept(GIOChannel *source, GIOCondition condition, gpointer data)
     socklen_t           addrlen = sizeof(addr);
     int                 sock;
 
-
     if (condition != G_IO_IN)
         return TRUE;
     
@@ -356,7 +400,6 @@ console_accept(GIOChannel *source, GIOCondition condition, gpointer data)
         return TRUE;
     
     if (lc->nchild > 1 && !(lc->flags & CONSOLE_MULTIPLE)) {
-        #define BUSY_MESSAGE "Console is currently busy.\n"
         write(sock, BUSY_MESSAGE, sizeof(BUSY_MESSAGE) - 1);
         close(sock);
         return TRUE;
@@ -370,7 +413,9 @@ console_accept(GIOChannel *source, GIOCondition condition, gpointer data)
     c->used     = 0;
     c->buf      = ALLOC_ARR(char, c->size);
     c->sock     = sock;
-    c->callback = lc->callback;
+    c->opened   = lc->opened;
+    c->closed   = lc->closed;
+    c->input    = lc->input;
     c->data     = lc->data;
 
     if (c->endpoint == NULL || c->buf == NULL)
@@ -381,8 +426,13 @@ console_accept(GIOChannel *source, GIOCondition condition, gpointer data)
     
     c->parent = lc;
     lc->nchild++;
-    
+
     c->gid = g_io_add_watch(c->gio, G_IO_IN | G_IO_HUP, console_handler, c);
+    
+    CALLBACK(c, opened, (struct sockaddr *)&addr, (int)addrlen);
+    if (CLOSED(c))
+        shutdown_console(c);
+
     return TRUE;
 
  fail:
@@ -411,12 +461,14 @@ console_read(console_t *c)
         c->size += BUFFER_CHUNK;
     }
 
-    if ((n = read(c->sock, c->buf + c->used, left)) < 0)
-        return -errno;
-    
-    c->used += n;
-
-    return c->used;
+    switch ((n = read(c->sock, c->buf + c->used, left))) {
+    case  0:
+    case -1:
+        return n;
+    default:
+        c->used += n;
+        return c->used;
+    }
 }
 
 
@@ -428,9 +480,14 @@ console_handler(GIOChannel *source, GIOCondition condition, gpointer data)
 {
     console_t *c = (console_t *)data;
     int        i, left = c->size - c->used - 1;
-    
+
     if (condition & G_IO_IN) {
-        if (console_read(c) > 0) {
+        switch (console_read(c)) {
+        case -1:
+            break;
+        case 0:
+            goto closed;
+        default:
             for (i = 0; i < c->used; i++)
                 if (c->buf[i] == '\r') {
                     c->buf[i] = '\0';
@@ -438,10 +495,9 @@ console_handler(GIOChannel *source, GIOCondition condition, gpointer data)
                         i++;
                         c->buf[++i] = '\0';
                     }
-#if 0
-                    printf("##### console input \"%s\" #####\n", c->buf);
-#endif
-                    c->callback(c->gid, c->buf, c->data);
+                    CALLBACK(c, input, c->buf, c->data);
+                    if (CLOSED(c))
+                        goto closed;
                     if ((left = c->used - i - 1) > 0) {
                         memmove(c->buf, c->buf + i + 1, left);
                         c->used         -= i + 1;
@@ -455,13 +511,15 @@ console_handler(GIOChannel *source, GIOCondition condition, gpointer data)
     }
     
     if (condition & G_IO_HUP) {
-        printf("##### closing console %d #####\n", c->gid);
-        c->callback(c->gid, "", c->data);
-        console_close(c->gid);
-        return FALSE;
+        CALLBACK(c, closed);
+        goto closed;
     }
 
     return TRUE;
+
+ closed:
+    shutdown_console(c);
+    return FALSE;
 }
 
 
