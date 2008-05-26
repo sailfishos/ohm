@@ -10,7 +10,7 @@
 #include <ohm-plugin.h>
 
 /* completion cb type */
-typedef void (*completion_cb_t)(int txid, int success);
+typedef void (*completion_cb_t)(int transid, int success);
 
 /* public API (inside OHM) */
 
@@ -88,7 +88,7 @@ static void complete(Transaction *t, gpointer data)
 }
 
 /* simple wrapper: hide the GObject interface */
-OHM_EXPORTABLE(int, signal, (char *signame, int txid, int factc, char **factv, completion_cb_t cb, unsigned long timeout))
+OHM_EXPORTABLE(int, signal_changed, (char *signal, int transid, int factc, char **factv, completion_cb_t callback, unsigned long timeout))
 {
 
     OhmFactStore *fs;
@@ -97,6 +97,9 @@ OHM_EXPORTABLE(int, signal, (char *signame, int txid, int factc, char **factv, c
     int i;
 
     /* Get facts to a list */
+
+    printf("signaling.signal_changed: signal '%s' with txid '%i', factcount '%i' with timeout '%li', %s a callback\n",
+            signal, transid, factc, timeout, callback ? "requires" : "doesn't require");
 
     fs = ohm_fact_store_get_fact_store();
     if (fs == NULL)
@@ -112,15 +115,15 @@ OHM_EXPORTABLE(int, signal, (char *signame, int txid, int factc, char **factv, c
         }
     }
 
-    if (cb == NULL) {
+    if (callback == NULL) {
         queue_decision(facts, 0, FALSE, 0);
     }
     else {
-        t = queue_decision(facts, txid, TRUE, timeout);
+        t = queue_decision(facts, transid, TRUE, timeout);
         if (t == NULL) {
             goto error;
         }
-        g_signal_connect(t, "on-transaction-complete", G_CALLBACK(complete), cb);
+        g_signal_connect(t, "on-transaction-complete", G_CALLBACK(complete), callback);
     }
 
     return 1;
@@ -158,7 +161,7 @@ OHM_PLUGIN_DESCRIPTION("signaling",
 OHM_PLUGIN_PROVIDES_METHODS(signaling, 5,
         OHM_EXPORT(register_internal_enforcement_point, "register_enforcement_point"),
         OHM_EXPORT(unregister_internal_enforcement_point, "unregister_enforcement_point"),
-        OHM_EXPORT(signal, "signal"),
+        OHM_EXPORT(signal_changed, "signal_changed"),
         OHM_EXPORT(queue_policy_decision, "queue_policy_decision"),
         OHM_EXPORT(queue_key_change, "queue_key_change"));
 
