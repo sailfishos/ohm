@@ -127,7 +127,7 @@ plugin_init(OhmPlugin *plugin)
 
     if (prolog_setup(extensions, rules) != 0)
         FAIL("failed to load extensions and rules to prolog interpreter");
-
+    
     console = console_open("127.0.0.1:2000",
                            console_opened, console_closed, console_input,
                            NULL, FALSE);
@@ -179,12 +179,13 @@ dres_parse_error(dres_t *dres, int lineno, const char *msg, const char *token)
  *****************************************************************************/
 
 /********************
- * dres
+ * dres/resolve
  ********************/
-OHM_EXPORTABLE(int, update_goal, (char *goal, ...))
+OHM_EXPORTABLE(int, update_goal, (char *goal, char **locals))
 {
+    
     /* XXX local variable assignments... */
-    return dres_update_goal(dres, goal);
+    return dres_update_goal(dres, goal, locals);
 }
 
 
@@ -572,61 +573,65 @@ static void
 set_fact(int cid, char *buf)
 {
     GValue  gval;
-    char    selector[128];
+    char    selector[128], fullname[128];
     char   *str, *name, *member, *selfld, *selval, *value, *p, *q;
     int     len;
     int      n = 128;
     OhmFact *facts[n];
     
     selector[0] = '\0';
-    if (strchr(buf, '=') != NULL) {
-        /*
-         * here we parse command lines like:
-         *    com.nokia.policy.audio_route[device:ihf].status = 0, ...
-         * where
-         *    'com.nokia.policy.audio_route' is a fact that has two fields:
-         *    'device' and 'status'
-         */
-        
-        for (str = buf; (name = strtok(str, ",")) != NULL; str = NULL) {
-            if ((p = strchr(name, '=')) != NULL) {
+    /*
+     * here we parse command lines like:
+     *    com.nokia.policy.audio_route[device:ihf].status = 0, ...
+     * where
+     *    'com.nokia.policy.audio_route' is a fact that has two fields:
+     *    'device' and 'status'
+     */
+    
+    for (str = buf; (name = strtok(str, ",")) != NULL; str = NULL) {
+        if ((p = strchr(name, '=')) != NULL) {
+            *p++ = 0;
+            value = p;
+       
+            if ((p = strchr(name, '[')) != NULL &&
+                (q = strchr(name, '.')) != NULL && p < q) {
+                sprintf(fullname, "%s%s", dres_get_prefix(dres), name);
+                name = fullname;
+            }
+
+            if ((p = strrchr(name, '.')) != NULL) {
                 *p++ = 0;
-                value = p;
-                
-                if ((p = strrchr(name, '.')) != NULL) {
-                    *p++ = 0;
-                    member = p;
+                member = p;
                     
-                    if (p[-2] == ']' && (q = strchr(name, '[')) != NULL) {
+                if (p[-2] == ']' && (q = strchr(name, '[')) != NULL) {
                         
-                        len = p - 2 - q - 1;
-                        strncpy(selector, q + 1, len);
-                        selector[len] = '\0';
+                    len = p - 2 - q - 1;
+                    strncpy(selector, q + 1, len);
+                    selector[len] = '\0';
                         
-                        *q = p[-2] = 0;
-                        selfld = q + 1;
-                        if ((p = strchr(selfld, ':')) == NULL) {
-                            console_printf(cid, "Invalid input: %s\n", selfld);
-                            continue;
-                            }
-                        else {
-                            *p++ = 0;
-                            selval = p;
-                        }
+                    *q = p[-2] = 0;
+                    selfld = q + 1;
+                    if ((p = strchr(selfld, ':')) == NULL) {
+                        console_printf(cid, "Invalid input: %s\n", selfld);
+                        continue;
                     }
-                    
-                    gval = ohm_value_from_string(value);
-                    
-                    if ((n = find_facts(name, selector, facts, n)) < 0)
-                        console_printf(cid, "no fact matches %s[%s]\n",
-                                       name, selector ?: "");
                     else {
-                        int i;
-                        for (i = 0; i < n; i++) {
-                            ohm_fact_set(facts[i], member, &gval);
-                            console_printf(cid, "%s:%s = %s\n", name,
-                                           member, value);
-                        }
+                        *p++ = 0;
+                        selval = p;
+                    }
+                }
+                    
+                gval = ohm_value_from_string(value);
+                    
+                if ((n = find_facts(name, selector, facts, n)) < 0)
+                    console_printf(cid, "no fact matches %s[%s]\n",
+                                   name, selector ?: "");
+                else {
+                    int i;
+                    for (i = 0; i < n; i++) {
+                        ohm_fact_set(facts[i], member, &gval);
+                        console_printf(cid, "%s:%s = %s\n", name,
+                                       member, value);
                     }
                 }
             }
@@ -686,7 +691,7 @@ dres_goal(int cid, char *cmd)
     snprintf(p, e-p, "%s<null>'", sep);
     DEBUG("%s", dbgstr);
 
-    dres_update_goal(dres, goal);
+    dres_update_goal(dres, goal, args);
 
     return;
 
@@ -720,16 +725,6 @@ console_closed(int id)
 
 
 /********************
- * command_help
- ********************/
-static void
-command_help(int id, char *input)
-{
-    console_printf(id, "helpyourselfish...\n");
-}
-
-
-/********************
  * command_bye
  ********************/
 static void
@@ -751,7 +746,7 @@ command_dump(int id, char *input)
 
     char factname[128], fullname[128], *name, *p, *q, *dump;
     
-    p = input + 4;
+    p = input;
     if (!*p)
         p = "all";
     while (*p) {
@@ -767,7 +762,7 @@ command_dump(int id, char *input)
         }
         else {
             if (!strchr(factname, '.')) {
-                sprintf(fullname, "com.nokia.policy.%s", factname);
+                sprintf(fullname, "%s%s", dres_get_prefix(dres), factname);
                 name = fullname;
             }
             else
@@ -791,17 +786,17 @@ command_dump(int id, char *input)
 static void
 command_set(int id, char *input)
 {
-    set_fact(id, input + 4);    
+    set_fact(id, input);    
 }
 
 
 /********************
- * command_dres
+ * command_resolve
  ********************/
 static void
-command_dres(int id, char *input)
+command_resolve(int id, char *input)
 {
-    dres_goal(id, input + 5);
+    dres_goal(id, input);
 }
 
 
@@ -814,6 +809,73 @@ command_prolog(int id, char *input)
     prolog_shell();
 }
 
+
+
+#define COMMAND(c, a, d) {                                              \
+    command:      #c,                                                   \
+    args:         a,                                                    \
+    description:  d,                                                    \
+    handler:      command_##c,                                          \
+}
+
+#define LAST() { command: NULL }
+
+
+typedef struct {
+    char  *command;
+    char  *args;
+    char  *description;
+    void (*handler)(int, char *);
+} command_t;
+
+
+static void command_help(int id, char *input);
+
+
+static command_t commands[] = {
+    COMMAND(help   , NULL       , "Get help on the available commands."     ),
+    COMMAND(dump   , "[var]"    , "Dump a given or all factstore variables."),
+    COMMAND(set    , "var value", "Set/change a given fact store variable." ),
+    COMMAND(resolve, "[goal]"   , "Run the dependency resolver for a goal." ),
+    COMMAND(prolog , NULL       , "Start an interactive prolog shell."      ),
+    COMMAND(bye    , NULL       , "Close the resolver terminal session."    ),
+    LAST()
+};
+
+
+
+/********************
+ * command_help
+ ********************/
+static void
+command_help(int id, char *input)
+{
+    command_t *c;
+    char       syntax[128];
+
+    console_printf(id, "Available commands:\n");
+    for (c = commands; c->command != NULL; c++) {
+        sprintf(syntax, "%s%s%s", c->command, c->args ? " ":"", c->args ?: ""); 
+        console_printf(id, "    %-30.30s %s\n", syntax, c->description);
+    }
+}
+
+
+/********************
+ * find_command
+ ********************/
+command_t *
+find_command(char *name)
+{
+    command_t *c;
+
+    for (c = commands; c->command != NULL; c++)
+        if (!strcmp(c->command, name))
+            return c;
+    
+    return NULL;
+}
+
  
 /********************
  * console_input
@@ -821,40 +883,23 @@ command_prolog(int id, char *input)
 static void
 console_input(int id, char *input, void *data)
 {
-#define NULCMD(n) { command: #n, len: 0             , handler: command_##n }
-#define ARGCMD(n) { command: #n, len: sizeof(#n) - 1, handler: command_##n }
+    command_t *command;
+    char       cmd[64], *p, *q;
+    int        len;
 
-    static struct {
-        char  *command;
-        int    len;
-        void (*handler)(int, char *);
-    } *c, commands[] = {
-        ARGCMD(help),
-        ARGCMD(dump),
-        ARGCMD(set),
-        ARGCMD(dres),
-        ARGCMD(prolog),
-        NULCMD(bye),
-        { command: NULL }
-    };
-    void (*handler)(int, char *);
+    q   = cmd;
+    len = 0;
+    for (p = input; *p && *p != ' ' && len < sizeof(cmd) - 1; *q++ = *p++)
+        ;
+    *q = '\0';
+    while (*p == ' ' || *p == '\t')
+        p++;
 
-
-    handler = NULL;
-    for (c = commands; c->command; c++) {
-        if ((c->len && !strncmp(input, c->command, c->len) &&
-             (input[c->len] == ' ' || input[c->len] == '\0')) ||
-            (!c->len && !strcmp(input, c->command))) {
-            handler = c->handler;
-            break;
-        }
-    }
-    
-    if (handler != NULL)
-        handler(id, input);
+    if ((command = find_command(cmd)) != NULL)
+        command->handler(id, p);
     else
         console_printf(id, "unknown command \"%s\"\n", input);
-    
+
     console_printf(id, CONSOLE_PROMPT);
 }
 
@@ -871,7 +916,7 @@ OHM_PLUGIN_DESCRIPTION("dres",
 OHM_PLUGIN_REQUIRES("prolog", "console");
 
 OHM_PLUGIN_PROVIDES_METHODS(dres, 1,
-    OHM_EXPORT(update_goal, "dres")
+    OHM_EXPORT(update_goal, "resolve")
 );
 
 OHM_PLUGIN_REQUIRES_METHODS(dres, 12,
