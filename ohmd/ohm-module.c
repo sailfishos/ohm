@@ -406,7 +406,7 @@ normalize_signature(const char *src, const char *dst)
   s = (char *)src;
   d = (char *)dst;
 
-  space   = 1;
+  space   = YES;
   pointer = brace = comma = 0;
   while (*s) {
     switch (*s) {
@@ -422,7 +422,7 @@ normalize_signature(const char *src, const char *dst)
       
     case '(':
     case ')':
-      space = comma = 0;
+      space = comma = NO;
       brace = (*s == '(');
       *d++  = *s++;
       break;
@@ -431,12 +431,12 @@ normalize_signature(const char *src, const char *dst)
       if (!pointer && !brace)
 	*d++ = ' ';
       pointer = 1;
-      space = comma = brace = 0;
+      space = comma = brace = NO;
       *d++  = *s++;
       break;
 
     case ',':
-      space = brace = 0;
+      space = brace = NO;
       comma = 1;
       *d++  = *s++;
       break;
@@ -564,7 +564,7 @@ ohm_check_method_signature(const char *required, const char *provided)
     /*printf("before p: '%s', r: '%s'\n", p, r);*/
 
     /* skip potential/probable variable names */
-    /* notes: we cannot handle if both has variable names (that mismatch) */
+    /* notes: we cannot handle both having variable names (that mismatch) */
     if (NAME_START(*p) && !NAME_START(*r) && 
 	(r[-1] == ' ' || r[-1] == '*' || *r == ')'))
       SKIP_NAME(p);
@@ -761,7 +761,31 @@ ohm_module_dbus_setup(OhmModule *module)
 static gboolean
 ohm_module_dbus_cleanup(OhmModule *module)
 {
-  return TRUE;         /* XXX TODO: implement me */
+  ohm_dbus_method_t *m;
+#if 1
+  ohm_dbus_signal_t *s;
+#endif
+
+  GSList       *l;
+  OhmPlugin    *plugin;
+  const gchar  *name;
+
+  for (l = module->priv->plugins; l != NULL; l = l->next) {
+    plugin = (OhmPlugin *)l->data;
+    name   = ohm_plugin_get_name(plugin);
+    
+    for (m = plugin->dbus_methods; m && m->name; m++)
+      if (!ohm_dbus_del_method(m->path, m->name, m->handler, m->data))
+	g_warning("Failed to unregister DBUS method %s:%s.%s.",
+		  name, m->path, m->name);
+#if 1
+    for (s = plugin->dbus_signals; s && s->signal; s++)
+      ohm_dbus_del_signal(s->sender, s->interface, s->signal, s->path,
+			  s->handler, s->data);
+#endif
+  }
+  
+  return TRUE;
 }
 
 

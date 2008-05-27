@@ -195,10 +195,13 @@ main (int argc, char *argv[])
 	}
 
 	
-	ohm_dbus_exit();
 	g_object_unref (manager);
+
+	ohm_dbus_exit();
+
 	dbus_g_connection_unref (connection);
 	/*free memory used by dbus*/
+
 	dbus_shutdown();
 
 	return 0;

@@ -158,8 +158,11 @@ plugin_exit(OhmPlugin *plugin)
         dres = NULL;
     }
 
+#if 0
     if (console > 0)
         console_close(console);
+    console = 0;
+#endif
 }
 
 
