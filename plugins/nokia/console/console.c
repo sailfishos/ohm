@@ -96,6 +96,8 @@ enum {
 typedef struct console_s console_t;
 
 
+#define MAX_GRABS 4                      /* 4 is enough for everybody... */
+
 struct console_s {
     console_t *parent;                   /* where we got accept(2)ed */
     int        nchild;                   /* number of children */
@@ -115,15 +117,22 @@ struct console_s {
 
     GIOChannel *gio;                     /* associated I/O channel */
     guint       gid;                     /* glib source id */
+
+    int         grabs[MAX_GRABS];        /* grabbed file descriptors */
 };
 
+#define GRAB_FD(g)      ((g) & 0xffff)
+#define GRAB_ID(g)      ((g) >> 16)
+#define GRABBED(id, fd) (((id) << 16) | (fd))
 
 static console_t **consoles;
 static int         nconsole;
 
-
 static gboolean console_accept (GIOChannel *, GIOCondition, gpointer);
 static gboolean console_handler(GIOChannel *, GIOCondition, gpointer);
+
+static int grab_fd  (int fd, int sock);
+static int ungrab_fd(int grab);
 
 
 /*****************************************************************************
@@ -181,6 +190,13 @@ static void
 del_console(console_t *c)
 {
     int i;
+
+    for (i = 0; i < MAX_GRABS; i++) {
+        if (c->grabs[i] != 0) {
+            ungrab_fd(c->grabs[i]);
+            c->grabs[i] = 0;
+        }
+    }
 
     FREE(c->endpoint);
     close(c->sock);
@@ -377,6 +393,164 @@ OHM_EXPORTABLE(int, console_printf, (int id, char *fmt, ...))
     return len;
 }
 
+
+/********************
+ * grab_fd
+ ********************/
+static int
+grab_fd(int fd, int sock)
+{
+    int gid = fd;
+    int gfd = dup(fd);
+
+    if (gfd < 0)
+        return 0;
+    
+    if (dup2(sock, fd) < 0) {
+        close(gfd);
+        return 0;
+    }
+    
+    return GRABBED(gid, gfd);
+}
+
+
+/********************
+ * ungrab_fd
+ ********************/
+static int
+ungrab_fd(int grab)
+{
+    int gid = GRAB_ID(grab);
+    int gfd = GRAB_FD(grab);
+
+    if (gfd < 0)
+        return ENOENT;
+    
+    dup2(gfd, gid);
+    return 0;
+}
+
+
+/********************
+ * console_grab
+ ********************/
+OHM_EXPORTABLE(int, console_grab, (int id, int fd))
+{
+    console_t *c = lookup_console(id);
+    int        i, empty;
+
+    if (c == NULL)
+        return EINVAL;
+    
+    for (i = 0, empty = -1; i < MAX_GRABS; i++) {
+        if (GRAB_ID(c->grabs[i]) == fd)
+            return EBUSY;
+        if (c->grabs[i] == 0 && empty < 0)
+            empty = i;
+    }
+
+    if (empty < 0)
+        return ENOSPC;
+    
+    if ((c->grabs[empty] = grab_fd(fd, c->sock)) == 0)
+        return errno;
+
+    return 0;
+}
+
+
+/********************
+ * console_ungrab
+ ********************/
+OHM_EXPORTABLE(int, console_ungrab, (int id, int fd))
+{
+    console_t *c = lookup_console(id);
+    int        i;
+
+    if (c == NULL)
+        return EINVAL;
+
+    if (fd < 0) {
+        for (i = 0; i < MAX_GRABS; i++) {
+            if (c->grabs[i] != 0) {
+                ungrab_fd(c->grabs[i]);
+                c->grabs[i] = 0;
+            }
+        }
+        return 0;
+    }
+    else {
+        int entry = -1;
+        for (i = 0; i < MAX_GRABS; i++) {
+            if (GRAB_ID(c->grabs[i]) == fd) {
+                entry = i;
+                break;
+            }
+        }
+        if (entry >= 0) {
+            ungrab_fd(c->grabs[entry]);
+            c->grabs[entry] = 0;
+            return 0;
+        }
+        else
+            return ENOENT;
+    }
+}
+
+
+
+
+#if 0
+/********************
+ * console_grab
+ ********************/
+OHM_EXPORTABLE(int, console_grab, (int id, int fd))
+{
+    console_t *c = lookup_console(id);
+
+    if (c->grabfd >= 0) {
+        dup2(c->grabfd, c->grabid);
+        c->grabfd = c->grabid = -1;
+    }
+
+    c->grabid = fd;
+    c->grabfd = dup(fd);
+    
+    if (c->grabfd < 0)
+        return errno;
+
+    if (dup2(c->sock, fd) < 0) {
+        close(c->grabfd);
+        c->grabfd = -1;
+        return errno;
+    }
+    
+    return (c->grabfd < 0 ? errno : 0);
+}
+
+
+/********************
+ * console_ungrab
+ ********************/
+OHM_EXPORTABLE(int, console_ungrab, (int id))
+{
+    console_t *c = lookup_console(id);
+    
+    if (c == NULL)
+        return EINVAL;
+
+    if (c->grabfd < 0)
+        return ENOENT;
+
+    dup2(c->grabfd, c->grabid);
+    c->grabfd = c->grabid = -1;
+
+    return 0;
+}
+#endif
+
+
 /*****************************************************************************
  *                       *** misc. helper functions ***                      *
  *****************************************************************************/
@@ -531,11 +705,13 @@ OHM_PLUGIN_DESCRIPTION("console",
                        plugin_exit,
                        NULL);
 
-OHM_PLUGIN_PROVIDES_METHODS(console, 4,
+OHM_PLUGIN_PROVIDES_METHODS(console, 6,
     OHM_EXPORT(console_open  , "open"  ),
     OHM_EXPORT(console_close , "close" ),
     OHM_EXPORT(console_write , "write" ),
-    OHM_EXPORT(console_printf, "printf")
+    OHM_EXPORT(console_printf, "printf"),
+    OHM_EXPORT(console_grab  , "grab"),
+    OHM_EXPORT(console_ungrab, "ungrab")
 );
 
 

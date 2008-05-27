@@ -57,6 +57,8 @@ OHM_IMPORTABLE(int, console_open , (char *address,
 OHM_IMPORTABLE(int, console_close , (int id));
 OHM_IMPORTABLE(int, console_write , (int id, char *buf, size_t size));
 OHM_IMPORTABLE(int, console_printf, (int id, char *fmt, ...));
+OHM_IMPORTABLE(int, console_grab  , (int id, int fd));
+OHM_IMPORTABLE(int, console_ungrab, (int id, int fd));
 
 OHM_IMPORTABLE(void, completion_cb, (int transid, int success));
 
@@ -596,9 +598,8 @@ set_fact(int cid, char *buf)
             *p++ = 0;
             value = p;
        
-            if ((p = strchr(name, '[')) != NULL &&
-                (q = strchr(name, '.')) != NULL && p < q) {
-                sprintf(fullname, "%s%s", dres_get_prefix(dres), name);
+            if (name[0] == '.') {
+                sprintf(fullname, "%s%s", dres_get_prefix(dres), name+1);
                 name = fullname;
             }
 
@@ -764,8 +765,8 @@ command_dump(int id, char *input)
             g_free(dump);
         }
         else {
-            if (!strchr(factname, '.')) {
-                sprintf(fullname, "%s%s", dres_get_prefix(dres), factname);
+            if (factname[0] == '.') {
+                sprintf(fullname, "%s%s", dres_get_prefix(dres), factname+1);
                 name = fullname;
             }
             else
@@ -813,6 +814,26 @@ command_prolog(int id, char *input)
 }
 
 
+/********************
+ * command_grab
+ ********************/
+static void
+command_grab(int id, char *input)
+{
+    console_grab(id, 1);
+    console_grab(id, 2);
+}
+
+/********************
+ * command_release
+ ********************/
+static void
+command_release(int id, char *input)
+{
+    console_ungrab(id, 1);
+    console_ungrab(id, 2);
+}
+
 
 #define COMMAND(c, a, d) {                                              \
     command:      #c,                                                   \
@@ -842,6 +863,8 @@ static command_t commands[] = {
     COMMAND(resolve, "[goal]"   , "Run the dependency resolver for a goal." ),
     COMMAND(prolog , NULL       , "Start an interactive prolog shell."      ),
     COMMAND(bye    , NULL       , "Close the resolver terminal session."    ),
+    COMMAND(grab   , NULL       , "Grab stdout and stderr to this terminal."),
+    COMMAND(release, NULL       , "Release any previous grabs."             ),
     LAST()
 };
 
@@ -900,9 +923,9 @@ console_input(int id, char *input, void *data)
 
     if ((command = find_command(cmd)) != NULL)
         command->handler(id, p);
-    else
+    else if (*p != '\0')
         console_printf(id, "unknown command \"%s\"\n", input);
-
+    
     console_printf(id, CONSOLE_PROMPT);
 }
 
@@ -922,7 +945,7 @@ OHM_PLUGIN_PROVIDES_METHODS(dres, 1,
     OHM_EXPORT(update_goal, "resolve")
 );
 
-OHM_PLUGIN_REQUIRES_METHODS(dres, 13,
+OHM_PLUGIN_REQUIRES_METHODS(dres, 15,
     OHM_IMPORT("prolog.setup"         , prolog_setup),
     OHM_IMPORT("prolog.lookup"        , prolog_lookup),
     OHM_IMPORT("prolog.call"          , prolog_invoke),
@@ -935,6 +958,8 @@ OHM_PLUGIN_REQUIRES_METHODS(dres, 13,
     OHM_IMPORT("console.close"        , console_close),
     OHM_IMPORT("console.write"        , console_write),
     OHM_IMPORT("console.printf"       , console_printf),
+    OHM_IMPORT("console.grab"         , console_grab),
+    OHM_IMPORT("console.ungrab"       , console_ungrab),
     OHM_IMPORT("signaling.signal_changed", signal_changed)
 );
     
