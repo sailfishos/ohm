@@ -455,8 +455,8 @@ send_ipc_signal(gpointer data)
             if (!dbus_message_iter_append_basic
                     (&actit, DBUS_TYPE_STRING, value))
                 goto fail;
-            dbus_message_iter_close_container(&arrit, &actit);
         }
+        dbus_message_iter_close_container(&arrit, &actit);
     }
 
     dbus_message_iter_close_container(&msgit, &arrit);
