@@ -64,6 +64,9 @@ static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
+static void dump_signal_changed_args(char *signame, int transid, int factc,
+                                     char**factv, completion_cb_t callback,
+                                     unsigned long timeout);
 static int  retval_to_facts(char ***objects, OhmFact **facts, int max);
 
 static void console_opened (int id, struct sockaddr *peer, int peerlen);
@@ -269,11 +272,13 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     int               factc;
     char              signal_name[MAX_LENGTH];
     char             *cb_name;
+    char              prefix[MAX_LENGTH];
+    char              arg[MAX_LENGTH];
     char             *factv[MAX_FACTS + 1];
     char              buf[MAX_FACTS * MAX_LENGTH];
     char              namebuf[MAX_LENGTH];
     char             *p;
-    int               i;
+    int               i, j;
     int               offs;
     int               success;
     
@@ -289,6 +294,12 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
     namebuf[0] = '\0';
     dres_name(dres, action->arguments[1], namebuf, MAX_LENGTH);
+
+    prefix[MAX_LENGTH-1] = '\0';
+    strncpy(prefix, dres_get_prefix(dres), MAX_LENGTH-1);
+
+    if ((j = strlen(prefix)) > 0 && j < MAX_LENGTH-2 && prefix[j-1] != '.')
+        strcpy(prefix+j, ".");
 
     switch (namebuf[0]) {
 
@@ -314,9 +325,9 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
     for (p = buf, i = 0;   i < factc;   i++) {
 
-        dres_name(dres, action->arguments[i+2], p, MAX_LENGTH);
+        dres_name(dres, action->arguments[i+2], arg, MAX_LENGTH);
             
-        switch (p[0]) {
+        switch (arg[0]) {
 
         case '$':
             offs = 1;
@@ -336,21 +347,27 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
             /* intentional fall trough */
 
         copy_string_arg:
-            factv[i] = p + offs;
-            p += strlen(p) + 1;
+            factv[i] = p;
+            p += snprintf(p, MAX_LENGTH, "%s%s",
+                          strchr(arg+offs, '.') ? "" : prefix, arg+offs) + 1;
             break;
         }
     }
     factv[factc] = NULL;
 
-    if (cb_name[0] == '\0')
+    if (cb_name[0] == '\0') {
+        dump_signal_changed_args(signal_name, 0, factc,factv, NULL, timeout);
         success = signal_changed(signal_name, 0, factc,factv, NULL, timeout);
+    }
     else {
         signature = (char *)completion_cb_SIGNATURE;
 
-        if (ohm_module_find_method(cb_name, &signature,(void *)&completion_cb))
+        if (ohm_module_find_method(cb_name,&signature,(void *)&completion_cb)){
+            dump_signal_changed_args(signal_name, transid, factc,factv,
+                                     completion_cb, timeout);
             success = signal_changed(signal_name, transid++, factc,factv,
                                      completion_cb, timeout);
+        }
         else {
             DEBUG("Could not resolve signal.\n");
             success = FALSE;
@@ -361,6 +378,20 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
 #undef MAX_LENGTH
 #undef MAX_FACTS
+}
+
+static void dump_signal_changed_args(char *signame, int transid, int factc,
+                                     char**factv, completion_cb_t callback,
+                                     unsigned long timeout)
+{
+    int i;
+
+    DEBUG("calling signal_changed(%s, %d,  %d, %p, %p, %lu)",
+          signame, transid, factc, factv, callback, timeout);
+
+    for (i = 0;  i < factc;  i++) {
+        DEBUG("   fact[%d]: '%s'", i, factv[i]);
+    }
 }
 
 
@@ -942,14 +973,6 @@ OHM_PLUGIN_REQUIRES_METHODS(dres, 13,
 int signal_changed(char *signame, int transid, int factc, char**factv,
                    completion_cb_t callback, unsigned long timeout)
 {
-    int i;
-
-    DEBUG("called as %s(%s, %d,  %d, %p, %p, %lu)",
-          __FUNCTION__, signame, transid, factc, factv, callback, timeout);
-    for (i = 0;  i < factc;  i++) {
-        DEBUG("   fact[%d]: '%s'", i, factv[i]);
-    }
-
     return TRUE;
 }
 #endif
@@ -962,90 +985,3 @@ int signal_changed(char *signame, int transid, int factc, char**factv,
  * End:
  * vim:set expandtab shiftwidth=4:
  */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-
-    
-    
-
-    facts->fact[facts->len] = NULL;
-
-    DEBUG("%s%s%s/%d gave the following result:",
-          predicate->module ?: "", predicate->module ? ":" : "",
-          predicate->name, predicate->arity);
-    prolog_dump(retval);
-
-
-
-
-
-    struct {
-        dres_array_t    head;
-        OhmFact        *facts[MAX_FACTS+1];
-    } arrbuf = { head: { len: 0 } };
-    dres_array_t       *facts = &arrbuf.head;
-    dres_variable_t    *var;
-    char                buf[64], factname[128];
-
-    char                pred_name[64];
-    prolog_predicate_t *predicate;
-
-    int       i;
-    
-    
-
-    if (DRES_ID_TYPE(action->lvalue.variable) == DRES_TYPE_FACTVAR) {
-        facts->len = retval_to_facts(retval,(OhmFact **)facts->fact, MAX_FACTS);
-        if (facts->len < 0)
-            goto fail;
-        
-        dres_name(dres, action->lvalue.variable, buf, sizeof(buf));
-        snprintf(factname, sizeof(factname), "%s%s",
-                 dres_get_prefix(dres), buf + 1);
-        
-        if (action->lvalue.field != NULL) {
-            /* uh-oh... */
-            DEBUG("uh-oh... should set lvalue.field");
-            goto fail;
-        }
-        
-        if ((var = dres_lookup_variable(dres, action->lvalue.variable)) == NULL)
-            goto fail;
-        
-        if (!dres_var_set(var->var, action->lvalue.selector,
-                          VAR_FACT_ARRAY, facts))
-            goto fail;
-        prolog_free(retval);
-        
-        for (i = 0; i < facts->len; i++)
-            g_object_unref(facts->fact[i]);
-        printf("***** inserted new fact %s\n", factname);
-    }
-
-    return 0;
-
-        
- fail:
-    for (i = 0; i < facts->len; i++)
-        g_object_unref(facts->fact[i]);
-    
-    return EINVAL;
-
-
-#endif
