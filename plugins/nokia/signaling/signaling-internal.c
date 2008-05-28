@@ -58,6 +58,7 @@ void free_facts(GSList *facts)
 {
 
     GSList *i;
+#if 0
 
     for (i = facts; i != NULL; i = g_slist_next(i)) {
         fact *e = i->data;
@@ -65,6 +66,11 @@ void free_facts(GSList *facts)
         /* FIXME; unref the OhmFacts? */
         g_slist_free(e->values);
     }
+#else
+    for (i = facts; i != NULL; i = g_slist_next(i)) {
+        g_free(i->data);
+    }
+#endif
 
     g_slist_free(facts);
     return;
@@ -76,71 +82,11 @@ GSList *copy_facts(GSList *facts)
     GSList *new_facts = NULL, *i = NULL;
 
     for (i = facts; i != NULL; i = g_slist_next(i)) {
-        new_facts = g_slist_prepend(new_facts, g_slist_copy(i->data));
+        new_facts = g_slist_prepend(new_facts, g_strdup(i->data));
     }
 
     return new_facts;
 }
-
-#if 0
-    void
-free_actions(char ***actions)
-{
-    int a, p;
-
-    if (actions) {
-        for (a = 0; actions[a]; a++) {
-            for (p = 0; actions[a][p]; p++)
-                free(actions[a][p]);
-            free(actions[a]);
-        }
-        free(actions);
-    }
-}
-
-    char ***
-copy_actions(char ***actions)
-{
-    int a, p;
-
-    int len_a = 0, len_p = 0, len_s = 0;
-    char ***new_actions;
-    if (actions == NULL)
-        return NULL;
-
-    for (a = 0; actions[a]; a++) {
-        len_a++;
-    }
-
-    new_actions = malloc(len_a * sizeof(char *));
-    if (new_actions == NULL)
-        return NULL;
-
-    for (a = 0; actions[a]; a++) {
-        for (p = 0; actions[a][p]; p++) {
-            len_p++;
-        }
-        new_actions[a] = malloc(len_p * sizeof(char *));
-        if (new_actions[a] == NULL) {
-            /* FIXME: free what we have already allocated */
-            return NULL;
-        }
-        /* allocate space for the actual strings */
-        for (p = 0; actions[a][p]; p++) {
-            len_s = strlen(actions[a][p]);
-            new_actions[a][p] = malloc(len_s+1);
-            if (new_actions[a][p] == NULL) {
-                /* FIXME: free what we have already allocated */
-                return NULL;
-            }
-            strncpy(new_actions[a][p], actions[a][p], len_s);
-        }
-    }
-
-    return new_actions;
-}
-
-#endif
 
 /* GObject stuff */
 
@@ -408,9 +354,8 @@ internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
 send_ipc_signal(gpointer data)
 {
     pending_signal *signal = data;
-    g_print("sending signal with txid '%u'\n", signal->txid);
-
-    dbus_uint32_t   txid = signal->txid;
+    Transaction    *transaction = signal->transaction;
+    dbus_uint32_t   txid;
 
     GSList         *facts = signal->facts, *i, *j;
     char           *path = DBUS_PATH_POLICY "/decision";
@@ -421,7 +366,12 @@ send_ipc_signal(gpointer data)
                     arrit,
                     actit;
 
-    g_print("emitting policy action D-Bus signal\n");
+    g_object_get(transaction,
+            "txid",
+            &txid,
+            NULL);
+
+    g_print("sending signal with txid '%u'\n", txid);
 
     if ((sig =
                 dbus_message_new_signal(path, interface, "actions")) == NULL)
@@ -436,25 +386,40 @@ send_ipc_signal(gpointer data)
                 "as", &arrit))
         goto fail;
 
+    OhmFactStore *fs = ohm_fact_store_get_fact_store();
+    if (fs == NULL) {
+        goto fail;
+    }
+
     for (i = facts; i != NULL; i = g_slist_next(i)) {
-        fact *f = i->data;
+        gchar *f = i->data;
+        GSList *ohm_facts = ohm_fact_store_get_facts_by_name(fs, f);
         if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_ARRAY,
                     "s", &actit)) {
+            printf("error opening container\n");
             goto fail;
         }
+        
+        printf("key: ");
+        printf("%s\n", f);
+
         if (!dbus_message_iter_append_basic
-                (&actit, DBUS_TYPE_STRING, f->key)) {
+                (&actit, DBUS_TYPE_STRING, &f)) {
+            printf("error appending OhmFact key\n");
             goto fail;
         }
-        for (j = f->values; j != NULL; j = g_slist_next(j)) {
+        for (j = ohm_facts; j != NULL; j = g_slist_next(j)) {
 
             OhmFact *of = j->data;
-            GValue *gval = ohm_fact_get(of, f->key);
-            const gchar *value = g_value_get_string(gval);
+            GValue *gval = ohm_fact_get(of, f);
 
-            if (!dbus_message_iter_append_basic
-                    (&actit, DBUS_TYPE_STRING, value))
-                goto fail;
+            if (gval != NULL) {
+                if (!dbus_message_iter_append_basic
+                        (&actit, DBUS_TYPE_VARIANT, &gval)) {
+                    printf("error appending OhmFact value\n");
+                    goto fail;
+                }
+            }
         }
         dbus_message_iter_close_container(&arrit, &actit);
     }
@@ -464,13 +429,16 @@ send_ipc_signal(gpointer data)
         goto fail;
 
     signal->klass->pending_signals = g_slist_remove(signal->klass->pending_signals, signal);
+    g_object_unref(transaction);
     g_free(signal);
-
     return FALSE;
 
 fail:
 
     g_print("emitting the signal failed\n");
+    g_object_unref(transaction);
+    signal->klass->pending_signals = g_slist_remove(signal->klass->pending_signals, signal);
+    g_free(signal);
     dbus_message_unref(sig);
     return FALSE;
 }
@@ -502,7 +470,7 @@ external_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
 
     for (i = k->pending_signals; i != NULL; i = g_slist_next(i)) {
         signal = i->data;
-        if (signal->txid == txid) {
+        if (signal->transaction == transaction) {
             /*
              * there already is a signal pending submit 
              */
@@ -517,9 +485,11 @@ external_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
          */
         pending_signal *signal = g_new0(pending_signal, 1);
         signal->facts = facts;
-        signal->txid = txid;
+        signal->transaction = transaction;
         signal->klass = k;
         k->pending_signals = g_slist_append(k->pending_signals, signal);
+        /* we need the transaction to live until the signal sending*/
+        g_object_ref(transaction);
         g_idle_add(send_ipc_signal, signal);
     }
 
@@ -713,8 +683,11 @@ transaction_dispose(GObject *object) {
         g_object_unref(ep);
     }
     
+#if 0
+    /* FIXME: these need to be freed */
     free_facts(self->facts);
     self->facts = NULL;
+#endif
 }
 
     static void
