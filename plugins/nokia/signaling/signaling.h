@@ -146,7 +146,7 @@ typedef struct _ExternalEPStrategyClass {
 
 typedef struct _pending_signal {
     GSList *facts;
-    guint txid;
+    Transaction *transaction;
     ExternalEPStrategyClass *klass;
 } pending_signal;
 
