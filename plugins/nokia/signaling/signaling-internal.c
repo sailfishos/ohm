@@ -349,6 +349,10 @@ internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
     return TRUE;
 }
 
+static int map_to_dbus_type(GValue *gval, gchar *sig) {
+    /* sig is of size 2! */
+
+}
 
     static          gboolean
 send_ipc_signal(gpointer data)
@@ -358,18 +362,55 @@ send_ipc_signal(gpointer data)
     dbus_uint32_t   txid;
 
     GSList         *facts = signal->facts, *i, *j;
+    GList *k = NULL;
     char           *path = DBUS_PATH_POLICY "/decision";
     char           *interface = DBUS_INTERFACE_POLICY;
 
     DBusMessage    *sig;
     DBusMessageIter msgit,
                     arrit,
-                    actit;
+                    actit,
+                    factarit,
+                    factit,
+                    varit;
 
     g_object_get(transaction,
             "txid",
             &txid,
             NULL);
+
+
+/**
+ *
+ * This is really complicatad and nasty. Idea is that the message is
+ * supposed to look something like this:
+ *
+ *    uint32 0
+ *       array [
+ *         dict entry(
+ *            string "com.nokia.policy.audio_route"
+ *            array [
+ *              dict entry(
+ *                 string "type"
+ *                 variant                   string "source"
+ *              )
+ *              dict entry(
+ *                 string "device"
+ *                 variant                   string "headset"
+ *              )
+ *              dict entry(
+ *                 string "type"
+ *                 variant                   string "sink"
+ *              )
+ *              dict entry(
+ *                 string "device"
+ *                 variant                   string "headset"
+ *              )
+ *            ]
+ *         )
+ *       ]
+ *
+ */
 
     g_print("sending signal with txid '%u'\n", txid);
 
@@ -383,7 +424,7 @@ send_ipc_signal(gpointer data)
         goto fail;
 
     if (!dbus_message_iter_open_container(&msgit, DBUS_TYPE_ARRAY,
-                "as", &arrit))
+                "{sa{sv}}", &arrit))
         goto fail;
 
     OhmFactStore *fs = ohm_fact_store_get_fact_store();
@@ -394,36 +435,79 @@ send_ipc_signal(gpointer data)
     for (i = facts; i != NULL; i = g_slist_next(i)) {
         gchar *f = i->data;
         GSList *ohm_facts = ohm_fact_store_get_facts_by_name(fs, f);
+        
+        printf("key: %s, facts: %s\n", f, ohm_facts ? "yes" : "ERROR: NO FACTS!");
 
-        if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_ARRAY,
-                    "s", &actit)) {
+        if (!ohm_facts)
+            continue;
+
+        if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_DICT_ENTRY,
+                    NULL, &actit)) {
             printf("error opening container\n");
             goto fail;
         }
-        
-        printf("key: %s, facts: %s\n", f, ohm_facts ? "yes" : "ERROR: NO FACTS!");
 
         if (!dbus_message_iter_append_basic
                 (&actit, DBUS_TYPE_STRING, &f)) {
             printf("error appending OhmFact key\n");
             goto fail;
         }
+        if (!dbus_message_iter_open_container(&actit, DBUS_TYPE_ARRAY,
+                    "{sv}", &factarit)) {
+            printf("error opening container\n");
+            goto fail;
+        }
         for (j = ohm_facts; j != NULL; j = g_slist_next(j)) {
 
             OhmFact *of = j->data;
-            GValue *gval = ohm_fact_get(of, f);
+            GList *fields = NULL;
+            
+            fields = ohm_fact_get_fields(of);
 
-            if (gval != NULL) {
+            for (k = fields; k != NULL; k = g_list_next(k)) {
+                if (!dbus_message_iter_open_container(&factarit, DBUS_TYPE_DICT_ENTRY,
+                            NULL, &factit)) {
+                    printf("error opening container\n");
+                    goto fail;
+                }
+
+                GQuark qk = (GQuark)GPOINTER_TO_INT(k->data);
+                const gchar *field_name = g_quark_to_string(qk);
+
+                gchar sig[2] = "s";
+                void *value;
+#if 0
+                gchar *sig;
+                int dbus_type;
+#endif
+
+                printf("Field name: %s\n", field_name);
+                GValue *gval = ohm_fact_get(of, field_name);
+
                 if (!dbus_message_iter_append_basic
-                        (&actit, DBUS_TYPE_VARIANT, &gval)) {
+                        (&factit, DBUS_TYPE_STRING, &field_name)) {
+                    printf("error appending OhmFact field\n");
+                    goto fail;
+                }
+                
+                if (!dbus_message_iter_open_container(&factit, DBUS_TYPE_VARIANT, sig, &varit)) {
+                    printf("error opening container\n");
+                    goto fail;
+                }
+
+                value = (void *) g_value_get_string(gval);
+                printf("value: %s\n", (char*)value);
+                if (!dbus_message_iter_append_basic(&varit, DBUS_TYPE_STRING, &value)) {
                     printf("error appending OhmFact value\n");
                     goto fail;
                 }
-            }
-            else {
-                printf("ERROR: value in the fact is NULL!\n");
+                
+                dbus_message_iter_close_container(&factit, &varit);
+
+                dbus_message_iter_close_container(&factarit, &factit);
             }
         }
+        dbus_message_iter_close_container(&actit, &factarit);
         dbus_message_iter_close_container(&arrit, &actit);
     }
 
