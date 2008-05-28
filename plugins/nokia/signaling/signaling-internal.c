@@ -394,14 +394,14 @@ send_ipc_signal(gpointer data)
     for (i = facts; i != NULL; i = g_slist_next(i)) {
         gchar *f = i->data;
         GSList *ohm_facts = ohm_fact_store_get_facts_by_name(fs, f);
+
         if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_ARRAY,
                     "s", &actit)) {
             printf("error opening container\n");
             goto fail;
         }
         
-        printf("key: ");
-        printf("%s\n", f);
+        printf("key: %s, facts: %s\n", f, ohm_facts ? "yes" : "ERROR: NO FACTS!");
 
         if (!dbus_message_iter_append_basic
                 (&actit, DBUS_TYPE_STRING, &f)) {
@@ -419,6 +419,9 @@ send_ipc_signal(gpointer data)
                     printf("error appending OhmFact value\n");
                     goto fail;
                 }
+            }
+            else {
+                printf("ERROR: value in the fact is NULL!\n");
             }
         }
         dbus_message_iter_close_container(&arrit, &actit);
@@ -683,11 +686,8 @@ transaction_dispose(GObject *object) {
         g_object_unref(ep);
     }
     
-#if 0
-    /* FIXME: these need to be freed */
     free_facts(self->facts);
     self->facts = NULL;
-#endif
 }
 
     static void
