@@ -349,9 +349,42 @@ internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
     return TRUE;
 }
 
-static int map_to_dbus_type(GValue *gval, gchar *sig) {
+static int map_to_dbus_type(GValue *gval, gchar *sig, void **value) {
     /* sig is of size 2! */
 
+    int retval;
+    gint i, *pi;
+    guint u, *pu;
+
+    switch(G_VALUE_TYPE(gval)) {
+        case G_TYPE_STRING:
+            *sig = 's';
+            *value = (void *) g_value_get_string(gval);
+            retval = DBUS_TYPE_STRING;
+            break;
+        case G_TYPE_INT:
+            *sig = 'i';
+            i = g_value_get_int(gval);
+            pi = g_malloc(sizeof(gint));
+            *pi = i;
+            *value = pi;
+            retval = DBUS_TYPE_INT32;
+            break;
+        case G_TYPE_UINT:
+            *sig = 'u';
+            u = g_value_get_uint(gval);
+            pu = g_malloc(sizeof(guint));
+            *pu = u;
+            *value = pu;
+            retval = DBUS_TYPE_UINT32;
+            break;
+        default:
+            *sig = '?';
+            retval = DBUS_TYPE_INVALID;
+            break;
+    }
+
+    return retval;
 }
 
     static          gboolean
@@ -465,31 +498,36 @@ send_ipc_signal(gpointer data)
             fields = ohm_fact_get_fields(of);
 
             for (k = fields; k != NULL; k = g_list_next(k)) {
+
+                GQuark qk = (GQuark)GPOINTER_TO_INT(k->data);
+                const gchar *field_name = g_quark_to_string(qk);
+                gchar sig_c = '?';
+                gchar sig[2] = "?"; 
+                void *value;
+                GValue *gval = ohm_fact_get(of, field_name);
+                int dbus_type = map_to_dbus_type(gval, &sig_c, &value);
+
+                sig[0] = sig_c;
+                
+                printf("Field name: %s\n", field_name);
+
+                if (dbus_type == DBUS_TYPE_INVALID) {
+                    /* unsupported data type */
+                    continue;
+                }
+
                 if (!dbus_message_iter_open_container(&factarit, DBUS_TYPE_DICT_ENTRY,
                             NULL, &factit)) {
                     printf("error opening container\n");
                     goto fail;
                 }
 
-                GQuark qk = (GQuark)GPOINTER_TO_INT(k->data);
-                const gchar *field_name = g_quark_to_string(qk);
-
-                gchar sig[2] = "s";
-                void *value;
-#if 0
-                gchar *sig;
-                int dbus_type;
-#endif
-
-                printf("Field name: %s\n", field_name);
-                GValue *gval = ohm_fact_get(of, field_name);
-
                 if (!dbus_message_iter_append_basic
                         (&factit, DBUS_TYPE_STRING, &field_name)) {
                     printf("error appending OhmFact field\n");
                     goto fail;
                 }
-                
+
                 if (!dbus_message_iter_open_container(&factit, DBUS_TYPE_VARIANT, sig, &varit)) {
                     printf("error opening container\n");
                     goto fail;
@@ -497,13 +535,16 @@ send_ipc_signal(gpointer data)
 
                 value = (void *) g_value_get_string(gval);
                 printf("value: %s\n", (char*)value);
-                if (!dbus_message_iter_append_basic(&varit, DBUS_TYPE_STRING, &value)) {
+                if (!dbus_message_iter_append_basic(&varit, dbus_type, &value)) {
                     printf("error appending OhmFact value\n");
                     goto fail;
                 }
+
+                g_free(value);
+
+                /* g_free(gval); */
                 
                 dbus_message_iter_close_container(&factit, &varit);
-
                 dbus_message_iter_close_container(&factarit, &factit);
             }
         }
