@@ -359,7 +359,7 @@ static int map_to_dbus_type(GValue *gval, gchar *sig, void **value) {
     switch(G_VALUE_TYPE(gval)) {
         case G_TYPE_STRING:
             *sig = 's';
-            *value = (void *) g_value_get_string(gval);
+            *value = (void *) g_strdup(g_value_get_string(gval));
             retval = DBUS_TYPE_STRING;
             break;
         case G_TYPE_INT:
@@ -400,12 +400,16 @@ send_ipc_signal(gpointer data)
     char           *interface = DBUS_INTERFACE_POLICY;
 
     DBusMessage    *sig;
+
+
+    /* this is ridiculous */
     DBusMessageIter msgit,
                     arrit,
                     actit,
                     factarit,
                     factit,
-                    varit;
+                    varit,
+                    anotherit;
 
     g_object_get(transaction,
             "txid",
@@ -457,7 +461,7 @@ send_ipc_signal(gpointer data)
         goto fail;
 
     if (!dbus_message_iter_open_container(&msgit, DBUS_TYPE_ARRAY,
-                "{sa{sv}}", &arrit))
+                "{saa(sv)}", &arrit))
         goto fail;
 
     OhmFactStore *fs = ohm_fact_store_get_fact_store();
@@ -486,14 +490,22 @@ send_ipc_signal(gpointer data)
             goto fail;
         }
         if (!dbus_message_iter_open_container(&actit, DBUS_TYPE_ARRAY,
-                    "{sv}", &factarit)) {
+                    "a(sv)", &factarit)) {
             printf("error opening container\n");
             goto fail;
         }
+
         for (j = ohm_facts; j != NULL; j = g_slist_next(j)) {
 
             OhmFact *of = j->data;
             GList *fields = NULL;
+
+            printf("starting to process OhmFact '%p'\n", of);
+            if (!dbus_message_iter_open_container(&factarit, DBUS_TYPE_ARRAY,
+                        "(sv)", &anotherit)) {
+                printf("error opening container\n");
+                goto fail;
+            }
             
             fields = ohm_fact_get_fields(of);
 
@@ -516,7 +528,7 @@ send_ipc_signal(gpointer data)
                     continue;
                 }
 
-                if (!dbus_message_iter_open_container(&factarit, DBUS_TYPE_DICT_ENTRY,
+                if (!dbus_message_iter_open_container(&anotherit, DBUS_TYPE_STRUCT,
                             NULL, &factit)) {
                     printf("error opening container\n");
                     goto fail;
@@ -533,8 +545,6 @@ send_ipc_signal(gpointer data)
                     goto fail;
                 }
 
-                value = (void *) g_value_get_string(gval);
-                printf("value: %s\n", (char*)value);
                 if (!dbus_message_iter_append_basic(&varit, dbus_type, &value)) {
                     printf("error appending OhmFact value\n");
                     goto fail;
@@ -545,8 +555,9 @@ send_ipc_signal(gpointer data)
                 /* g_free(gval); */
                 
                 dbus_message_iter_close_container(&factit, &varit);
-                dbus_message_iter_close_container(&factarit, &factit);
+                dbus_message_iter_close_container(&anotherit, &factit);
             }
+            dbus_message_iter_close_container(&factarit, &anotherit);
         }
         dbus_message_iter_close_container(&actit, &factarit);
         dbus_message_iter_close_container(&arrit, &actit);
