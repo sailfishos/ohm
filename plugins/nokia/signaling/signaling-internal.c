@@ -58,21 +58,12 @@ void free_facts(GSList *facts)
 {
 
     GSList *i;
-#if 0
 
-    for (i = facts; i != NULL; i = g_slist_next(i)) {
-        fact *e = i->data;
-        g_free(e->key);
-        /* FIXME; unref the OhmFacts? */
-        g_slist_free(e->values);
-    }
-#else
     for (i = facts; i != NULL; i = g_slist_next(i)) {
         g_free(i->data);
     }
-#endif
-
     g_slist_free(facts);
+
     return;
 }
 
@@ -1431,24 +1422,9 @@ register_external_enforcement_point(DBusConnection * c, DBusMessage * msg,
         goto err;
     }
     
-#if 0
-    ret = dbus_message_get_args(msg,
-            NULL,
-            DBUS_TYPE_STRING,
-            &uri,
-            DBUS_TYPE_INVALID);
-
-    if (!ret || uri == NULL) {
-        goto err;
-    }
-
-    /* register an external enforcement_point (no need to take the
-     * reference) */
-    ep = register_enforcement_point(uri, FALSE);
-#else
     uri = dbus_message_get_sender(msg);
     ep = register_enforcement_point(uri, FALSE);
-#endif
+
     if (ep == NULL) {
         reply = dbus_message_new_error(msg,
                 DBUS_ERROR_FAILED,
@@ -1496,21 +1472,7 @@ unregister_external_enforcement_point(DBusConnection * c, DBusMessage * msg,
         goto err;
     }
     
-#if 0
-    ret = dbus_message_get_args(msg,
-            NULL,
-            DBUS_TYPE_STRING,
-            &uri,
-            DBUS_TYPE_INVALID);
-
-    if (!ret || uri == NULL) {
-        goto err;
-    }
-
-    /* unregister an external enforcement_point */
-#else
     uri = dbus_message_get_sender(msg);
-#endif
 
     ret = unregister_enforcement_point(uri);
     if (!ret) {
