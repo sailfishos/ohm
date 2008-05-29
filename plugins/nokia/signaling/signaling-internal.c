@@ -400,22 +400,25 @@ send_ipc_signal(gpointer data)
     char           *interface = DBUS_INTERFACE_POLICY;
 
     DBusMessage    *sig;
-
-
+    
     /* this is ridiculous */
-    DBusMessageIter msgit,
-                    arrit,
-                    actit,
-                    factarit,
-                    factit,
-                    varit,
-                    anotherit;
+    DBusMessageIter message_iter,
+                    command_array_iter,
+                    command_array_entry_iter,
+                    fact_iter,
+                    fact_struct_iter,
+                    fact_struct_field_iter,
+                    variant_iter;
 
     g_object_get(transaction,
             "txid",
             &txid,
             NULL);
 
+    OhmFactStore *fs = ohm_fact_store_get_fact_store();
+    if (fs == NULL) {
+        goto fail;
+    }
 
 /**
  *
@@ -455,19 +458,16 @@ send_ipc_signal(gpointer data)
                 dbus_message_new_signal(path, interface, "actions")) == NULL)
         goto fail;
 
-    dbus_message_iter_init_append(sig, &msgit);
+    /* open message_iter */
+    dbus_message_iter_init_append(sig, &message_iter);
 
-    if (!dbus_message_iter_append_basic(&msgit, DBUS_TYPE_UINT32, &txid))
+    if (!dbus_message_iter_append_basic(&message_iter, DBUS_TYPE_UINT32, &txid))
         goto fail;
 
-    if (!dbus_message_iter_open_container(&msgit, DBUS_TYPE_ARRAY,
-                "{saa(sv)}", &arrit))
+    /* open command_array_iter */
+    if (!dbus_message_iter_open_container(&message_iter, DBUS_TYPE_ARRAY,
+                "{saa(sv)}", &command_array_iter))
         goto fail;
-
-    OhmFactStore *fs = ohm_fact_store_get_fact_store();
-    if (fs == NULL) {
-        goto fail;
-    }
 
     for (i = facts; i != NULL; i = g_slist_next(i)) {
         gchar *f = i->data;
@@ -478,19 +478,22 @@ send_ipc_signal(gpointer data)
         if (!ohm_facts)
             continue;
 
-        if (!dbus_message_iter_open_container(&arrit, DBUS_TYPE_DICT_ENTRY,
-                    NULL, &actit)) {
+        /* open command_array_entry_iter */
+        if (!dbus_message_iter_open_container(&command_array_iter, DBUS_TYPE_DICT_ENTRY,
+                    NULL, &command_array_entry_iter)) {
             printf("error opening container\n");
             goto fail;
         }
 
         if (!dbus_message_iter_append_basic
-                (&actit, DBUS_TYPE_STRING, &f)) {
+                (&command_array_entry_iter, DBUS_TYPE_STRING, &f)) {
             printf("error appending OhmFact key\n");
             goto fail;
         }
-        if (!dbus_message_iter_open_container(&actit, DBUS_TYPE_ARRAY,
-                    "a(sv)", &factarit)) {
+        
+        /* open fact_iter */
+        if (!dbus_message_iter_open_container(&command_array_entry_iter, DBUS_TYPE_ARRAY,
+                    "a(sv)", &fact_iter)) {
             printf("error opening container\n");
             goto fail;
         }
@@ -501,8 +504,10 @@ send_ipc_signal(gpointer data)
             GList *fields = NULL;
 
             printf("starting to process OhmFact '%p'\n", of);
-            if (!dbus_message_iter_open_container(&factarit, DBUS_TYPE_ARRAY,
-                        "(sv)", &anotherit)) {
+        
+            /* open fact_struct_iter */
+            if (!dbus_message_iter_open_container(&fact_iter, DBUS_TYPE_ARRAY,
+                        "(sv)", &fact_struct_iter)) {
                 printf("error opening container\n");
                 goto fail;
             }
@@ -528,48 +533,58 @@ send_ipc_signal(gpointer data)
                     continue;
                 }
 
-                if (!dbus_message_iter_open_container(&anotherit, DBUS_TYPE_STRUCT,
-                            NULL, &factit)) {
+                /* open fact_struct_field_iter */
+                if (!dbus_message_iter_open_container(&fact_struct_iter, DBUS_TYPE_STRUCT,
+                            NULL, &fact_struct_field_iter)) {
                     printf("error opening container\n");
                     goto fail;
                 }
 
                 if (!dbus_message_iter_append_basic
-                        (&factit, DBUS_TYPE_STRING, &field_name)) {
+                        (&fact_struct_field_iter, DBUS_TYPE_STRING, &field_name)) {
                     printf("error appending OhmFact field\n");
                     goto fail;
                 }
 
-                if (!dbus_message_iter_open_container(&factit, DBUS_TYPE_VARIANT, sig, &varit)) {
+                /* open variant_iter */
+                if (!dbus_message_iter_open_container(&fact_struct_field_iter, DBUS_TYPE_VARIANT, sig, &variant_iter)) {
                     printf("error opening container\n");
                     goto fail;
                 }
 
-                if (!dbus_message_iter_append_basic(&varit, dbus_type, &value)) {
+                if (!dbus_message_iter_append_basic(&variant_iter, dbus_type, &value)) {
                     printf("error appending OhmFact value\n");
                     goto fail;
                 }
 
                 g_free(value);
 
-                /* g_free(gval); */
-                
-                dbus_message_iter_close_container(&factit, &varit);
-                dbus_message_iter_close_container(&anotherit, &factit);
+                /* close variant_iter */
+                dbus_message_iter_close_container(&fact_struct_field_iter, &variant_iter);
+                /* close fact_struct_field_iter */
+                dbus_message_iter_close_container(&fact_struct_iter, &fact_struct_field_iter);
             }
-            dbus_message_iter_close_container(&factarit, &anotherit);
+            /* close fact_struct_iter */
+            dbus_message_iter_close_container(&fact_iter, &fact_struct_iter);
         }
-        dbus_message_iter_close_container(&actit, &factarit);
-        dbus_message_iter_close_container(&arrit, &actit);
+        /* close fact_iter */
+        dbus_message_iter_close_container(&command_array_entry_iter, &fact_iter);
+
+        /* close command_array_entry_iter */
+        dbus_message_iter_close_container(&command_array_iter, &command_array_entry_iter);
     }
 
-    dbus_message_iter_close_container(&msgit, &arrit);
+    /* close command_array_iter */
+    dbus_message_iter_close_container(&message_iter, &command_array_iter);
+    
     if (!dbus_connection_send(connection, sig, NULL))
         goto fail;
 
     signal->klass->pending_signals = g_slist_remove(signal->klass->pending_signals, signal);
     g_object_unref(transaction);
     g_free(signal);
+
+    /* FALSE means that this is not called again */
     return FALSE;
 
 fail:
