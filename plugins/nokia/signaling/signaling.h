@@ -24,7 +24,9 @@
 
 #include "signaling_marshal.h"
 
-#include "prolog/ohm-fact.h"
+#include <dres/dres.h>
+#include <dres/variables.h>
+#include <prolog/ohm-fact.h>
 
 #define DBUS_INTERFACE_POLICY    "com.nokia.policy"
 #define DBUS_INTERFACE_FDO       "org.freedesktop.DBus"
@@ -191,6 +193,8 @@ DBusHandlerResult unregister_external_enforcement_point(DBusConnection * c, DBus
 
 DBusHandlerResult update_external_enforcement_points(DBusConnection * c, DBusMessage * msg, void *user_data);
 
+/* external stuff (tmp) */
+GList *ohm_fact_get_fields(OhmFact *self);
 #endif
 
 /*
