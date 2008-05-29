@@ -340,8 +340,9 @@ internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
     return TRUE;
 }
 
-static int map_to_dbus_type(GValue *gval, gchar *sig, void **value) {
-    /* sig is of size 2! */
+    static int
+map_to_dbus_type(GValue *gval, gchar *sig, void **value)
+{
 
     int retval;
     gint i, *pi;
@@ -412,34 +413,37 @@ send_ipc_signal(gpointer data)
     }
 
 /**
- *
  * This is really complicatad and nasty. Idea is that the message is
  * supposed to look something like this:
  *
- *    uint32 0
+ * uint32 0
+ * array [
+ *    dict entry(
+ *       string "com.nokia.policy.audio_route"
  *       array [
- *         dict entry(
- *            string "com.nokia.policy.audio_route"
- *            array [
- *              dict entry(
- *                 string "type"
- *                 variant                   string "source"
- *              )
- *              dict entry(
- *                 string "device"
- *                 variant                   string "headset"
- *              )
- *              dict entry(
- *                 string "type"
- *                 variant                   string "sink"
- *              )
- *              dict entry(
- *                 string "device"
- *                 variant                   string "headset"
- *              )
- *            ]
- *         )
+ *          array [
+ *             struct {
+ *                string "type"
+ *                variant                      string "source"
+ *             }
+ *             struct {
+ *                string "device"
+ *                variant                      string "headset"
+ *             }
+ *          ]
+ *          array [
+ *             struct {
+ *                string "type"
+ *                variant                      string "sink"
+ *             }
+ *             struct {
+ *                string "device"
+ *                variant                      string "headset"
+ *             }
+ *          ]
  *       ]
+ *    )
+ * ]
  *
  */
 
