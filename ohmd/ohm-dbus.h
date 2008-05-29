@@ -8,6 +8,7 @@
 
 
 typedef struct {
+  const char                    *interface;           /* interface */
   const char                    *path;                /* DBUS object path */
   const char                    *name;                /* method name */
   DBusObjectPathMessageFunction  handler;             /* method handler */
