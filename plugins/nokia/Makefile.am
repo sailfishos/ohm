@@ -2,7 +2,8 @@ SUBDIRS = 	  \
 	prolog    \
 	dres      \
 	signaling \
-	console
+	console   \
+	libplayback
 
 clean-local:
 	rm -f *~

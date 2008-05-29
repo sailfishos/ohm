@@ -187,9 +187,9 @@ OHM_PLUGIN_DBUS_SIGNALS(
         );
 
 OHM_PLUGIN_DBUS_METHODS(
-        {DBUS_PATH_POLICY, METHOD_POLICY_REGISTER,
+        {NULL, DBUS_PATH_POLICY, METHOD_POLICY_REGISTER,
             register_external_enforcement_point, NULL},
-        {DBUS_PATH_POLICY, METHOD_POLICY_UNREGISTER,
+        {NULL, DBUS_PATH_POLICY, METHOD_POLICY_UNREGISTER,
             unregister_external_enforcement_point, NULL}
         );
 
