@@ -23,6 +23,15 @@
 
 typedef void (*completion_cb_t)(int transid, int success);
 
+
+typedef struct {
+    char  *name;
+    char  *args;
+    char  *description;
+    void (*handler)(int, char *);
+} command_t;
+
+
 /* rule engine methods */
 OHM_IMPORTABLE(int , prolog_setup , (char **extensions, char **files));
 OHM_IMPORTABLE(void, prolog_free  , (void *retval));
@@ -48,7 +57,7 @@ int signal_changed(char *, int, int, char**, completion_cb_t, unsigned long);
 #endif
 
 
-/* console methods */
+/* console methods and event handlers */
 OHM_IMPORTABLE(int, console_open , (char *address,
                                     void (*opened)(int, struct sockaddr *, int),
                                     void (*closed)(int),
@@ -59,6 +68,11 @@ OHM_IMPORTABLE(int, console_write , (int id, char *buf, size_t size));
 OHM_IMPORTABLE(int, console_printf, (int id, char *fmt, ...));
 OHM_IMPORTABLE(int, console_grab  , (int id, int fd));
 OHM_IMPORTABLE(int, console_ungrab, (int id, int fd));
+
+static void console_opened (int id, struct sockaddr *peer, int peerlen);
+static void console_closed (int id);
+static void console_input  (int id, char *buf, void *data);
+
 
 OHM_IMPORTABLE(void, completion_cb, (int transid, int success));
 
@@ -71,9 +85,53 @@ static void dump_signal_changed_args(char *signame, int transid, int factc,
                                      unsigned long timeout);
 static int  retval_to_facts(char ***objects, OhmFact **facts, int max);
 
-static void console_opened (int id, struct sockaddr *peer, int peerlen);
-static void console_closed (int id);
-static void console_input  (int id, char *buf, void *data);
+
+/* factstore change tracking trickery */
+#define FACT_INSERTED "inserted"
+#define FACT_REMOVED  "removed"
+#define FACT_UPDATED  "updated"
+
+static int      watch_factstore  (void);
+static void     unwatch_factstore(void);
+static void     schedule_dres    (gpointer store, gpointer data);
+static gboolean idle_handler     (gpointer data);
+static guint    idle;
+
+
+#define COMMAND(c, a, d) {                                              \
+    name:        #c,                                                    \
+    args:         a,                                                    \
+    description:  d,                                                    \
+    handler:      command_##c,                                          \
+}
+
+#define LAST() { name: NULL }
+
+#define COMMAND_HANDLER(name) static void command_##name(int id, char *input)
+
+COMMAND_HANDLER(help);
+COMMAND_HANDLER(dump);
+COMMAND_HANDLER(set);
+COMMAND_HANDLER(resolve);
+COMMAND_HANDLER(prolog);
+COMMAND_HANDLER(bye);
+COMMAND_HANDLER(grab);
+COMMAND_HANDLER(release);
+
+static command_t commands[] = {
+    COMMAND(help   , NULL       , "Get help on the available commands."     ),
+    COMMAND(dump   , "[var]"    , "Dump a given or all factstore variables."),
+    COMMAND(set    , "var value", "Set/change a given fact store variable." ),
+    COMMAND(resolve, "[goal]"   , "Run the dependency resolver for a goal." ),
+    COMMAND(prolog , NULL       , "Start an interactive prolog shell."      ),
+    COMMAND(bye    , NULL       , "Close the resolver terminal session."    ),
+    COMMAND(grab   , NULL       , "Grab stdout and stderr to this terminal."),
+    COMMAND(release, NULL       , "Release any previous grabs."             ),
+    LAST()
+};
+
+static command_t *find_command(char *name);
+
 
 
 
@@ -112,9 +170,6 @@ plugin_init(OhmPlugin *plugin)
         PROLOG_RULEDIR"interface",
         PROLOG_RULEDIR"profile",
         PROLOG_RULEDIR"audio",
-#if 0
-        PROLOG_RULEDIR"test",
-#endif
         NULL
     };
 
@@ -138,6 +193,9 @@ plugin_init(OhmPlugin *plugin)
                            NULL, FALSE);
     if (console < 0)
         g_warning("DRES plugin, %s: failed to open console", __FUNCTION__);
+
+    if (watch_factstore())
+        FAIL("failed to monitor factstore for key change events");
     
     return;
 
@@ -158,6 +216,8 @@ plugin_init(OhmPlugin *plugin)
 static void
 plugin_exit(OhmPlugin *plugin)
 {
+    unwatch_factstore();
+    
     if (dres) {
         dres_exit(dres);
         dres = NULL;
@@ -172,6 +232,40 @@ plugin_exit(OhmPlugin *plugin)
 
 
 /********************
+ * watch_factstore
+ ********************/
+static int
+watch_factstore(void)
+{
+    gpointer store = G_OBJECT(ohm_fact_store_get_fact_store());
+    
+    if (store == NULL)
+        return EINVAL;
+    
+    g_signal_connect(store, FACT_INSERTED, G_CALLBACK(schedule_dres), NULL);
+    g_signal_connect(store, FACT_REMOVED , G_CALLBACK(schedule_dres), NULL);
+    g_signal_connect(store, FACT_UPDATED , G_CALLBACK(schedule_dres), NULL);
+
+    return 0;
+}
+
+
+/********************
+ * unwatch_factstore
+ ********************/
+static void
+unwatch_factstore(void)
+{
+    gpointer store = G_OBJECT(ohm_fact_store_get_fact_store());
+
+    if (store == NULL)
+        return;
+    
+    g_signal_handlers_disconnect_by_func(store, schedule_dres, NULL);
+}
+
+
+/********************
  * dres_parse_error
  ********************/
 void
@@ -179,6 +273,34 @@ dres_parse_error(dres_t *dres, int lineno, const char *msg, const char *token)
 {
     g_warning("error: %s, on line %d near input %s\n", msg, lineno, token);
     exit(1);
+}
+
+
+/********************
+ * schedule_dres
+ ********************/
+static void
+schedule_dres(gpointer even_dummier, gpointer dummy)
+{
+    printf("scheduling DRES all...\n");
+
+    if (idle == 0)
+        idle = g_idle_add(idle_handler, NULL);
+}
+
+
+/********************
+ * idle_handler
+ ********************/
+static gboolean
+idle_handler(gpointer data)
+{
+    printf("updating goal all...\n");
+    dres_update_goal(dres, "all", NULL);
+
+    idle = 0;
+    
+    return FALSE;
 }
 
 
@@ -191,8 +313,6 @@ dres_parse_error(dres_t *dres, int lineno, const char *msg, const char *token)
  ********************/
 OHM_EXPORTABLE(int, update_goal, (char *goal, char **locals))
 {
-    
-    /* XXX local variable assignments... */
     return dres_update_goal(dres, goal, locals);
 }
 
@@ -395,6 +515,65 @@ static void dump_signal_changed_args(char *signame, int transid, int factc,
         DEBUG("   fact[%d]: '%s'", i, factv[i]);
     }
 }
+
+
+/*****************************************************************************
+ *                         *** console event handlers ***                    *
+ *****************************************************************************/
+
+/********************
+ * console_opened
+ ********************/
+static void
+console_opened(int id, struct sockaddr *peer, int peerlen)
+{
+    printf("***** console 0x%x opened.\n", id);
+
+    console_printf(id, "OHMng Dependency Resolver Console\n");
+    console_printf(id, "Type help to get a list of available commands.\n\n");
+    console_printf(id, CONSOLE_PROMPT);
+}
+
+
+/********************
+ * console_closed
+ ********************/
+static void
+console_closed(int id)
+{
+    printf("***** console 0x%x closed.\n", id);
+}
+
+
+/********************
+ * console_input
+ ********************/
+static void
+console_input(int id, char *input, void *data)
+{
+    command_t *command;
+    char       cmd[64], *p, *q;
+    int        len;
+
+    if (!input[0])
+        return;
+    
+    len = 0;
+    q   = cmd;
+    for (p = input; *p && *p != ' ' && len < sizeof(cmd) - 1; *q++ = *p++)
+        ;
+    *q = '\0';
+    while (*p == ' ' || *p == '\t')
+        p++;
+
+    if ((command = find_command(cmd)) != NULL)
+        command->handler(id, p);
+    else
+        console_printf(id, "unknown command \"%s\"\n", input);
+    
+    console_printf(id, CONSOLE_PROMPT);
+}
+
 
 
 /*****************************************************************************
@@ -735,30 +914,6 @@ dres_goal(int cid, char *cmd)
 }
 
 
-
-/********************
- * console_opened
- ********************/
-static void
-console_opened(int id, struct sockaddr *peer, int peerlen)
-{
-    printf("***** console 0x%x opened.\n", id);
-
-    console_printf(id, "Welcome to the OHMng Dependency Resolver Console.\n");
-    console_printf(id, "Type help to get a list of available commands.\n\n");
-    console_printf(id, CONSOLE_PROMPT);
-}
-
-/********************
- * console_closed
- ********************/
-static void
-console_closed(int id)
-{
-    printf("***** console 0x%x closed.\n", id);
-}
-
-
 /********************
  * command_bye
  ********************/
@@ -851,6 +1006,7 @@ command_prolog(int id, char *input)
 static void
 command_grab(int id, char *input)
 {
+    console_grab(id, 0);
     console_grab(id, 1);
     console_grab(id, 2);
 }
@@ -861,44 +1017,10 @@ command_grab(int id, char *input)
 static void
 command_release(int id, char *input)
 {
+    console_ungrab(id, 0);
     console_ungrab(id, 1);
     console_ungrab(id, 2);
 }
-
-
-#define COMMAND(c, a, d) {                                              \
-    command:      #c,                                                   \
-    args:         a,                                                    \
-    description:  d,                                                    \
-    handler:      command_##c,                                          \
-}
-
-#define LAST() { command: NULL }
-
-
-typedef struct {
-    char  *command;
-    char  *args;
-    char  *description;
-    void (*handler)(int, char *);
-} command_t;
-
-
-static void command_help(int id, char *input);
-
-
-static command_t commands[] = {
-    COMMAND(help   , NULL       , "Get help on the available commands."     ),
-    COMMAND(dump   , "[var]"    , "Dump a given or all factstore variables."),
-    COMMAND(set    , "var value", "Set/change a given fact store variable." ),
-    COMMAND(resolve, "[goal]"   , "Run the dependency resolver for a goal." ),
-    COMMAND(prolog , NULL       , "Start an interactive prolog shell."      ),
-    COMMAND(bye    , NULL       , "Close the resolver terminal session."    ),
-    COMMAND(grab   , NULL       , "Grab stdout and stderr to this terminal."),
-    COMMAND(release, NULL       , "Release any previous grabs."             ),
-    LAST()
-};
-
 
 
 /********************
@@ -911,8 +1033,8 @@ command_help(int id, char *input)
     char       syntax[128];
 
     console_printf(id, "Available commands:\n");
-    for (c = commands; c->command != NULL; c++) {
-        sprintf(syntax, "%s%s%s", c->command, c->args ? " ":"", c->args ?: ""); 
+    for (c = commands; c->name != NULL; c++) {
+        sprintf(syntax, "%s%s%s", c->name, c->args ? " ":"", c->args ?: ""); 
         console_printf(id, "    %-30.30s %s\n", syntax, c->description);
     }
 }
@@ -921,45 +1043,19 @@ command_help(int id, char *input)
 /********************
  * find_command
  ********************/
-command_t *
+static command_t *
 find_command(char *name)
 {
     command_t *c;
 
-    for (c = commands; c->command != NULL; c++)
-        if (!strcmp(c->command, name))
+    for (c = commands; c->name != NULL; c++)
+        if (!strcmp(c->name, name))
             return c;
     
     return NULL;
 }
 
  
-/********************
- * console_input
- ********************/
-static void
-console_input(int id, char *input, void *data)
-{
-    command_t *command;
-    char       cmd[64], *p, *q;
-    int        len;
-
-    q   = cmd;
-    len = 0;
-    for (p = input; *p && *p != ' ' && len < sizeof(cmd) - 1; *q++ = *p++)
-        ;
-    *q = '\0';
-    while (*p == ' ' || *p == '\t')
-        p++;
-
-    if ((command = find_command(cmd)) != NULL)
-        command->handler(id, p);
-    else if (*p != '\0')
-        console_printf(id, "unknown command \"%s\"\n", input);
-    
-    console_printf(id, CONSOLE_PROMPT);
-}
-
 
 
 OHM_PLUGIN_DESCRIPTION("dres",
