@@ -444,10 +444,13 @@ OHM_EXPORTABLE(int, console_grab, (int id, int fd))
         return EINVAL;
     
     for (i = 0, empty = -1; i < MAX_GRABS; i++) {
-        if (GRAB_ID(c->grabs[i]) == fd)
-            return EBUSY;
-        if (c->grabs[i] == 0 && empty < 0)
-            empty = i;
+        if (c->grabs[i] != 0) {
+            if (GRAB_ID(c->grabs[i]) == fd)
+                return EBUSY;
+        }
+        else
+            if (empty < 0)
+                empty = i;
     }
 
     if (empty < 0)
