@@ -15,7 +15,7 @@ typedef struct {
   void                          *data;                /* user data */
 } ohm_dbus_method_t;
 
-#define OHM_DBUS_METHODS_END { NULL, NULL, NULL, NULL }
+#define OHM_DBUS_METHODS_END { NULL, NULL, NULL, NULL, NULL }
 
 typedef struct {
   const char                    *sender;
