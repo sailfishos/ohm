@@ -114,7 +114,7 @@ static DBusHandlerResult playback_request(DBusConnection *conn,
     const char        *sender;
     const char        *state;
     ohm_playback_t    *pb;
-    char              *locals[7];
+    char              *locals[9];
     DBusMessage       *reply;
     int                success;
     DBusHandlerResult  result;

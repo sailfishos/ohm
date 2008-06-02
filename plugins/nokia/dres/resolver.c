@@ -428,22 +428,30 @@ echo_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
         switch (arg[0]) {
 
         case '&':
-            PRINT(" ");
+            if ((str = dres_scope_getvar(dres->scope, arg+1)) == NULL)
+                PRINT("???");
+            else {
+                PRINT(str);
+                free(str);
+            }
             break;
 
         case '$':
-            if ((var = dres_lookup_variable(dres, action->arguments[i])) &&
-                dres_var_get_field(var->var, "value", NULL, VAR_STRING, &str))
-                PRINT(str);
-            else
+            if (!(var = dres_lookup_variable(dres, action->arguments[i])) ||
+                !dres_var_get_field(var->var, "value", NULL, VAR_STRING, &str))
                 PRINT("???");
-            PRINT(" ");
+            else {
+                PRINT(str);
+                free(str);
+            }
             break;
 
         default:
             PRINT(arg);
             break;
         }
+
+        PRINT(" ");
     }
 
     DEBUG("%s", buf);
