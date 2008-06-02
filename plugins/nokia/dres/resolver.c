@@ -274,7 +274,8 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     int               offs;
     int               success;
     
-    *ret = NULL;
+    if (ret != NULL)
+        *ret = NULL;
 
     factc = action->nargument - 2;
 
@@ -456,7 +457,8 @@ echo_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
     DEBUG("%s", buf);
 
-    *ret = NULL;
+    if (ret != NULL)
+        *ret = NULL;
 
     return 0;
 
