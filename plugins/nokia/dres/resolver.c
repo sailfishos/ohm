@@ -116,9 +116,10 @@ plugin_init(OhmPlugin *plugin)
     if (dres_parse_file(dres, DRES_RULE_PATH))
         FAIL("failed to parse DRES rule file \"%s\"", DRES_RULE_PATH);
 
+    dres_dump_targets(dres);
+
     if (prolog_setup(extensions, rules) != 0)
         FAIL("failed to load extensions and rules to prolog interpreter");
-
 
     if (console_init("127.0.0.1:2000"))
         g_warning("resolver plugin: failed to open console");
@@ -186,6 +187,64 @@ OHM_EXPORTABLE(int, update_goal, (char *goal, char **locals))
  *                          *** DRES action handlers ***                     *
  *****************************************************************************/
 
+
+/********************
+ * action_argument
+ ********************/
+static char *
+action_argument(dres_t *dres, int argument)
+{
+    dres_variable_t *var;
+    char             name[64], *value;
+
+    
+    dres_name(dres, argument, name, sizeof(name));
+        
+    switch (name[0]) {
+    case '$':
+        if ((var = dres_lookup_variable(dres, argument)) == NULL ||
+            !dres_var_get_field(var->var, DRES_VAR_FIELD, NULL,
+                                VAR_STRING, &value))
+            return NULL;
+        return value;
+        
+    case '&':
+        if ((value = dres_scope_getvar(dres->scope, name + 1)) == NULL)
+            return NULL;
+        return value;
+        
+    case '<':
+        return NULL;
+        
+    default:
+        return STRDUP(name);
+    }
+}
+
+/********************
+ * action_arguments
+ ********************/
+static int
+action_arguments(dres_t *dres, dres_action_t *action, char **args, int narg)
+{
+    int i;
+    
+    for (i = 1; i < action->nargument; i++)
+        if ((args[i-1] = action_argument(dres, action->arguments[i])) == NULL)
+            goto fail;
+
+    return i;
+    
+ fail:
+    narg = i;
+    for (i = 0; narg - 1; i++)
+        if (args[i] != NULL)
+            FREE(args[i]);
+    
+    return -1;
+}
+
+
 /********************
  * prolog_handler
  ********************/
@@ -199,19 +258,31 @@ prolog_handler(dres_t *dres, char *actname, dres_action_t *action, void **ret)
     char             ***retval;
     OhmFact           **facts = NULL;
     int                 nfact, err;
+    char               *args[32];
+    int                 i, narg;
     
     if (action->nargument < 1)
         return EINVAL;
+
+    narg = 0;
 
     name[0] = '\0';
     dres_name(dres, action->arguments[0], name, sizeof(name));
     
     if ((predicate = prolog_lookup(name, action->nargument)) == NULL)
         FAIL(ENOENT);
-    
+
+    if ((narg = action_arguments(dres, action, args, narg)) < 0)
+        FAIL(EINVAL);
+
+#if 0
     if (!prolog_invoke(predicate, &retval))
         FAIL(EINVAL);
-    
+#else
+    if (!prolog_ainvoke(predicate, &retval, (void **)args, narg))
+        FAIL(EINVAL);
+#endif
+
     DEBUG("rule engine gave the following results:");
     prolog_dump(retval);
 
@@ -231,11 +302,12 @@ prolog_handler(dres_t *dres, char *actname, dres_action_t *action, void **ret)
     
  fail:
     if (facts) {
-        int i;
         for (i = 0; i < nfact; i++)
             g_object_unref(facts[i]);
         FREE(facts);
     }
+    for (i = 0; i < narg; i++)
+        FREE(args[i]);
     
     return err;
 
@@ -384,13 +456,6 @@ static void dump_signal_changed_args(char *signame, int transid, int factc,
 
 
 
-/*****************************************************************************
- *                        *** misc. helper routines ***                      *
- *****************************************************************************/
-
-
-
-
 #include "console.c"
 #include "factstore.c"
  
@@ -427,14 +492,7 @@ OHM_PLUGIN_REQUIRES_METHODS(dres, 15,
     OHM_IMPORT("console.ungrab"       , console_ungrab),
     OHM_IMPORT("signaling.signal_changed", signal_changed)
 );
-    
-#if 0
-int signal_changed(char *signame, int transid, int factc, char**factv,
-                   completion_cb_t callback, unsigned long timeout)
-{
-    return TRUE;
-}
-#endif
+
                             
 
 /* 
