@@ -60,6 +60,8 @@ static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
+static int  echo_handler   (dres_t *dres,
+                            char *name, dres_action_t *action, void **ret);
 static void dump_signal_changed_args(char *signame, int transid, int factc,
                                      char**factv, completion_cb_t callback,
                                      unsigned long timeout);
@@ -108,13 +110,16 @@ plugin_init(OhmPlugin *plugin)
         FAIL("failed to initialize DRES library");
     
     if (dres_register_handler(dres, "prolog", prolog_handler) != 0)
-        FAIL("failed to register DRES prolog handler");
+        FAIL("failed to register RESOLVE prolog handler");
 
     if (dres_register_handler(dres, "signal_changed", signal_handler) != 0)
-        FAIL("failed to register DRES signal_changed handler");
+        FAIL("failed to register RESOLVE signal_changed handler");
+
+    if (dres_register_handler(dres, "echo", echo_handler) != 0)
+        FAIL("failed to register RESOLVE echo handler");
 
     if (dres_parse_file(dres, DRES_RULE_PATH))
-        FAIL("failed to parse DRES rule file \"%s\"", DRES_RULE_PATH);
+        FAIL("failed to parse RESOLVE rule file \"%s\"", DRES_RULE_PATH);
 
     if (prolog_setup(extensions, rules) != 0)
         FAIL("failed to load extensions and rules to prolog interpreter");
@@ -296,7 +301,7 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
     case '&':
         cb_name = "";
-        if (!(var = dres_lookup_variable(dres, action->arguments[1]))) {
+        if ((var = dres_lookup_variable(dres, action->arguments[1]))) {
             dres_var_get_field(var->var, "value",NULL, VAR_STRING, &cb_name);
         }
         break;
@@ -323,7 +328,7 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
         case '&':
             factv[i] = "";
 
-            if (!(var = dres_lookup_variable(dres, action->arguments[i+2]))) {
+            if ((var = dres_lookup_variable(dres, action->arguments[i+2]))) {
                 dres_var_get_field(var->var, "value", NULL,
                                    VAR_STRING, &factv[i]);
             }
@@ -384,6 +389,73 @@ static void dump_signal_changed_args(char *signame, int transid, int factc,
 
 
 
+/********************
+ * echo_handler
+ ********************/
+static int
+echo_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
+{
+#define MAX_LENGTH 64
+#define PRINT(s)              \
+    do {                      \
+        int l = strlen(s);    \
+        if (l < (e-p)-1) {    \
+            strcpy(p, s);     \
+            p += l;           \
+        }                     \
+        else if (e-p > 0) {   \
+            l = (e-p) - 1;    \
+            strncpy(p, s, l); \
+            p[l] = '\0';      \
+            p += l;           \
+        }                     \
+    } while(0)
+
+    dres_variable_t *var;
+    char             arg[MAX_LENGTH];
+    char             buf[4096];
+    char            *p, *e, *str;
+    int              i;
+
+    DEBUG("echo_handler()");
+
+    buf[0] = '\0';
+
+    for (i = 0, e = (p = buf) + sizeof(buf);   i < action->nargument;    i++) {
+
+        dres_name(dres, action->arguments[i], arg, MAX_LENGTH);
+
+        switch (arg[0]) {
+
+        case '&':
+            PRINT(" ");
+            break;
+
+        case '$':
+            if ((var = dres_lookup_variable(dres, action->arguments[i])) &&
+                dres_var_get_field(var->var, "value", NULL, VAR_STRING, &str))
+                PRINT(str);
+            else
+                PRINT("???");
+            PRINT(" ");
+            break;
+
+        default:
+            PRINT(arg);
+            break;
+        }
+    }
+
+    DEBUG("%s", buf);
+
+    *ret = NULL;
+
+    return 0;
+
+#undef PRINT
+#undef MAX_LENGTH
+}
+
 /*****************************************************************************
  *                        *** misc. helper routines ***                      *
  *****************************************************************************/
@@ -411,20 +483,20 @@ OHM_PLUGIN_PROVIDES_METHODS(dres, 1,
 );
 
 OHM_PLUGIN_REQUIRES_METHODS(dres, 15,
-    OHM_IMPORT("prolog.setup"         , prolog_setup),
-    OHM_IMPORT("prolog.lookup"        , prolog_lookup),
-    OHM_IMPORT("prolog.call"          , prolog_invoke),
-    OHM_IMPORT("prolog.vcall"         , prolog_vinvoke),
-    OHM_IMPORT("prolog.acall"         , prolog_ainvoke),
-    OHM_IMPORT("prolog.free_retval"   , prolog_free),
-    OHM_IMPORT("prolog.dump_retval"   , prolog_dump),
-    OHM_IMPORT("prolog.shell"         , prolog_shell),
-    OHM_IMPORT("console.open"         , console_open),
-    OHM_IMPORT("console.close"        , console_close),
-    OHM_IMPORT("console.write"        , console_write),
-    OHM_IMPORT("console.printf"       , console_printf),
-    OHM_IMPORT("console.grab"         , console_grab),
-    OHM_IMPORT("console.ungrab"       , console_ungrab),
+    OHM_IMPORT("prolog.setup"            , prolog_setup),
+    OHM_IMPORT("prolog.lookup"           , prolog_lookup),
+    OHM_IMPORT("prolog.call"             , prolog_invoke),
+    OHM_IMPORT("prolog.vcall"            , prolog_vinvoke),
+    OHM_IMPORT("prolog.acall"            , prolog_ainvoke),
+    OHM_IMPORT("prolog.free_retval"      , prolog_free),
+    OHM_IMPORT("prolog.dump_retval"      , prolog_dump),
+    OHM_IMPORT("prolog.shell"            , prolog_shell),
+    OHM_IMPORT("console.open"            , console_open),
+    OHM_IMPORT("console.close"           , console_close),
+    OHM_IMPORT("console.write"           , console_write),
+    OHM_IMPORT("console.printf"          , console_printf),
+    OHM_IMPORT("console.grab"            , console_grab),
+    OHM_IMPORT("console.ungrab"          , console_ungrab),
     OHM_IMPORT("signaling.signal_changed", signal_changed)
 );
     
