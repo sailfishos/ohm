@@ -60,8 +60,6 @@ static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
-static int  echo_handler   (dres_t *dres,
-                            char *name, dres_action_t *action, void **ret);
 static void dump_signal_changed_args(char *signame, int transid, int factc,
                                      char**factv, completion_cb_t callback,
                                      unsigned long timeout);
@@ -115,9 +113,6 @@ plugin_init(OhmPlugin *plugin)
     if (dres_register_handler(dres, "signal_changed", signal_handler) != 0)
         FAIL("failed to register RESOLVE signal_changed handler");
 
-    if (dres_register_handler(dres, "echo", echo_handler) != 0)
-        FAIL("failed to register RESOLVE echo handler");
-
     if (dres_parse_file(dres, DRES_RULE_PATH))
         FAIL("failed to parse RESOLVE rule file \"%s\"", DRES_RULE_PATH);
 
@@ -126,7 +121,7 @@ plugin_init(OhmPlugin *plugin)
     if (prolog_setup(extensions, rules) != 0)
         FAIL("failed to load extensions and rules to prolog interpreter");
 
-    if (console_init("127.0.0.1:2000"))
+    if (console_init("127.0.0.1:3000"))
         g_warning("resolver plugin: failed to open console");
 
     if (factstore_init())
@@ -461,82 +456,6 @@ static void dump_signal_changed_args(char *signame, int transid, int factc,
 
 
 
-
-/********************
- * echo_handler
- ********************/
-static int
-echo_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
-{
-#define MAX_LENGTH 64
-#define PRINT(s)              \
-    do {                      \
-        int l = strlen(s);    \
-        if (l < (e-p)-1) {    \
-            strcpy(p, s);     \
-            p += l;           \
-        }                     \
-        else if (e-p > 0) {   \
-            l = (e-p) - 1;    \
-            strncpy(p, s, l); \
-            p[l] = '\0';      \
-            p += l;           \
-        }                     \
-    } while(0)
-
-    dres_variable_t *var;
-    char             arg[MAX_LENGTH];
-    char             buf[4096];
-    char            *p, *e, *str;
-    int              i;
-
-    DEBUG("echo_handler()");
-
-    buf[0] = '\0';
-
-    for (i = 0, e = (p = buf) + sizeof(buf);   i < action->nargument;    i++) {
-
-        dres_name(dres, action->arguments[i], arg, MAX_LENGTH);
-
-        switch (arg[0]) {
-
-        case '&':
-            if ((str = dres_scope_getvar(dres->scope, arg+1)) == NULL)
-                PRINT("???");
-            else {
-                PRINT(str);
-                free(str);
-            }
-            break;
-
-        case '$':
-            if (!(var = dres_lookup_variable(dres, action->arguments[i])) ||
-                !dres_var_get_field(var->var, "value", NULL, VAR_STRING, &str))
-                PRINT("???");
-            else {
-                PRINT(str);
-                free(str);
-            }
-            break;
-
-        default:
-            PRINT(arg);
-            break;
-        }
-
-        PRINT(" ");
-    }
-
-    DEBUG("%s", buf);
-
-    if (ret != NULL)
-        *ret = NULL;
-
-    return 0;
-
-#undef PRINT
-#undef MAX_LENGTH
-}
 
 /*****************************************************************************
  *                        *** misc. helper routines ***                      *
