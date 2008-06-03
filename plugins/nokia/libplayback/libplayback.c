@@ -1,14 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include <glib.h>
 #include <glib-object.h>
 #include <gmodule.h>
 #include <ohm-plugin.h>
-#include <dbus/dbus.h>
 
 #include "libplayback.h"
+
+#ifndef DEBUG
+#define DEBUG(fmt, args...) do {                                        \
+        printf("[%s] "fmt"\n", __FUNCTION__, ## args);                  \
+    } while (0)
+#endif
 
 /* D-Bus interface names */
 #define DBUS_ADMIN_INTERFACE            "org.freedesktop.DBus"
@@ -24,9 +30,15 @@
 /* D-Bus pathes */
 #define DBUS_PLAYBACK_MANAGER_PATH     "/org/maemo/Playback/Manager"
 
+/* playback request statuses */
+#define PBREQ_PENDING       1
+#define PBREQ_FINISHED      0
+#define PBREQ_ERROR        -1
 
-static DBusConnection   *sess_conn;
-static ohm_pblisthead_t  pb_head;
+
+static DBusConnection      *sess_conn;
+static ohm_pblisthead_t     pb_head;
+static ohm_pbreqlisthead_t  rq_head;
 
 OHM_IMPORTABLE(int, resolve, (char *goal, char **locals));
 
@@ -36,8 +48,14 @@ static DBusHandlerResult hello(DBusConnection *, DBusMessage *, void *);
 static void plugin_init(OhmPlugin *);
 static void plugin_destroy(OhmPlugin *);
 
-static ohm_playback_t *playback_new(const char *, const char *);
+static ohm_playback_t *playback_create(const char *, const char *);
 static ohm_playback_t *playback_find(const char *, const char *);
+
+static ohm_pbreq_t *pbreq_create(ohm_playback_t *, DBusMessage *, const char*);
+static void         pbreq_destroy(ohm_pbreq_t *);
+static ohm_pbreq_t *pbreq_get_first(void);
+static int          pbreq_process(void);
+static void         pbreq_reply(DBusMessage *, const char *);
 
 
 static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,
@@ -96,7 +114,7 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
 
         printf("Hello from %s%s\n", sender, path);
         
-        pb = playback_new(sender, path);
+        pb = playback_create(sender, path);
     }
 
     return result;
@@ -108,17 +126,14 @@ static DBusHandlerResult playback_request(DBusConnection *conn,
 {
     static const char  *stop = "Stop";
 
-    dbus_uint32_t      serial;
     const char        *msgpath;
     const char        *objpath;
     const char        *sender;
     const char        *state;
     ohm_playback_t    *pb;
-    char              *locals[9];
-    DBusMessage       *reply;
+    ohm_pbreq_t       *req;
     int                success;
     DBusHandlerResult  result;
-    int                i;
 
     success = dbus_message_is_method_call(msg, DBUS_PLAYBACK_MANAGER_INTERFACE,
                                           DBUS_PLAYBACK_REQUEST_METHOD);
@@ -128,49 +143,26 @@ static DBusHandlerResult playback_request(DBusConnection *conn,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        serial  = dbus_message_get_serial(msg);
         msgpath = dbus_message_get_path(msg);
         sender  = dbus_message_get_sender(msg);
-        reply   = dbus_message_new_method_return(msg);
+        req     = NULL;
 
         success = dbus_message_get_args(msg, NULL,
                                         DBUS_TYPE_OBJECT_PATH, &objpath,
                                         DBUS_TYPE_STRING, &state,
                                         DBUS_TYPE_INVALID);
+        if (success) {
+            if ((pb  = playback_find(sender, objpath)) != NULL &&
+                (req = pbreq_create(pb, msg, state))   != NULL    ) {
 
-        if (!success)
-            state = stop;
-        else {
-            if ((pb = playback_find(sender, objpath)) == NULL)
-                state = "Stop";
-            else {
-                /* call the dependency resolver here */
-                printf("Received playback request from %s%s %s %p\n",
-                       pb->client, pb->object, state, resolve); 
-
-                locals[i=0] = "audio_playback_request";
-                locals[++i] = (char *)state;
-                locals[++i] = "completion_callback";
-                locals[++i] = "libplayback.completion_cb";
-                locals[++i] = "audio_playback_media";
-                locals[++i] = "unknown";
-                locals[++i] = NULL;
-
-                resolve("audio_playback_request", locals);
-
-                pb->state = state;
-
+                    if (pbreq_process() != PBREQ_ERROR ||
+                        req->sts != ohm_pbreq_handled)
+                        return result;
             }
         }
 
-        success = dbus_message_append_args(reply, DBUS_TYPE_STRING,&state,
-                                           DBUS_TYPE_INVALID);
-        if (!success)
-            dbus_message_unref(msg);
-        else {
-            dbus_connection_send(sess_conn, reply, &serial);
-            dbus_message_unref(reply);
-        }
+        pbreq_reply(msg, stop);
+        pbreq_destroy(req);     /* copes with NULL */
     }
 
     return result;
@@ -256,6 +248,9 @@ static void plugin_init(OhmPlugin *plugin)
     pb_head.next = (ohm_playback_t *)&pb_head;
     pb_head.prev = (ohm_playback_t *)&pb_head;
 
+    rq_head.next = (ohm_pbreq_t *)&rq_head;
+    rq_head.prev = (ohm_pbreq_t *)&rq_head;
+
 
 #undef FILTER_SIGNAL
 }
@@ -265,9 +260,11 @@ static void plugin_destroy(OhmPlugin *plugin)
 
 }
 
-static ohm_playback_t *playback_new(const char *client, const char *object)
+static ohm_playback_t *playback_create(const char *client, const char *object)
 {
     ohm_playback_t *pb = playback_find(client, object);
+    ohm_playback_t *next;
+    ohm_playback_t *prev;
 
     if (pb == NULL) {
         if ((pb = malloc(sizeof(*pb))) != NULL) {
@@ -276,11 +273,14 @@ static ohm_playback_t *playback_new(const char *client, const char *object)
             pb->client = strdup(client);
             pb->object = strdup(object);
 
-            pb_head.prev->next = pb;
-            pb->next = (ohm_playback_t *)&pb_head;
+            next = (ohm_playback_t *)&pb_head;
+            prev = pb_head.prev;
 
-            pb->prev = pb_head.prev;
-            pb_head.prev = pb;
+            prev->next = pb;
+            pb->next   = next;
+
+            next->prev = pb;
+            pb->prev   = prev;
         }
     }
 
@@ -300,11 +300,169 @@ static ohm_playback_t *playback_find(const char *client, const char *object)
     return NULL;
 }
 
+static ohm_pbreq_t *pbreq_create(ohm_playback_t *pb, DBusMessage *msg,
+                                 const char *state)
+{
+    ohm_pbreq_t *req, *next, *prev;
+
+    if (msg == NULL)
+        req = NULL;
+    else {
+        if ((req = malloc(sizeof(*req))) != NULL) {
+            dbus_message_ref(msg);
+
+            memset(req, 0, sizeof(*req));            
+            req->pb    = pb;
+            req->sts   = ohm_pbreq_queued;
+            req->msg   = msg;
+            req->state = strdup(state);
+
+            next = (ohm_pbreq_t *)&rq_head;
+            prev = rq_head.prev;
+            
+            prev->next = req;
+            req->next  = next;
+
+            next->prev = req;
+            req->prev  = prev;
+        }
+    }
+
+    return req;
+}
+
+static void pbreq_destroy(ohm_pbreq_t *req)
+{
+    ohm_pbreq_t *prev, *next;
+
+    if (req != NULL) {
+        prev = req->prev;
+        next = req->next;
+
+        prev->next = req->next;
+        next->prev = req->prev;
+
+        if (req->msg != NULL)
+            dbus_message_unref(req->msg);
+
+        if (req->state)
+            free(req->state);
+
+        free(req);
+    }
+}
+
+static ohm_pbreq_t *pbreq_get_first(void)
+{
+    ohm_pbreq_t *req = rq_head.next;
+
+    if (req == (ohm_pbreq_t *)&rq_head)
+        req = NULL;
+
+    return req;
+}
+
+static int pbreq_process(void)
+{
+    ohm_pbreq_t *req;
+    char        *vars[9];
+    int          i;
+    int          sts;
+    int          err;
+
+    if ((req = pbreq_get_first()) == NULL)
+        sts = PBREQ_PENDING;
+    else {
+        switch (req->sts) {
+
+        case ohm_pbreq_queued:
+            vars[i=0] = "audio_playback_request";
+            vars[++i] = req->state;
+            vars[++i] = "completion_callback";
+            vars[++i] = "libplayback.completion_cb";
+            vars[++i] = "audio_playback_media";
+            vars[++i] = "unknown";
+            vars[++i] = NULL;
+                
+            if (!(err = resolve("audio_playback_request", vars))) {
+                sts = PBREQ_PENDING;
+                req->sts = ohm_pbreq_pending;
+            }
+            else {
+                DEBUG("resolve() failed: (%d) %s", err, strerror(err));
+                sts = PBREQ_ERROR;
+                req->sts = ohm_pbreq_handled;
+            }
+            break;
+
+        case ohm_pbreq_pending:
+            sts = PBREQ_PENDING;
+            break;
+
+        case ohm_pbreq_handled:
+            sts = PBREQ_FINISHED;
+            break;
+
+        default:
+            sts = PBREQ_ERROR;
+            break;
+        }
+    }
+
+    return sts;
+}
+
+static void pbreq_reply(DBusMessage *msg, const char *state)
+{
+    DBusMessage       *reply;
+    dbus_uint32_t      serial;
+    int                success;
+
+    serial = dbus_message_get_serial(msg);
+    reply  = dbus_message_new_method_return(msg);
+
+    success = dbus_message_append_args(reply, DBUS_TYPE_STRING,&state,
+                                       DBUS_TYPE_INVALID);
+    if (!success)
+        dbus_message_unref(msg);
+    else {
+        DEBUG("replying to playback request with '%s'", state);
+
+        dbus_connection_send(sess_conn, reply, &serial);
+        dbus_message_unref(reply);
+    }
+}
+
+
 OHM_EXPORTABLE(void, completion_cb, (int transid, int success))
 {
+    static char    *stop = "Stop";
+
+    ohm_pbreq_t    *req;
+    ohm_playback_t *pb;
+
     printf("*** libplayback.%s(%d, %s)\n", __FUNCTION__,
            transid, success ? "OK":"FAILED");
+
+    if ((req = pbreq_get_first()) == NULL) {
+        DEBUG("libplayback completion_cb: Can't find the request");
+        return;
+    }
+
+    if (req->sts != ohm_pbreq_pending) {
+        DEBUG("libplayback completion_cb: bad state %d", req->sts);
+        return;
+    }
+
+    pb = req->pb;
+    
+    if (pb->state != NULL)
+        free(pb->state);
+    pb->state = strdup(success ? req->state : stop);
+
+    pbreq_reply(req->msg, pb->state);
 }
+
 
 OHM_PLUGIN_REQUIRES_METHODS(libplayback, 1, 
    OHM_IMPORT("dres.resolve", resolve)
