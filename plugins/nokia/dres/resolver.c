@@ -363,11 +363,11 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
     switch (namebuf[0]) {
 
-    case '$':
-        cb_name = "";
+    case '&':
+        cb_name = dres_scope_getvar(dres->scope, namebuf+1);
         break;
 
-    case '&':
+    case '$':
         cb_name = "";
         if ((var = dres_lookup_variable(dres, action->arguments[1]))) {
             dres_var_get_field(var->var, "value",NULL, VAR_STRING, &cb_name);
