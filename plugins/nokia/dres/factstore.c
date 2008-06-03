@@ -5,8 +5,9 @@
 #define FACT_UPDATED  "updated"
 
 
-
-static void schedule_update(gpointer object, gpointer user_data);
+static void schedule_resolve(gpointer object, gpointer user_data);
+static void schedule_updated(gpointer fact, gpointer name, gpointer value,
+                             gpointer user_data);
 
 
 static guint         update;                  /* id of next update, if any */
@@ -33,9 +34,9 @@ factstore_init(void)
     
     fs = G_OBJECT(store);
     
-    g_signal_connect(fs, FACT_INSERTED, G_CALLBACK(schedule_update), NULL);
-    g_signal_connect(fs, FACT_REMOVED , G_CALLBACK(schedule_update), NULL);
-    g_signal_connect(fs, FACT_UPDATED , G_CALLBACK(schedule_update), NULL);
+    g_signal_connect(fs, FACT_INSERTED, G_CALLBACK(schedule_resolve), NULL);
+    g_signal_connect(fs, FACT_REMOVED , G_CALLBACK(schedule_resolve), NULL);
+    g_signal_connect(fs, FACT_UPDATED , G_CALLBACK(schedule_updated), NULL);
     
     return 0;
 }
@@ -53,7 +54,8 @@ factstore_exit(void)
         return;
 
     fs = G_OBJECT(store);
-    g_signal_handlers_disconnect_by_func(fs, schedule_update, NULL);
+    g_signal_handlers_disconnect_by_func(fs, schedule_resolve, NULL);
+    g_signal_handlers_disconnect_by_func(fs, schedule_updated, NULL);
 
     store = NULL;
 }
@@ -75,15 +77,26 @@ update_all(gpointer data)
 
 
 /********************
- * schedule_update
+ * schedule_resolve
  ********************/
 static void
-schedule_update(gpointer object, gpointer user_data)
+schedule_resolve(gpointer object, gpointer user_data)
 {
     printf("scheduling DRES update all...\n");
 
     if (!update)
         update = g_idle_add(update_all, NULL);
+}
+
+
+/********************
+ * schedule_updated
+ ********************/
+static void
+schedule_updated(gpointer fact, gpointer name, gpointer value,
+                 gpointer user_data)
+{
+    schedule_resolve(fact, user_data);
 }
 
 
