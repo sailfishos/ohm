@@ -233,7 +233,7 @@ command_resolve(int id, char *input)
         }
     }
     
-    console_printf(id, "updating goal \"%s\"\n");
+    console_printf(id, "updating goal \"%s\"\n", goal);
     if (args[0]) {
         console_printf(id, "  with the following arguments:\n");
         for (i = 0; args[i] != NULL; i += 2)
@@ -321,7 +321,7 @@ parse_dres_args(char *input, char **args, int narg)
 
     next = input;
     arg  = args;
-    for (i = 0; *next && i < narg; i++) {
+    for (i = 0; next && *next && i < narg; i++) {
         while (*next == ' ')
             next++;
         var = next;
