@@ -133,7 +133,7 @@ transaction_get_property(GObject *object,
             g_value_set_uint(value, t->txid);
             break;
         case PROP_TIMEOUT:
-            g_value_set_uint(value, t->txid);
+            g_value_set_uint(value, t->timeout);
             break;
         case PROP_RESPONSE_COUNT:
             g_value_set_uint(value, g_slist_length(t->acked)+g_slist_length(t->nacked));
@@ -1286,6 +1286,8 @@ process_inq(gpointer data)
             guint timeout = 0;
 
             g_object_get(t, "timeout", &timeout, NULL);
+
+            printf("setting timeout: %u\n", timeout);
             t->timeout_id = g_timeout_add(timeout, timeout_transaction, t);
         }
     }
@@ -1600,7 +1602,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
 
     const char *interface = dbus_message_get_interface(msg);
     const char *member    = dbus_message_get_member(msg);
-    const char *path      = dbus_message_get_path(msg);
+    const char *sender      = dbus_message_get_sender(msg);
 
     DBusError      error;
     dbus_uint32_t  txid, status;
@@ -1609,8 +1611,8 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     Transaction *transaction = NULL;
 
 #if 1
-    g_print("got signal %s.%s, path %s\n", interface ?: "NULL", member,
-            path ?: "NULL");
+    g_print("got signal %s.%s, sender %s\n", interface ?: "NULL", member,
+            sender ?: "NULL");
 #endif
 
     if (member == NULL || strcmp(member, "status"))
@@ -1619,7 +1621,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     if (interface == NULL || strcmp(interface, DBUS_INTERFACE_POLICY))
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-    if (path == NULL)
+    if (sender == NULL)
         return DBUS_HANDLER_RESULT_HANDLED;
 
     dbus_error_init(&error);
@@ -1646,7 +1648,9 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
 
         g_object_get(tmp, "id", &id, NULL);
 
-        if (!strcmp(id, path)) {
+        g_print("comparing id '%s' and sender '%s'\n", id, sender);
+
+        if (!strcmp(id, sender)) {
             /* we found the sender */
             ep = tmp;
             g_print("transaction 0x%x %sed by peer '%s'\n", txid,
@@ -1659,7 +1663,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     }
 
     if (ep == NULL) {
-        g_print("transaction ACK/NAK from unknown peer %s, ignored...\n", path);
+        g_print("transaction ACK/NAK from unknown peer %s, ignored...\n", sender);
         return DBUS_HANDLER_RESULT_HANDLED;
     }
 
