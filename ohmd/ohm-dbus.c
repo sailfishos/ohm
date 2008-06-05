@@ -263,12 +263,11 @@ ohm_dbus_dispatch_signal(DBusConnection * c, DBusMessage * msg, void *data)
 #endif
 
     GSList *i = NULL;
-    DBusHandlerResult retval;
-
-    if (!interface || !member || !path) {
-        return DBUS_HANDLER_RESULT_HANDLED;
-    }
-
+    DBusHandlerResult retval = DBUS_HANDLER_RESULT_HANDLED;
+    
+    if (!interface || !member || !path)
+        return retval;
+    
     for (i = dbus_signal_handlers; i != NULL; i = g_slist_next(i)) {
 
         ohm_dbus_signal_t *signal_handler = i->data;
