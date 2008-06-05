@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 
 #include <glib.h>
 #include <glib-object.h>
 #include <gmodule.h>
 #include <ohm-plugin.h>
+
+#include "prolog/ohm-fact.h"
 
 #include "libplayback.h"
 
@@ -15,6 +18,10 @@
         printf("[%s] "fmt"\n", __FUNCTION__, ## args);                  \
     } while (0)
 #endif
+
+
+/* D-Bus service names */
+#define DBUS_PLAYBACK_SERVICE          "org.maemo.Playback"
 
 /* D-Bus interface names */
 #define DBUS_ADMIN_INTERFACE            "org.freedesktop.DBus"
@@ -30,11 +37,22 @@
 /* D-Bus pathes */
 #define DBUS_PLAYBACK_MANAGER_PATH     "/org/maemo/Playback/Manager"
 
+/* FactStore prefix */
+#define FACTSTORE_PREFIX               "com.nokia.policy"
+#define FACTSTORE_PLAYBACK             FACTSTORE_PREFIX ".playback"
+
 /* playback request statuses */
 #define PBREQ_PENDING       1
 #define PBREQ_FINISHED      0
 #define PBREQ_ERROR        -1
 
+typedef void  (*property_cb_t)(ohm_playback_t *, const char *, const char *);
+typedef struct {
+    char          *client;
+    char          *object;
+    char          *prname;
+    property_cb_t  usercb;
+} property_cb_data_t;
 
 static DBusConnection      *sess_conn;
 static ohm_pblisthead_t     pb_head;
@@ -44,18 +62,36 @@ OHM_IMPORTABLE(int, resolve, (char *goal, char **locals));
 
 static DBusHandlerResult name_changed(DBusConnection *, DBusMessage *, void *);
 static DBusHandlerResult hello(DBusConnection *, DBusMessage *, void *);
+static void              set_group_cb(ohm_playback_t *, const char *,
+                                      const char *);
+static DBusHandlerResult playback_request(DBusConnection *, DBusMessage *,
+                                          void *);
 
 static void plugin_init(OhmPlugin *);
 static void plugin_destroy(OhmPlugin *);
 
 static ohm_playback_t *playback_create(const char *, const char *);
+static void            playback_destroy(ohm_playback_t *);
 static ohm_playback_t *playback_find(const char *, const char *);
+static void            playback_purge(const char *);
+static int             playback_add_factsore_entry(const char *, const char *);
+static void            playback_delete_factsore_entry(ohm_playback_t *);
+static OhmFact        *playback_find_factstore_entry(ohm_playback_t *);
+static void            playback_update_factsore_entry(ohm_playback_t *, char *,
+                                                      char *);
+static void            playback_request_property(ohm_playback_t *, char *,
+                                                 property_cb_t);
+static void            playback_receive_property(DBusPendingCall *, void *);
+static void            playback_free_property_cb_data(void *);
 
 static ohm_pbreq_t *pbreq_create(ohm_playback_t *, DBusMessage *, const char*);
 static void         pbreq_destroy(ohm_pbreq_t *);
 static ohm_pbreq_t *pbreq_get_first(void);
 static int          pbreq_process(void);
 static void         pbreq_reply(DBusMessage *, const char *);
+static void         pbreq_purge(ohm_playback_t *);
+
+static int          playback_resolve_request(ohm_playback_t *, char *, int);
 
 
 static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,
@@ -83,8 +119,8 @@ static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,
 
         if (success && sender != NULL && before != NULL) {
             if (!after || !strcmp(after, "")) {
-                /* a libplayback client went away, unregister it */
-                printf("client %s is gone\n", sender);
+                DEBUG("client %s is gone", sender);
+                playback_purge(sender);
             }
         }
     }
@@ -112,13 +148,43 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
         path   = dbus_message_get_path(msg);
         sender = dbus_message_get_sender(msg);
 
-        printf("Hello from %s%s\n", sender, path);
+        DEBUG("Hello from %s%s", sender, path);
         
         pb = playback_create(sender, path);
+
+        playback_request_property(pb, "Class", set_group_cb);
     }
 
     return result;
 }
+
+void set_group_cb(ohm_playback_t *pb, const char *prname, const char *prvalue)
+{
+    static struct {char *klass; char *group;}  map[] = {
+        {"None"      , "othermedia"},
+        {"Test"      , "othermedia"},
+        {"Event"     , "ringtone"  },
+        {"VoIP"      , "ipcall"    },
+        {"Media"     , "player"    },
+        {"Background", "othermedia"},
+        {NULL        , "othermedia"}
+    };
+
+    int i;
+
+    for (i = 0;   map[i].klass != NULL;   i++) {
+        if (!strcmp(prvalue, map[i].klass))
+            break;
+    }
+
+    pb->group = strdup(map[i].group);
+    playback_update_factsore_entry(pb, "group", pb->group);
+
+    DEBUG("playback group is set to %s", pb->group);
+
+    pbreq_process();
+}
+
 
 static DBusHandlerResult playback_request(DBusConnection *conn,
                                           DBusMessage    *msg,
@@ -281,10 +347,46 @@ static ohm_playback_t *playback_create(const char *client, const char *object)
 
             next->prev = pb;
             pb->prev   = prev;
+
+            if (playback_add_factsore_entry(client, object))
+                DEBUG("playback %s%s created", client, object);
+            else {
+                playback_destroy(pb);
+                pb = NULL;
+            }
         }
     }
 
     return pb;
+}
+
+static void playback_destroy(ohm_playback_t *pb)
+{
+    ohm_playback_t *prev, *next;
+
+    if (pb != NULL) {
+        DEBUG("playback %s%s going to be destroyed", pb->client, pb->object);
+
+        playback_delete_factsore_entry(pb);
+        pbreq_purge(pb);
+
+        if (pb->client)
+            free(pb->client);
+
+        if (pb->object)
+            free(pb->object);
+
+        if (pb->group)
+            free(pb->group);
+
+        next = pb->next;
+        prev = pb->prev;
+
+        prev->next = pb->next;
+        next->prev = pb->prev;
+
+        free(pb);
+    }
 }
 
 static ohm_playback_t *playback_find(const char *client, const char *object)
@@ -299,6 +401,221 @@ static ohm_playback_t *playback_find(const char *client, const char *object)
     
     return NULL;
 }
+
+static void playback_purge(const char *client)
+{
+    ohm_playback_t *pb, *nxpb;
+
+    for (pb = pb_head.next;  pb != (ohm_playback_t *)&pb_head;  pb = nxpb) {
+        nxpb = pb->next;
+
+        if (!strcmp(client, pb->client))
+            playback_destroy(pb);
+    }
+}
+
+static int playback_add_factsore_entry(const char *client, const char *object)
+{
+    OhmFactStore   *fs;
+    OhmFact        *fact;
+    GValue          gval;
+
+    fs = ohm_fact_store_get_fact_store();
+    fact = ohm_fact_new(FACTSTORE_PLAYBACK);
+
+    gval = ohm_value_from_string(client);
+    ohm_fact_set(fact, "client", &gval);
+    
+    gval = ohm_value_from_string(object);
+    ohm_fact_set(fact, "object", &gval);
+
+    gval = ohm_value_from_string("othermedia");
+    ohm_fact_set(fact, "group", &gval);
+
+    gval = ohm_value_from_string("none");
+    ohm_fact_set(fact, "state", &gval);
+
+    if (ohm_fact_store_insert(fs, fact))
+        DEBUG("factstore entry %s created", FACTSTORE_PLAYBACK);
+    else {
+        DEBUG("Can't add %s to factsore", FACTSTORE_PLAYBACK);
+        return FALSE;
+    }
+    
+    return TRUE;
+}
+
+static void playback_delete_factsore_entry(ohm_playback_t *pb)
+{
+    OhmFactStore *fs;
+    OhmFact      *fact;
+
+    fs = ohm_fact_store_get_fact_store();
+
+    if ((fact = playback_find_factstore_entry(pb)) != NULL) {
+        ohm_fact_store_remove(fs, fact);
+
+        g_object_unref(fact);
+
+        DEBUG("Factstore entry %s deleted", FACTSTORE_PLAYBACK);
+    }
+}
+
+static OhmFact *playback_find_factstore_entry(ohm_playback_t *pb)
+{
+    OhmFactStore *fs;
+    OhmFact      *fact;
+    GSList       *list;
+    GValue       *gval;
+
+    if (pb != NULL) {
+        fs = ohm_fact_store_get_fact_store();
+
+        for (list  = ohm_fact_store_get_facts_by_name(fs, FACTSTORE_PLAYBACK);
+             list != NULL;
+             list  = g_slist_next(list))
+        {
+            fact = (OhmFact *)list->data;
+
+            if ((gval = ohm_fact_get(fact, "client")) == NULL ||
+                strcmp(pb->client, g_value_get_string(gval))     )
+                continue;
+                
+            if ((gval = ohm_fact_get(fact, "object")) == NULL ||
+                strcmp(pb->object, g_value_get_string(gval))     )
+                continue;
+            
+            return fact;
+        }
+    }
+
+    return NULL;
+}
+
+static void playback_update_factsore_entry(ohm_playback_t *pb, char *member,
+                                           char *value)
+{
+    OhmFact *fact;
+    GValue   gval;
+
+    if ((fact = playback_find_factstore_entry(pb)) && member && value) {
+
+        gval = ohm_value_from_string(value);
+        ohm_fact_set(fact, member, &gval);
+
+        DEBUG("Factstore entry update %s[client:%s,object:%s].%s = %s",
+              FACTSTORE_PLAYBACK, pb->client, pb->object, member, value);
+    }
+}
+
+static void playback_request_property(ohm_playback_t *pb, char *prname,
+                                      property_cb_t usercb)
+{
+    static char        *ifname = DBUS_PLAYBACK_INTERFACE;
+
+    DBusMessage        *msg;
+    DBusPendingCall    *pend;
+    property_cb_data_t *ud;
+    int                 success;
+
+    msg = dbus_message_new_method_call(DBUS_PLAYBACK_SERVICE,
+                                       pb->object,
+                                       DBUS_INTERFACE_PROPERTIES,
+                                       "Get");
+    if (msg == NULL) {
+        DEBUG("Failed to create D-Dbus message to request properties");
+        return;
+    }
+
+    success = dbus_message_append_args(msg,
+                                       DBUS_TYPE_STRING, &ifname,
+                                       DBUS_TYPE_STRING, &prname,
+                                       DBUS_TYPE_INVALID);
+    if (!success) {
+        DEBUG("Can't setup D-Bus message to request properties");
+        goto failed;
+    }
+    
+    if ((ud = malloc(sizeof(*ud))) == NULL) {
+        DEBUG("Failed to allocate memory for callback data");
+        goto failed;
+    }
+
+    memset(ud, 0, sizeof(*ud));
+    ud->client = strdup(pb->client);
+    ud->object = strdup(pb->object);
+    ud->prname = strdup(prname);
+    ud->usercb = usercb;
+
+    success = dbus_connection_send_with_reply(sess_conn, msg, &pend, 1000);
+    if (!success) {
+        DEBUG("Failed to query properties");
+        goto failed;
+    }
+
+    success = dbus_pending_call_set_notify(pend, playback_receive_property,
+                                           ud, playback_free_property_cb_data);
+    if (!success) {
+        DEBUG("Can't set notification for pending call");
+    }
+
+    return;
+
+ failed:
+    dbus_message_unref(msg);
+    return;
+}
+
+static void playback_receive_property(DBusPendingCall *pend, void *data)
+{
+    property_cb_data_t *cbd = (property_cb_data_t *)data;
+    DBusMessage        *reply;
+    ohm_playback_t     *pb;
+    const char         *prvalue;
+    int                 success;
+
+    if ((reply = dbus_pending_call_steal_reply(pend)) == NULL || cbd == NULL) {
+        DEBUG("Property receiving failed: invalid argument");
+        return;
+    }
+
+    if ((pb = playback_find(cbd->client, cbd->object)) == NULL) {
+        DEBUG("Property receiving failed: playback is gone");
+        return;
+    }
+
+    success = dbus_message_get_args(reply, NULL,
+                                    DBUS_TYPE_STRING, &prvalue,
+                                    DBUS_TYPE_INVALID);
+    if (!success) {
+        DEBUG("Failed to parse property reply message");
+        return;
+    }
+
+    DEBUG("Received property %s=%s", cbd->prname, prvalue);
+
+    if (cbd->usercb != NULL)
+        cbd->usercb(pb, cbd->prname, prvalue);
+
+    dbus_message_unref(reply);
+}
+
+static void playback_free_property_cb_data(void *memory)
+{
+    property_cb_data_t *cbd = (property_cb_data_t *)memory;
+
+    DEBUG("Freeing property callback data");
+
+    if (cbd != NULL) {
+        free(cbd->client);
+        free(cbd->object);
+        free(cbd->prname);
+
+        free(cbd);
+    }
+}
+
+
 
 static ohm_pbreq_t *pbreq_create(ohm_playback_t *pb, DBusMessage *msg,
                                  const char *state)
@@ -364,48 +681,51 @@ static ohm_pbreq_t *pbreq_get_first(void)
 
 static int pbreq_process(void)
 {
-    ohm_pbreq_t *req;
-    char        *vars[9];
-    int          i;
-    int          sts;
-    int          err;
+    ohm_pbreq_t    *req;
+    ohm_playback_t *pb;
+    int             sts;
+    char            state[64];
+    char           *p, *q, *e, c;
 
     if ((req = pbreq_get_first()) == NULL)
         sts = PBREQ_PENDING;
     else {
-        switch (req->sts) {
+        pb = req->pb;
 
-        case ohm_pbreq_queued:
-            vars[i=0] = "audio_playback_request";
-            vars[++i] = req->state;
-            vars[++i] = "completion_callback";
-            vars[++i] = "libplayback.completion_cb";
-            vars[++i] = "audio_playback_media";
-            vars[++i] = "unknown";
-            vars[++i] = NULL;
-                
-            if (!(err = resolve("audio_playback_request", vars))) {
-                sts = PBREQ_PENDING;
-                req->sts = ohm_pbreq_pending;
-            }
-            else {
-                DEBUG("resolve() failed: (%d) %s", err, strerror(err));
-                sts = PBREQ_ERROR;
-                req->sts = ohm_pbreq_handled;
-            }
-            break;
-
-        case ohm_pbreq_pending:
+        if (pb->group == NULL)
             sts = PBREQ_PENDING;
-            break;
+        else {
+            p = req->state;
+            e = (q = state) + sizeof(state) - 1;
+            while ((c = *p++) && q < e)
+                *q++ = tolower(c);
+            *q = '\0';
 
-        case ohm_pbreq_handled:
-            sts = PBREQ_FINISHED;
-            break;
+            switch (req->sts) {
 
-        default:
-            sts = PBREQ_ERROR;
-            break;
+            case ohm_pbreq_queued:
+                if (playback_resolve_request(pb, state, TRUE)) {
+                    sts = PBREQ_PENDING;
+                    req->sts = ohm_pbreq_pending;
+                }
+                else {
+                    sts = PBREQ_ERROR;
+                    req->sts = ohm_pbreq_handled;
+                }
+                break;
+
+            case ohm_pbreq_pending:
+                sts = PBREQ_PENDING;
+                break;
+                
+            case ohm_pbreq_handled:
+                sts = PBREQ_FINISHED;
+                break;
+                
+            default:
+                sts = PBREQ_ERROR;
+                break;
+            }
         }
     }
 
@@ -429,10 +749,51 @@ static void pbreq_reply(DBusMessage *msg, const char *state)
         DEBUG("replying to playback request with '%s'", state);
 
         dbus_connection_send(sess_conn, reply, &serial);
+#if 0
         dbus_message_unref(reply);
+#endif
     }
 }
 
+static void pbreq_purge(ohm_playback_t *pb)
+{
+    ohm_pbreq_t *req, *nxreq;
+
+    for (req = rq_head.next; req != (ohm_pbreq_t *)&rq_head; req = nxreq) {
+        nxreq = req->next;
+
+        if (pb == req->pb)
+            pbreq_destroy(req);
+    }
+}
+
+static int playback_resolve_request(ohm_playback_t *pb, char *state, int cb)
+{
+    char *vars[32];
+    int   i;
+    int   err;
+
+    playback_update_factsore_entry(pb, "state", state);
+
+    vars[i=0] = "playback_state";
+    vars[++i] = state;
+    vars[++i] = "playback_group";
+    vars[++i] = pb->group;
+    vars[++i] = "playback_media";
+    vars[++i] = "unknown";
+
+    if (cb) {
+        vars[++i] = "completion_callback";
+        vars[++i] = "libplayback.completion_cb";
+    }
+
+    vars[++i] = NULL;
+
+    if ((err = resolve("audio_playback_request", vars)) != 0)
+        DEBUG("resolve() failed: (%d) %s", err, strerror(err));
+
+    return err ? FALSE : TRUE;
+}
 
 OHM_EXPORTABLE(void, completion_cb, (int transid, int success))
 {
@@ -461,6 +822,7 @@ OHM_EXPORTABLE(void, completion_cb, (int transid, int success))
     pb->state = strdup(success ? req->state : stop);
 
     pbreq_reply(req->msg, pb->state);
+    pbreq_destroy(req);
 }
 
 

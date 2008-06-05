@@ -15,6 +15,7 @@ typedef struct ohm_playback_s {
     OHM_PLAYBACK_LIST;
     char           *client;       /* D-Bus id of the client */
     char           *object;       /* path of the playback object */
+    char           *group;
     char           *state;
     struct {
         int play;
