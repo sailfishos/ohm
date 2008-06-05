@@ -367,7 +367,7 @@ set_fact(int cid, char *buf)
                     
                 if ((n = find_facts(name, selector, facts, n)) < 0)
                     console_printf(cid, "no fact matches %s[%s]\n",
-                                   name, selector ?: "");
+                                   name, selector);
                 else {
                     int i;
                     for (i = 0; i < n; i++) {
