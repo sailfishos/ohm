@@ -2,12 +2,13 @@ SUBDIRS = 				\
 	ohmd				\
 	po				\
 	initscript			\
-	docs				\
 	libohm				\
 	libidletime			\
 	tools				\
 	etc				\
 	plugins
+#	docs
+
 
 pkgconfigdir = ${libdir}/pkgconfig
 pkgconfig_DATA = ohm.pc
