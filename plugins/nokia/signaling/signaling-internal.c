@@ -399,7 +399,7 @@ send_ipc_signal(gpointer data)
     char           *path = DBUS_PATH_POLICY "/decision";
     char           *interface = DBUS_INTERFACE_POLICY;
 
-    DBusMessage    *sig;
+    DBusMessage    *sig = NULL;
     
     /* this is ridiculous */
     DBusMessageIter message_iter,
