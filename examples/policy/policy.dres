@@ -1,0 +1,88 @@
+PREFIX = com.nokia.policy
+
+# accessories
+$accessories  = { device: ihf          , state: 1 }
+$accessories += { device: earpiece     , state: 1 }
+$accessories += { device: microphone   , state: 1 }
+$accessories += { device: bluetooth    , state: 0 }
+$accessories += { device: headset      , state: 0 }
+$accessories += { device: headphone    , state: 0 }
+$accessories += { device: headmike     , state: 0 }
+$accessories += { device: ihfandheadset, state: 0 }
+
+# audio rouring
+$audio_route  = { type: source, device: microphone }
+$audio_route += { type: sink  , device: ihf        }
+
+
+# active policy groups
+$audio_active_policy_group  = { group: othermedia, state: 1 }
+$audio_active_policy_group += { group: fmradio   , state: 0 }
+$audio_active_policy_group += { group: player    , state: 0 }
+$audio_active_policy_group += { group: ipcall    , state: 0 }
+$audio_active_policy_group += { group: cscall    , state: 0 }
+$audio_active_policy_group += { group: ringtone  , state: 0 }
+
+# audio corking
+$audio_cork  = { group: othermedia, cork: uncorked }
+$audio_cork += { group: fmradio   , cork: uncorked }
+$audio_cork += { group: player    , cork: uncorked }
+$audio_cork += { group: ipcall    , cork: uncorked }
+$audio_cork += { group: cscall    , cork: uncorked }
+$audio_cork += { group: ringtone  , cork: uncorked }
+
+# volume limits
+$volume_limit  = { group: othermedia, limit: 100 }
+$volume_limit += { group: fmradio   , limit: 100 }
+$volume_limit += { group: player    , limit: 100 }
+$volume_limit += { group: ipcall    , limit: 100 }
+$volume_limit += { group: cscall    , limit: 100 }
+$volume_limit += { group: ringtone  , limit: 100 }
+
+$audio_playback_request = { value: }
+$audio_playback         = { value: }
+$cpu_load               = { value: }
+$privacy_override       = { value: default }
+$current_profile        = { value: general }
+$temperature            = { value: }
+$cpu_frequency          = { value: }
+$max_cpu_frequency      = { value: }
+$min_cpu_frequency      = { value: }
+$idle                   = { value: }
+$battery                = { value: }
+$sleeping_state         = { value: }
+$sleeping_request       = { value: }
+
+all: sleeping_state cpu_frequency audio_route audio_volume_limit audio_cork
+	signal_changed(audio_policy, &completion_callback, audio_route, volume_limit, audio_cork)
+
+sleeping_state: $sleeping_request $battery $idle
+	$sleeping_state = prolog(set_sleeping_state, &sleeping_request, \
+                                 $battery, $idle)
+
+cpu_frequency: sleeping_state $min_cpu_frequency $max_cpu_frequency \
+			$battery $temperature
+	$cpu_frequency[type:arm] = prolog(set_cpu_frequency, &min_cpu_frequency, &max_cpu_frequency)
+
+audio_route: $current_profile $privacy_override $accessories \
+             $audio_active_policy_group
+	$audio_route = prolog(set_routes)
+
+audio_volume_limit: audio_route $audio_active_policy_group
+	$volume_limit = prolog(set_volume_limits)
+
+audio_cork: audio_route $audio_active_policy_group
+	$audio_cork = prolog(set_corks)
+
+audio_playback_request:
+	echo(audio_playback_request, &playback_state, &completion_callback, \
+	     &playback_group, &playback_media)
+	$audio_active_policy_group = prolog(playback_request, &playback_group,\
+	                                    &playback_state, &playback_media)
+	resolve(all, &completion_callback=&completion_callback)
+
+#
+#wlancheck:
+#	&netdev[type:WLAN].status = prolog(wlancheck, \
+#	                                   $wlandevice[type: WLAN, status: 1])
+
