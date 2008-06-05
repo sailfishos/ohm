@@ -61,7 +61,7 @@ class EventScheduler(threading.Thread):
 class ExternalEnforcementPoint(dbus.service.Object):
 
     def __init__(self):
-        self.event_scheduler =  EventScheduler();
+        self.event_scheduler = EventScheduler();
 
         self.bus = dbus.SystemBus()
 

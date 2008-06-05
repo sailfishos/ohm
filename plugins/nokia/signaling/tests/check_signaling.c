@@ -373,8 +373,6 @@ static void test_timeout_ack(Transaction *t, gchar *uri, guint ack, gpointer dat
     return;
 }
 
-GObject *o;
-
 static void test_timeout_complete(Transaction *t, gpointer data) {
 
     guint txid;
@@ -437,6 +435,7 @@ static void test_timeout_complete(Transaction *t, gpointer data) {
     
     return;
 }
+
 START_TEST (test_signaling_timeout)
 
     DBusError error;
@@ -454,9 +453,9 @@ START_TEST (test_signaling_timeout)
 
     /* Register the signal handlers */
 
-    g_signal_connect(o, "on-ack-received", G_CALLBACK(test_timeout_ack), NULL);
+    g_signal_connect(test_transaction_object, "on-ack-received", G_CALLBACK(test_timeout_ack), NULL);
 
-    g_signal_connect(o, "on-transaction-complete", G_CALLBACK(test_timeout_complete), NULL);
+    g_signal_connect(test_transaction_object, "on-transaction-complete", G_CALLBACK(test_timeout_complete), NULL);
 
     g_main_loop_run(loop);
 

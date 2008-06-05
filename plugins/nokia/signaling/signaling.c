@@ -91,9 +91,6 @@ static void complete(Transaction *t, gpointer data)
 OHM_EXPORTABLE(int, signal_changed, (char *signal, int transid, int factc, char **factv, completion_cb_t callback, unsigned long timeout))
 {
 
-#if 0
-    OhmFactStore *fs;
-#endif
     Transaction *t = NULL;
     GSList *facts = NULL;
     int i;
@@ -103,31 +100,9 @@ OHM_EXPORTABLE(int, signal_changed, (char *signal, int transid, int factc, char 
     printf("signaling.signal_changed: signal '%s' with txid '%i', factcount '%i' with timeout '%li', %s a callback\n",
             signal, transid, factc, timeout, callback ? "requires" : "doesn't require");
 
-#if 1 
     for (i = 0; i < factc; i++) {
         facts = g_slist_prepend(facts, g_strdup(factv[i]));
     }
-
-#else
-
-    fs = ohm_fact_store_get_fact_store();
-    if (fs == NULL)
-        goto error;
-
-    for (i = 0; i < factc; i++) {
-        GSList *tmp = ohm_fact_store_get_facts_by_name(fs, factv[i]);
-        if (tmp != NULL) {
-            fact *f = g_new(fact, 1);
-            f->key = g_strdup(factv[i]);
-            printf("got fact %s\n", f->key);
-            f->values = tmp;
-            facts = g_slist_prepend(facts, f);
-        }
-        else {
-            printf("did not get any facts for key %s\n", factv[i]);
-        }
-    }
-#endif
 
     if (callback == NULL) {
         queue_decision(facts, 0, FALSE, 0);

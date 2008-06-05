@@ -58,21 +58,12 @@ void free_facts(GSList *facts)
 {
 
     GSList *i;
-#if 0
 
-    for (i = facts; i != NULL; i = g_slist_next(i)) {
-        fact *e = i->data;
-        g_free(e->key);
-        /* FIXME; unref the OhmFacts? */
-        g_slist_free(e->values);
-    }
-#else
     for (i = facts; i != NULL; i = g_slist_next(i)) {
         g_free(i->data);
     }
-#endif
-
     g_slist_free(facts);
+
     return;
 }
 
@@ -142,7 +133,7 @@ transaction_get_property(GObject *object,
             g_value_set_uint(value, t->txid);
             break;
         case PROP_TIMEOUT:
-            g_value_set_uint(value, t->txid);
+            g_value_set_uint(value, t->timeout);
             break;
         case PROP_RESPONSE_COUNT:
             g_value_set_uint(value, g_slist_length(t->acked)+g_slist_length(t->nacked));
@@ -349,8 +340,9 @@ internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
     return TRUE;
 }
 
-static int map_to_dbus_type(GValue *gval, gchar *sig, void **value) {
-    /* sig is of size 2! */
+    static int
+map_to_dbus_type(GValue *gval, gchar *sig, void **value)
+{
 
     int retval;
     gint i, *pi;
@@ -421,34 +413,37 @@ send_ipc_signal(gpointer data)
     }
 
 /**
- *
  * This is really complicatad and nasty. Idea is that the message is
  * supposed to look something like this:
  *
- *    uint32 0
+ * uint32 0
+ * array [
+ *    dict entry(
+ *       string "com.nokia.policy.audio_route"
  *       array [
- *         dict entry(
- *            string "com.nokia.policy.audio_route"
- *            array [
- *              dict entry(
- *                 string "type"
- *                 variant                   string "source"
- *              )
- *              dict entry(
- *                 string "device"
- *                 variant                   string "headset"
- *              )
- *              dict entry(
- *                 string "type"
- *                 variant                   string "sink"
- *              )
- *              dict entry(
- *                 string "device"
- *                 variant                   string "headset"
- *              )
- *            ]
- *         )
+ *          array [
+ *             struct {
+ *                string "type"
+ *                variant                      string "source"
+ *             }
+ *             struct {
+ *                string "device"
+ *                variant                      string "headset"
+ *             }
+ *          ]
+ *          array [
+ *             struct {
+ *                string "type"
+ *                variant                      string "sink"
+ *             }
+ *             struct {
+ *                string "device"
+ *                variant                      string "headset"
+ *             }
+ *          ]
  *       ]
+ *    )
+ * ]
  *
  */
 
@@ -1291,6 +1286,8 @@ process_inq(gpointer data)
             guint timeout = 0;
 
             g_object_get(t, "timeout", &timeout, NULL);
+
+            printf("setting timeout: %u\n", timeout);
             t->timeout_id = g_timeout_add(timeout, timeout_transaction, t);
         }
     }
@@ -1431,24 +1428,9 @@ register_external_enforcement_point(DBusConnection * c, DBusMessage * msg,
         goto err;
     }
     
-#if 0
-    ret = dbus_message_get_args(msg,
-            NULL,
-            DBUS_TYPE_STRING,
-            &uri,
-            DBUS_TYPE_INVALID);
-
-    if (!ret || uri == NULL) {
-        goto err;
-    }
-
-    /* register an external enforcement_point (no need to take the
-     * reference) */
-    ep = register_enforcement_point(uri, FALSE);
-#else
     uri = dbus_message_get_sender(msg);
     ep = register_enforcement_point(uri, FALSE);
-#endif
+
     if (ep == NULL) {
         reply = dbus_message_new_error(msg,
                 DBUS_ERROR_FAILED,
@@ -1496,21 +1478,7 @@ unregister_external_enforcement_point(DBusConnection * c, DBusMessage * msg,
         goto err;
     }
     
-#if 0
-    ret = dbus_message_get_args(msg,
-            NULL,
-            DBUS_TYPE_STRING,
-            &uri,
-            DBUS_TYPE_INVALID);
-
-    if (!ret || uri == NULL) {
-        goto err;
-    }
-
-    /* unregister an external enforcement_point */
-#else
     uri = dbus_message_get_sender(msg);
-#endif
 
     ret = unregister_enforcement_point(uri);
     if (!ret) {
@@ -1634,7 +1602,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
 
     const char *interface = dbus_message_get_interface(msg);
     const char *member    = dbus_message_get_member(msg);
-    const char *path      = dbus_message_get_path(msg);
+    const char *sender      = dbus_message_get_sender(msg);
 
     DBusError      error;
     dbus_uint32_t  txid, status;
@@ -1643,8 +1611,8 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     Transaction *transaction = NULL;
 
 #if 1
-    g_print("got signal %s.%s, path %s\n", interface ?: "NULL", member,
-            path ?: "NULL");
+    g_print("got signal %s.%s, sender %s\n", interface ?: "NULL", member,
+            sender ?: "NULL");
 #endif
 
     if (member == NULL || strcmp(member, "status"))
@@ -1653,7 +1621,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     if (interface == NULL || strcmp(interface, DBUS_INTERFACE_POLICY))
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-    if (path == NULL)
+    if (sender == NULL)
         return DBUS_HANDLER_RESULT_HANDLED;
 
     dbus_error_init(&error);
@@ -1680,7 +1648,9 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
 
         g_object_get(tmp, "id", &id, NULL);
 
-        if (!strcmp(id, path)) {
+        g_print("comparing id '%s' and sender '%s'\n", id, sender);
+
+        if (!strcmp(id, sender)) {
             /* we found the sender */
             ep = tmp;
             g_print("transaction 0x%x %sed by peer '%s'\n", txid,
@@ -1693,7 +1663,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     }
 
     if (ep == NULL) {
-        g_print("transaction ACK/NAK from unknown peer %s, ignored...\n", path);
+        g_print("transaction ACK/NAK from unknown peer %s, ignored...\n", sender);
         return DBUS_HANDLER_RESULT_HANDLED;
     }
 
