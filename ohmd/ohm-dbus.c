@@ -266,6 +266,7 @@ ohm_dbus_dispatch_signal(DBusConnection * c, DBusMessage * msg, void *data)
     DBusHandlerResult retval = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     
     if (!interface || !member || !path) {
+        /* FIXME: it kind of depends what we should return here */
         return DBUS_HANDLER_RESULT_HANDLED;
     }
     

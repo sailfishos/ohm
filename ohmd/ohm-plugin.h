@@ -27,6 +27,7 @@
 #include <dlfcn.h>
 
 #include <dbus/dbus.h>
+#include <gmodule.h>
 #include "ohm-dbus.h"
 
 G_BEGIN_DECLS
