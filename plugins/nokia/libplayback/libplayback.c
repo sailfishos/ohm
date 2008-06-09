@@ -31,15 +31,17 @@
 /* D-Bus signal & method names */
 #define DBUS_NAME_OWNER_CHANGED_SIGNAL  "NameOwnerChanged"
 #define DBUS_HELLO_SIGNAL               "Hello"
+#define DBUS_NOTIFY_SIGNAL              "Notify"
 
-#define DBUS_PLAYBACK_REQUEST_METHOD    "RequestState"
+#define DBUS_PLAYBACK_REQ_STATE_METHOD  "RequestState"
+
 
 /* D-Bus pathes */
-#define DBUS_PLAYBACK_MANAGER_PATH     "/org/maemo/Playback/Manager"
+#define DBUS_PLAYBACK_MANAGER_PATH      "/org/maemo/Playback/Manager"
 
 /* FactStore prefix */
-#define FACTSTORE_PREFIX               "com.nokia.policy"
-#define FACTSTORE_PLAYBACK             FACTSTORE_PREFIX ".playback"
+#define FACTSTORE_PREFIX                "com.nokia.policy"
+#define FACTSTORE_PLAYBACK              FACTSTORE_PREFIX ".playback"
 
 /* playback request statuses */
 #define PBREQ_PENDING       1
@@ -62,10 +64,11 @@ OHM_IMPORTABLE(int, resolve, (char *goal, char **locals));
 
 static DBusHandlerResult name_changed(DBusConnection *, DBusMessage *, void *);
 static DBusHandlerResult hello(DBusConnection *, DBusMessage *, void *);
+static DBusHandlerResult notify(DBusConnection *, DBusMessage *, void *);
 static void              set_group_cb(ohm_playback_t *, const char *,
                                       const char *);
-static DBusHandlerResult playback_request(DBusConnection *, DBusMessage *,
-                                          void *);
+static DBusHandlerResult playback_req_state(DBusConnection *, DBusMessage *,
+                                            void *);
 
 static void plugin_init(OhmPlugin *);
 static void plugin_destroy(OhmPlugin *);
@@ -158,6 +161,61 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
     return result;
 }
 
+static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
+                                void *user_data)
+{
+    const char        *path;
+    const char        *sender;
+    const char        *iface;
+    const char        *prop;
+    const char        *value;
+    ohm_playback_t    *pb;
+    int                success;
+    DBusError          err;
+    DBusHandlerResult  result;
+
+    success = dbus_message_is_signal(msg, DBUS_INTERFACE_PROPERTIES,
+                                     DBUS_NOTIFY_SIGNAL);
+
+    if (!success)
+        result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    else {
+        result = DBUS_HANDLER_RESULT_HANDLED;
+
+        path   = dbus_message_get_path(msg);
+        sender = dbus_message_get_sender(msg);
+
+        if ((pb = playback_find(sender, path)) != NULL) {
+            dbus_error_init(&err);
+
+            success = dbus_message_get_args(msg, &err,
+                                            DBUS_TYPE_STRING, &iface,
+                                            DBUS_TYPE_STRING, &prop,
+                                            DBUS_TYPE_STRING, &value,
+                                            DBUS_TYPE_INVALID);
+            if (!success) {
+                if (!dbus_error_is_set(&err))
+                    DEBUG("Malformed Notify from %s%s", sender, path);
+                else {
+                    DEBUG("Malformed Notify from %s%s: %s",
+                          sender, path, err.message); 
+                    dbus_error_free(&err);
+                }
+            }
+            else {
+                if (!strcmp(iface, DBUS_PLAYBACK_INTERFACE)) {
+                    if (!strcmp(prop, "State")) {
+                        DEBUG("State of %s%s is '%s'", sender, path, value);
+
+                    }
+                }
+            }
+        } /* if playback_find() */
+    }
+
+    return result;
+}
+
 void set_group_cb(ohm_playback_t *pb, const char *prname, const char *prvalue)
 {
     static struct {char *klass; char *group;}  map[] = {
@@ -186,9 +244,9 @@ void set_group_cb(ohm_playback_t *pb, const char *prname, const char *prvalue)
 }
 
 
-static DBusHandlerResult playback_request(DBusConnection *conn,
-                                          DBusMessage    *msg,
-                                          void           *user_data)
+static DBusHandlerResult playback_req_state(DBusConnection *conn,
+                                            DBusMessage    *msg,
+                                            void           *user_data)
 {
     static const char  *stop = "Stop";
 
@@ -202,7 +260,7 @@ static DBusHandlerResult playback_request(DBusConnection *conn,
     DBusHandlerResult  result;
 
     success = dbus_message_is_method_call(msg, DBUS_PLAYBACK_MANAGER_INTERFACE,
-                                          DBUS_PLAYBACK_REQUEST_METHOD);
+                                          DBUS_PLAYBACK_REQ_STATE_METHOD);
 
     if (!success)
         result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -238,11 +296,12 @@ static void plugin_init(OhmPlugin *plugin)
 {
 #define FILTER_SIGNAL(i) "type='signal',interface='" i "'"
 
-    static char *adm_rule = FILTER_SIGNAL(DBUS_ADMIN_INTERFACE);
-    static char *pb_rule  = FILTER_SIGNAL(DBUS_PLAYBACK_INTERFACE);
+    static char *adm_rule  = FILTER_SIGNAL(DBUS_ADMIN_INTERFACE);
+    static char *pb_rule   = FILTER_SIGNAL(DBUS_PLAYBACK_INTERFACE);
+    static char *prop_rule = FILTER_SIGNAL(DBUS_INTERFACE_PROPERTIES);
 
-    static struct DBusObjectPathVTable pb_methods = {
-        .message_function = playback_request
+    static struct DBusObjectPathVTable req_state_method = {
+        .message_function = playback_req_state
     };
 
 
@@ -272,6 +331,7 @@ static void plugin_init(OhmPlugin *plugin)
     dbus_bus_add_match(sess_conn, adm_rule, &err);
     if (dbus_error_is_set(&err)) {
         g_error("Can't add match \"%s\": %s", adm_rule, err.message);
+        dbus_error_free(&err);
     }
     if (!dbus_connection_add_filter(sess_conn, name_changed,NULL, NULL)) {
         g_error("Can't add filter 'name_changed'");
@@ -280,9 +340,19 @@ static void plugin_init(OhmPlugin *plugin)
     dbus_bus_add_match(sess_conn, pb_rule, &err);
     if (dbus_error_is_set(&err)) {
         g_error("Can't add match \"%s\": %s", pb_rule, err.message);
+        dbus_error_free(&err);
     }
     if (!dbus_connection_add_filter(sess_conn, hello,NULL, NULL)) {
         g_error("Can't add filter 'hello'");
+    }
+
+    dbus_bus_add_match(sess_conn, prop_rule, &err);
+    if (dbus_error_is_set(&err)) {
+        g_error("Can't add match \"%s\": %s", prop_rule, err.message);
+        dbus_error_free(&err);
+    }
+    if (!dbus_connection_add_filter(sess_conn, notify,NULL, NULL)) {
+        g_error("Can't add filter 'notify'");
     }
 
     /*
@@ -290,7 +360,7 @@ static void plugin_init(OhmPlugin *plugin)
      */
     success = dbus_connection_register_object_path(sess_conn,
                                                    DBUS_PLAYBACK_MANAGER_PATH,
-                                                   &pb_methods, NULL);
+                                                   &req_state_method, NULL);
     if (!success) {
         g_error("Can't register object path %s", DBUS_PLAYBACK_MANAGER_PATH);
     }
