@@ -391,7 +391,7 @@ send_ipc_signal(gpointer data)
     char           *path = DBUS_PATH_POLICY "/decision";
     char           *interface = DBUS_INTERFACE_POLICY;
 
-    DBusMessage    *sig = NULL;
+    DBusMessage    *dbus_signal = NULL;
     
     /* this is ridiculous */
     DBusMessageIter message_iter,
@@ -449,12 +449,12 @@ send_ipc_signal(gpointer data)
 
     g_print("sending signal with txid '%u'\n", txid);
 
-    if ((sig =
+    if ((dbus_signal =
                 dbus_message_new_signal(path, interface, "actions")) == NULL)
         goto fail;
 
     /* open message_iter */
-    dbus_message_iter_init_append(sig, &message_iter);
+    dbus_message_iter_init_append(dbus_signal, &message_iter);
 
     if (!dbus_message_iter_append_basic(&message_iter, DBUS_TYPE_UINT32, &txid))
         goto fail;
@@ -572,7 +572,7 @@ send_ipc_signal(gpointer data)
     /* close command_array_iter */
     dbus_message_iter_close_container(&message_iter, &command_array_iter);
     
-    if (!dbus_connection_send(connection, sig, NULL))
+    if (!dbus_connection_send(connection, dbus_signal, NULL))
         goto fail;
 
     signal->klass->pending_signals = g_slist_remove(signal->klass->pending_signals, signal);
@@ -588,7 +588,7 @@ fail:
     g_object_unref(transaction);
     signal->klass->pending_signals = g_slist_remove(signal->klass->pending_signals, signal);
     g_free(signal);
-    dbus_message_unref(sig);
+    dbus_message_unref(dbus_signal);
     return FALSE;
 }
 
@@ -1309,6 +1309,8 @@ register_enforcement_point(const gchar * uri, gboolean internal)
     EnforcementPoint *ep = NULL;
     gchar *id;
 
+    g_print("> register_enforcement_point\n");
+
     for (i = enforcement_points; i != NULL; i = g_slist_next(i)) {
     
         g_object_get(i->data, "id", &id, NULL);
@@ -1411,6 +1413,8 @@ update_external_enforcement_points(DBusConnection * c, DBusMessage * msg,
             }
         } 
     }
+    
+    g_print("< update_external_enforcement_points\n");
 
     return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -1423,6 +1427,8 @@ register_external_enforcement_point(DBusConnection * c, DBusMessage * msg,
     const gchar *uri;
     gint ret;
     EnforcementPoint *ep = NULL;
+
+    g_print("> register_external_enforcement_point\n");
 
     if (msg == NULL) {
         goto err;
