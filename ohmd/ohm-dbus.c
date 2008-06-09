@@ -257,16 +257,17 @@ ohm_dbus_dispatch_signal(DBusConnection * c, DBusMessage * msg, void *data)
     const char *member    = dbus_message_get_member(msg);
     const char *path      = dbus_message_get_path(msg);
 
-#if 0
+#if 1
     g_print("got signal %s.%s, path %s\n", interface ?: "NULL", member,
             path ?: "NULL");
 #endif
 
     GSList *i = NULL;
-    DBusHandlerResult retval = DBUS_HANDLER_RESULT_HANDLED;
+    DBusHandlerResult retval = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     
-    if (!interface || !member || !path)
-        return retval;
+    if (!interface || !member || !path) {
+        return DBUS_HANDLER_RESULT_HANDLED;
+    }
     
     for (i = dbus_signal_handlers; i != NULL; i = g_slist_next(i)) {
 
