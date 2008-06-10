@@ -418,22 +418,22 @@ static int playback_add_factsore_entry(const char *client, const char *object)
 {
     OhmFactStore   *fs;
     OhmFact        *fact;
-    GValue          gval;
+    GValue         *gval;
 
     fs = ohm_fact_store_get_fact_store();
     fact = ohm_fact_new(FACTSTORE_PLAYBACK);
 
-    gval = ohm_value_from_string(client);
-    ohm_fact_set(fact, "client", &gval);
+    gval = ohm_str_value(client);
+    ohm_fact_set(fact, "client", gval);
     
-    gval = ohm_value_from_string(object);
-    ohm_fact_set(fact, "object", &gval);
+    gval = ohm_str_value(object);
+    ohm_fact_set(fact, "object", gval);
 
-    gval = ohm_value_from_string("othermedia");
-    ohm_fact_set(fact, "group", &gval);
+    gval = ohm_str_value("othermedia");
+    ohm_fact_set(fact, "group", gval);
 
-    gval = ohm_value_from_string("none");
-    ohm_fact_set(fact, "state", &gval);
+    gval = ohm_str_value("none");
+    ohm_fact_set(fact, "state", gval);
 
     if (ohm_fact_store_insert(fs, fact))
         DEBUG("factstore entry %s created", FACTSTORE_PLAYBACK);
@@ -496,12 +496,12 @@ static void playback_update_factsore_entry(ohm_playback_t *pb, char *member,
                                            char *value)
 {
     OhmFact *fact;
-    GValue   gval;
+    GValue  *gval;
 
     if ((fact = playback_find_factstore_entry(pb)) && member && value) {
 
-        gval = ohm_value_from_string(value);
-        ohm_fact_set(fact, member, &gval);
+        gval = ohm_str_value(value);
+        ohm_fact_set(fact, member, gval);
 
         DEBUG("Factstore entry update %s[client:%s,object:%s].%s = %s",
               FACTSTORE_PLAYBACK, pb->client, pb->object, member, value);
