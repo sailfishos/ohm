@@ -91,7 +91,6 @@ plugin_init(OhmPlugin *plugin)
 
     char *extensions[] = {
         PROLOG_SYSDIR"extensions/fact",
-        PROLOG_SYSDIR"extensions/relation",
         NULL
     };
 
@@ -378,6 +377,9 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
         cb_name = namebuf;
         break;
     }
+
+    if (cb_name == NULL)
+        cb_name = "";
     DEBUG("%s(): cb_name='%s'\n", __FUNCTION__, cb_name);
 
     

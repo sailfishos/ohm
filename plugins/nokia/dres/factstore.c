@@ -110,10 +110,10 @@ schedule_updated(gpointer fact, gpointer name, gpointer value,
 static OhmFact *
 object_to_fact(char *name, char **object)
 {
-    OhmFact *fact;
-    GValue   value;
-    char    *field;
-    int      i;
+    OhmFact      *fact;
+    GValue       *value;
+    char         *field;
+    int           i;
 
     if (object == NULL || strcmp(object[0], "name") || object[1] == NULL)
         return NULL;
@@ -124,7 +124,7 @@ object_to_fact(char *name, char **object)
     for (i = 2; object[i] != NULL; i += 2) {
         field = object[i];
         value = ohm_value_from_string(object[i+1]);
-        ohm_fact_set(fact, field, &value);
+        ohm_fact_set(fact, field, value);
     }
     
     return fact;
@@ -315,12 +315,11 @@ static int find_facts(char *name, char *select, OhmFact **facts, int max)
 static void
 set_fact(int cid, char *buf)
 {
-    GValue  gval;
-    char    selector[128], fullname[128];
-    char   *str, *name, *member, *selfld, *selval, *value, *p, *q;
-    int     len;
-    int      n = 128;
-    OhmFact *facts[n];
+    GValue      *gval;
+    char         selector[128], fullname[128];
+    char        *str, *name, *member, *selfld, *selval, *value, *p, *q;
+    int          n = 128, len, i;
+    OhmFact     *facts[n];
     
     selector[0] = '\0';
     /*
@@ -363,15 +362,13 @@ set_fact(int cid, char *buf)
                     }
                 }
                     
-                gval = ohm_value_from_string(value);
-                    
                 if ((n = find_facts(name, selector, facts, n)) < 0)
                     console_printf(cid, "no fact matches %s[%s]\n",
                                    name, selector);
                 else {
-                    int i;
                     for (i = 0; i < n; i++) {
-                        ohm_fact_set(facts[i], member, &gval);
+                        gval = ohm_value_from_string(value);
+                        ohm_fact_set(facts[i], member, gval);
                         console_printf(cid, "%s:%s = %s\n", name,
                                        member, value);
                     }
