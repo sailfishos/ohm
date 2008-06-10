@@ -48,12 +48,14 @@
 #define PBREQ_FINISHED      0
 #define PBREQ_ERROR        -1
 
-typedef void  (*property_cb_t)(ohm_playback_t *, const char *, const char *);
+typedef void  (*get_property_cb_t)(ohm_playback_t *,const char *,const char *);
+typedef void  (*set_property_cb_t)(ohm_playback_t *,int,const char *);
+
 typedef struct {
-    char          *client;
-    char          *object;
-    char          *prname;
-    property_cb_t  usercb;
+    char              *client;
+    char              *object;
+    char              *prname;
+    get_property_cb_t  usercb;
 } property_cb_data_t;
 
 static DBusConnection      *sess_conn;
@@ -82,10 +84,14 @@ static void            playback_delete_factsore_entry(ohm_playback_t *);
 static OhmFact        *playback_find_factstore_entry(ohm_playback_t *);
 static void            playback_update_factsore_entry(ohm_playback_t *, char *,
                                                       char *);
-static void            playback_request_property(ohm_playback_t *, char *,
-                                                 property_cb_t);
-static void            playback_receive_property(DBusPendingCall *, void *);
-static void            playback_free_property_cb_data(void *);
+static void            playback_get_property(ohm_playback_t *, char *,
+                                             get_property_cb_t);
+static void            playback_get_property_cb(DBusPendingCall *, void *);
+static void            playback_free_get_property_cb_data(void *);
+#if 0
+static void            playback_set_property(ohm_playback_t *, char *, char *,
+                                             set_property_cb_t);
+#endif
 
 static ohm_pbreq_t *pbreq_create(ohm_playback_t *, DBusMessage *, const char*);
 static void         pbreq_destroy(ohm_pbreq_t *);
@@ -155,7 +161,7 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
         
         pb = playback_create(sender, path);
 
-        playback_request_property(pb, "Class", set_group_cb);
+        playback_get_property(pb, "Class", set_group_cb);
     }
 
     return result;
@@ -578,8 +584,8 @@ static void playback_update_factsore_entry(ohm_playback_t *pb, char *member,
     }
 }
 
-static void playback_request_property(ohm_playback_t *pb, char *prname,
-                                      property_cb_t usercb)
+static void playback_get_property(ohm_playback_t *pb, char *prname,
+                                  get_property_cb_t usercb)
 {
     static char        *ifname = DBUS_PLAYBACK_INTERFACE;
 
@@ -602,7 +608,7 @@ static void playback_request_property(ohm_playback_t *pb, char *prname,
                                        DBUS_TYPE_STRING, &prname,
                                        DBUS_TYPE_INVALID);
     if (!success) {
-        DEBUG("Can't setup D-Bus message to request properties");
+        DEBUG("Can't setup D-Bus message to get properties");
         goto failed;
     }
     
@@ -623,8 +629,8 @@ static void playback_request_property(ohm_playback_t *pb, char *prname,
         goto failed;
     }
 
-    success = dbus_pending_call_set_notify(pend, playback_receive_property,
-                                           ud, playback_free_property_cb_data);
+    success = dbus_pending_call_set_notify(pend, playback_get_property_cb, ud,
+                                           playback_free_get_property_cb_data);
     if (!success) {
         DEBUG("Can't set notification for pending call");
     }
@@ -636,7 +642,7 @@ static void playback_request_property(ohm_playback_t *pb, char *prname,
     return;
 }
 
-static void playback_receive_property(DBusPendingCall *pend, void *data)
+static void playback_get_property_cb(DBusPendingCall *pend, void *data)
 {
     property_cb_data_t *cbd = (property_cb_data_t *)data;
     DBusMessage        *reply;
@@ -670,11 +676,11 @@ static void playback_receive_property(DBusPendingCall *pend, void *data)
     dbus_message_unref(reply);
 }
 
-static void playback_free_property_cb_data(void *memory)
+static void playback_free_get_property_cb_data(void *memory)
 {
     property_cb_data_t *cbd = (property_cb_data_t *)memory;
 
-    DEBUG("Freeing property callback data");
+    DEBUG("Freeing get property callback data");
 
     if (cbd != NULL) {
         free(cbd->client);
@@ -685,6 +691,54 @@ static void playback_free_property_cb_data(void *memory)
     }
 }
 
+#if 0
+static void playback_set_property(ohm_playback_t *pb, char *prname,
+                                  char *prvalue, set_property_cb_t usercb)
+{
+    static char        *ifname = DBUS_PLAYBACK_INTERFACE;
+
+    DBusMessage        *msg;
+    DBusPendingCall    *pend;
+    int                 success;
+
+    msg = dbus_message_new_method_call(DBUS_PLAYBACK_SERVICE,
+                                       pb->object,
+                                       DBUS_INTERFACE_PROPERTIES,
+                                       "Set");
+    if (msg == NULL) {
+        DEBUG("Failed to create D-Dbus message to set properties");
+        return;
+    }
+
+    success = dbus_message_append_args(msg,
+                                       DBUS_TYPE_STRING, &ifname,
+                                       DBUS_TYPE_STRING, &prname,
+                                       DBUS_TYPE_STRING, &prvalue,
+                                       DBUS_TYPE_INVALID);
+    if (!success) {
+        DEBUG("Can't setup D-Bus message to set properties");
+        goto failed;
+    }
+    
+    success = dbus_connection_send_with_reply(sess_conn, msg, &pend, 1000);
+    if (!success) {
+        DEBUG("Failed to set properties");
+        goto failed;
+    }
+
+    success = dbus_pending_call_set_notify(pend, playback_get_property_cb, ud,
+                                           playback_free_set_property_cb_data);
+    if (!success) {
+        DEBUG("Can't set notification for pending call");
+    }
+
+    return;
+
+ failed:
+    dbus_message_unref(msg);
+    return;
+}
+#endif
 
 
 static ohm_pbreq_t *pbreq_create(ohm_playback_t *pb, DBusMessage *msg,
