@@ -4,7 +4,7 @@ SUBDIRS = 	  \
 	signaling \
 	console   \
 	hal       \
-	libplayback
+	playback
 
 clean-local:
 	rm -f *~
