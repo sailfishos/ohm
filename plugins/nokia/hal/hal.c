@@ -13,8 +13,7 @@
 /* FIXME:
  *
  * - How are the OhmFacts reference counted? We don't want to remove
- *   them if they are scheduled to be signaled
- * - How to implement changesets?
+ *   them if they are scheduled to be signaled or something
  * - Add support to adding/removing device capabilities (new fields in
  *   OhmFacts
  * - How do the 64-bit uints map to any allowed OhmFact value?
@@ -33,7 +32,6 @@ typedef struct _hal_modified_property {
     dbus_bool_t is_removed;
     dbus_bool_t is_added;
 } hal_modified_property;
-
 
 static gchar * escape_udi(const char *hal_udi)
 {
@@ -74,7 +72,7 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
     LibHalPropertyType type = libhal_device_get_property_type(plugin->hal_ctx, udi, key, NULL);
 
     switch (type) {
-#if 0
+#if 1
         case LIBHAL_PROPERTY_TYPE_INT32:
             {
                 dbus_int32_t hal_value = libhal_device_get_property_int(
@@ -83,11 +81,11 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
                         key,
                         NULL);
 
-                value = g_new(GValue, 1);
-                g_value_init(value, G_TYPE_INT);
-                g_value_set_int(value, hal_value);
+                value = ohm_int_value(hal_value);
                 break;
             }
+#endif
+#if 0
 #if DBUS_HAVE_INT64
         case LIBHAL_PROPERTY_TYPE_UINT64:
             {
@@ -218,8 +216,10 @@ static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalProperty
 
         if (val) {
             ohm_fact_set(fact, key, val);
+#if 0
             g_print("  added key '%s' with value '%s'\n",
                     key, g_value_get_string(val)); /* FIXME: tmp */
+#endif
         }
         libhal_psi_next(&iter); /* FIXME: make sure we get all this way */
     }
@@ -292,7 +292,7 @@ static gboolean process_modified_properties(gpointer data)
     GSList *e = NULL;
     g_print("> process_modified_properties\n");
 
-    /* TODO: should we put these into an OhmFact changeset? */
+    ohm_fact_store_transaction_push(plugin->fs); /* begin transaction */
 
     for (e = plugin->modified_properties; e != NULL; e = g_slist_next(e)) {
         hal_modified_property *modified_property = e->data;
@@ -314,6 +314,8 @@ static gboolean process_modified_properties(gpointer data)
         g_free(modified_property);
         e->data = NULL;
     }
+
+    ohm_fact_store_transaction_pop(plugin->fs, FALSE); /* commit */
 
     g_slist_free(plugin->modified_properties);
     plugin->modified_properties = NULL;
