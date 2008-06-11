@@ -73,6 +73,18 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
 
     switch (type) {
 #if 1
+        case LIBHAL_PROPERTY_TYPE_STRING:
+            {
+                char *hal_value = libhal_device_get_property_string(
+                        plugin->hal_ctx,
+                        udi,
+                        key,
+                        NULL);
+
+                value = ohm_str_value(hal_value);
+                libhal_free_string(hal_value);
+                break;
+            }
         case LIBHAL_PROPERTY_TYPE_INT32:
             {
                 dbus_int32_t hal_value = libhal_device_get_property_int(
@@ -127,22 +139,10 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
                 g_value_set_boolean(value, hal_value);
                 break;
             }
-#endif
-        case LIBHAL_PROPERTY_TYPE_STRING:
-            {
-                char *hal_value = libhal_device_get_property_string(
-                        plugin->hal_ctx,
-                        udi,
-                        key,
-                        NULL);
-
-                value = ohm_str_value(hal_value);
-                libhal_free_string(hal_value);
-                break;
-            }
         case LIBHAL_PROPERTY_TYPE_STRLIST:
             /* TODO */
             break;
+#endif
         default:
             /* error case */
             /* TODO */
@@ -193,7 +193,7 @@ static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalProperty
 
     LibHalPropertySetIterator iter;
     OhmFact *fact = NULL;
-
+    int i, len;
     gchar *escaped_udi = escape_udi(udi);
 
     if (escaped_udi == NULL)
@@ -205,23 +205,43 @@ static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalProperty
 
     if (!fact)
         return NULL;
+
     libhal_psi_init(&iter, properties);
     
     /* TODO error handling */
-    /* TODO: refactor to use only the PropertySet thingie */
 
-    while (libhal_psi_has_more(&iter)) {
+    len = libhal_property_set_get_num_elems(properties);
+
+    for (i = 0; i < len; i++, libhal_psi_next(&iter)) {
         char *key = libhal_psi_get_key(&iter);
-        GValue *val = get_value_from_property(plugin, udi, key);
+        LibHalPropertyType type = libhal_psi_get_type(&iter);
+        GValue *val = NULL;
+
+        /* Not good to duplicate the switch, consider strategy pattern. Still,
+         * it is a good idea to fetch the properties only once. */
+        switch (type) {
+            case LIBHAL_PROPERTY_TYPE_INT32:
+                {
+                    dbus_int32_t hal_value = libhal_psi_get_int(&iter);
+                    val = ohm_int_value(hal_value);
+                    break;
+                }
+            case LIBHAL_PROPERTY_TYPE_STRING:
+                {
+                    /* freed with propertyset*/
+                    char *hal_value = libhal_psi_get_string(&iter);
+                    val = ohm_str_value(hal_value);
+                    break;
+                }
+            default:
+                /* error case */
+                /* TODO */
+                break;
+        }
 
         if (val) {
             ohm_fact_set(fact, key, val);
-#if 0
-            g_print("  added key '%s' with value '%s'\n",
-                    key, g_value_get_string(val)); /* FIXME: tmp */
-#endif
         }
-        libhal_psi_next(&iter); /* FIXME: make sure we get all this way */
     }
 
     return fact;
@@ -299,15 +319,17 @@ static gboolean process_modified_properties(gpointer data)
         OhmFact *fact = get_fact(plugin, modified_property->udi);
         GValue *value = NULL;
         if (!fact) {
-            /* not found */
-            continue;
+            g_print("No fact found to be modified, most likely unsupported type\n");
         }
+        else {
+            value = get_value_from_property(plugin, modified_property->udi, modified_property->key);
 
-        value = get_value_from_property(plugin, modified_property->udi, modified_property->key);
-        /* this assumes implicit mapping between dbus and glib types */
-
-        if (value)
-            ohm_fact_set(fact, modified_property->key, value);
+            if (value) {
+                /* FIXME: do we need to free the original value or does the
+                 * setter do it automatically? */
+                ohm_fact_set(fact, modified_property->key, value);
+            }
+        }
 
         g_free(modified_property->udi);
         g_free(modified_property->key);
@@ -363,7 +385,7 @@ hal_property_modified_cb (LibHalContext *ctx,
 }
 
 /* to be refactored somewhere */
-static void init_hal(DBusConnection *c)
+static hal_plugin * init_hal(DBusConnection *c)
 {
     DBusError error;
     hal_plugin *plugin = g_new0(hal_plugin, 1);
@@ -371,7 +393,7 @@ static void init_hal(DBusConnection *c)
     char **all_devices;
 
     if (!plugin) {
-        return;
+        return NULL;
     }
     plugin->hal_ctx = libhal_ctx_new();
     plugin->c = c;
@@ -425,13 +447,19 @@ static void init_hal(DBusConnection *c)
         libhal_free_property_set(properties);
         libhal_free_string(udi);
     }
+
+    return plugin;
 }
 
-static void deinit_hal()
+static void deinit_hal(hal_plugin *plugin)
 {
+    libhal_ctx_shutdown(plugin->hal_ctx, NULL);
+    libhal_ctx_free(plugin->hal_ctx);
     /* TODO: deinit and free the HAL context */
     return;
 }
+
+hal_plugin *hal_plugin_p;
 
 static void
 plugin_init(OhmPlugin * plugin)
@@ -439,7 +467,7 @@ plugin_init(OhmPlugin * plugin)
     DBusConnection *c = ohm_plugin_dbus_get_connection();
     g_print("> HAL plugin init\n");
     /* should we ref the connection? */
-    init_hal(c);
+    hal_plugin_p = init_hal(c);
     g_print("< HAL plugin init\n");
     return;
 }
@@ -447,7 +475,10 @@ plugin_init(OhmPlugin * plugin)
 static void
 plugin_exit(OhmPlugin * plugin)
 {
-    deinit_hal();
+    if (hal_plugin_p) {
+        deinit_hal(hal_plugin_p);
+    }
+    g_free(hal_plugin_p);
     return;
 }
 
