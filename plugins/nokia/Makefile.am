@@ -5,7 +5,7 @@ SUBDIRS = 	  \
 	console   \
 	profile   \
 	hal       \
-	libplayback
+	playback
 
 clean-local:
 	rm -f *~
