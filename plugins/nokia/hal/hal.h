@@ -1,3 +1,11 @@
+/**
+ * @file hal.h
+ * @brief OHM HAL plugin header file
+ * @author ismo.h.puustinen@nokia.com
+ *
+ * Copyright (C) 2008, Nokia. All rights reserved.
+ */
+
 #ifndef HAL_H
 #define HAL_H
 
@@ -20,4 +28,23 @@
 #include <dres/variables.h>
 #include <prolog/ohm-fact.h>
 
+typedef struct _hal_plugin {
+    LibHalContext *hal_ctx;
+    DBusConnection *c;
+    GSList *modified_properties;
+    OhmFactStore *fs;
+} hal_plugin;
+
+
+hal_plugin * init_hal(DBusConnection *c);
+void deinit_hal(hal_plugin *plugin);
+
 #endif
+
+/*
+ * Local Variables:
+ * c-basic-offset: 4
+ * indent-tabs-mode: nil
+ * End:
+ * vim:set expandtab shiftwidth=4:
+ */
