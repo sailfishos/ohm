@@ -16,7 +16,7 @@
  *   them if they are scheduled to be signaled or something
  * - Add support to adding/removing device capabilities (new fields in
  *   OhmFacts
- * - How do the 64-bit uints map to any allowed OhmFact value?
+ * - How do the 64-bit uints map to any allowed OhmFact types?
  */
 
 typedef struct _hal_plugin {
@@ -35,7 +35,12 @@ typedef struct _hal_modified_property {
 
 static gchar * escape_udi(const char *hal_udi)
 {
-    /* returns an escaped copy of the udi */
+    /* returns an escaped copy of the udi:
+     *
+     * /org/freedesktop/key becomes
+     * org.freedesktop.key
+     *
+     * */
     gchar *escaped_udi;
 
     /* escape the udi  */
@@ -72,7 +77,6 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
     LibHalPropertyType type = libhal_device_get_property_type(plugin->hal_ctx, udi, key, NULL);
 
     switch (type) {
-#if 1
         case LIBHAL_PROPERTY_TYPE_STRING:
             {
                 char *hal_value = libhal_device_get_property_string(
@@ -96,7 +100,6 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
                 value = ohm_int_value(hal_value);
                 break;
             }
-#endif
 #if 0
 #if DBUS_HAVE_INT64
         case LIBHAL_PROPERTY_TYPE_UINT64:
@@ -145,7 +148,6 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
 #endif
         default:
             /* error case */
-            /* TODO */
             break;
     }
 
@@ -181,10 +183,8 @@ static gboolean set_fact(hal_plugin *plugin, OhmFact *fact)
 {
     /* Inserts the OhmFact to the FactStore */
 
-    ohm_fact_store_insert(plugin->fs, fact);
-    g_print("inserted fact '%p' to FactStore\n", fact);
-    /* TODO error handling */
-    return TRUE;
+    g_print("inserting fact '%p' to FactStore\n", fact);
+    return ohm_fact_store_insert(plugin->fs, fact);
 }
 
 static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalPropertySet *properties)
@@ -234,8 +234,8 @@ static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalProperty
                     break;
                 }
             default:
-                /* error case */
-                /* TODO */
+                /* error case, currently means that FactStore doesn't
+                 * support the type yet */
                 break;
         }
 
@@ -251,11 +251,11 @@ static gboolean delete_fact(hal_plugin *plugin, OhmFact *fact)
 {
     /* Remove the OhmFact from the FactStore */
 
-    /* TODO error handling */
     ohm_fact_store_remove(plugin->fs, fact);
     g_print("deleted fact '%p' from FactStore\n", fact);
     g_object_unref(fact);
 
+    /* we don't get a return value fro ohm_fact_store_unref */
     return TRUE;
 }
 
@@ -325,8 +325,9 @@ static gboolean process_modified_properties(gpointer data)
             value = get_value_from_property(plugin, modified_property->udi, modified_property->key);
 
             if (value) {
-                /* FIXME: do we need to free the original value or does the
-                 * setter do it automatically? */
+                /* FIXED: Do we need to free the original value or does the
+                 * setter do it automatically? Apparently the setter
+                 * does it. */
                 ohm_fact_set(fact, modified_property->key, value);
             }
         }
@@ -402,17 +403,23 @@ static hal_plugin * init_hal(DBusConnection *c)
     /* TODO: error handling everywhere */
     dbus_error_init(&error);
 
-    libhal_ctx_set_dbus_connection(plugin->hal_ctx, c);
+    if (!libhal_ctx_set_dbus_connection(plugin->hal_ctx, c))
+        goto error;
 
     /* start a watch on new devices */
 
-    libhal_ctx_set_device_added(plugin->hal_ctx, hal_device_added_cb);
-    libhal_ctx_set_device_removed(plugin->hal_ctx, hal_device_removed_cb);
-    libhal_ctx_set_device_property_modified(plugin->hal_ctx, hal_property_modified_cb);
+    if (!libhal_ctx_set_device_added(plugin->hal_ctx, hal_device_added_cb))
+        goto error;
+    if (!libhal_ctx_set_device_removed(plugin->hal_ctx, hal_device_removed_cb))
+        goto error;
+    if (!libhal_ctx_set_device_property_modified(plugin->hal_ctx, hal_property_modified_cb))
+        goto error;
 
-    libhal_ctx_set_user_data(plugin->hal_ctx, plugin);
+    if (!libhal_ctx_set_user_data(plugin->hal_ctx, plugin))
+        goto error;
 
-    libhal_ctx_init(plugin->hal_ctx, &error);
+    if (!libhal_ctx_init(plugin->hal_ctx, &error))
+        goto error;
 
     /* get all devices */
 
@@ -426,36 +433,53 @@ static hal_plugin * init_hal(DBusConnection *c)
         char *udi = all_devices[i];
         OhmFact *fact = NULL;
 
-        if (!interesting(plugin, udi))
+        if (!udi || !interesting(plugin, udi))
             continue;
 
-        libhal_device_add_property_watch(plugin->hal_ctx, udi, &error);
         properties = libhal_device_get_all_properties(plugin->hal_ctx, udi, &error);
 
-        /* create an OhmFact based on the properties */
+        if (properties) {
 
-        fact = get_fact(plugin, udi);
+            /* We got properties, so let's start listening for them */
+            libhal_device_add_property_watch(plugin->hal_ctx, udi, &error);
 
-        if (!fact) {
-            fact = create_fact(plugin, udi, properties);
-            set_fact(plugin, fact);
+            /* create an OhmFact based on the properties */
+            fact = get_fact(plugin, udi);
+
+            if (!fact) {
+                fact = create_fact(plugin, udi, properties);
+                set_fact(plugin, fact);
+            }
+            else {
+                /* TODO: There already is a fact of this name. Add the properties to it.
+                 * Do this when the add_device_capability support actually
+                 * comes in. Do we honor the values already in the fact or
+                 * overwrite them? */
+            }
+            libhal_free_property_set(properties);
         }
-        else {
-            /* TODO: There already is a fact of this name. Add the properties to it. */
-        }
 
-        libhal_free_property_set(properties);
         libhal_free_string(udi);
     }
 
     return plugin;
+
+error:
+
+    if (dbus_error_is_set(&error)) {
+        g_print("Error initializing the HAL plugin. '%s': '%s'\n", error.name, error.message);
+    }
+    else {
+        g_print("Error initializing the HAL plugin\n");
+    }
+
+    return NULL;
 }
 
 static void deinit_hal(hal_plugin *plugin)
 {
     libhal_ctx_shutdown(plugin->hal_ctx, NULL);
     libhal_ctx_free(plugin->hal_ctx);
-    /* TODO: deinit and free the HAL context */
     return;
 }
 
