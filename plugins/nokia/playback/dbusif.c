@@ -228,8 +228,8 @@ static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,
 static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
                                void *user_data)
 {
-    const char        *path;
-    const char        *sender;
+    char              *path;
+    char              *sender;
     client_t          *cl;
     int                success;
     DBusHandlerResult  result;
@@ -242,8 +242,8 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        path   = dbus_message_get_path(msg);
-        sender = dbus_message_get_sender(msg);
+        path   = (char *)dbus_message_get_path(msg);
+        sender = (char *)dbus_message_get_sender(msg);
 
         DEBUG("Hello from %s%s", sender, path);
         
@@ -259,11 +259,11 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
 static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
                                 void *user_data)
 {
-    const char        *dbusid;
-    const char        *object;
-    const char        *iface;
-    const char        *prop;
-    const char        *value;
+    char              *dbusid;
+    char              *object;
+    char              *iface;
+    char              *prop;
+    char              *value;
     client_t          *cl;
     int                success;
     DBusError          err;
@@ -277,8 +277,8 @@ static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        dbusid = dbus_message_get_sender(msg);
-        object = dbus_message_get_path(msg);
+        dbusid = (char *)dbus_message_get_sender(msg);
+        object = (char *)dbus_message_get_path(msg);
 
         if ((cl = client_find(dbusid, object)) != NULL) {
             dbus_error_init(&err);
@@ -317,10 +317,10 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
 {
     static const char  *stop = "Stop";
 
-    const char         *msgpath;
-    const char         *objpath;
-    const char         *sender;
-    const char         *state;
+    char               *msgpath;
+    char               *objpath;
+    char               *sender;
+    char               *state;
     client_t           *cl;
     pbreq_t            *req;
     int                 success;
@@ -334,8 +334,8 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        msgpath = dbus_message_get_path(msg);
-        sender  = dbus_message_get_sender(msg);
+        msgpath = (char *)dbus_message_get_path(msg);
+        sender  = (char *)dbus_message_get_sender(msg);
         req     = NULL;
 
         success = dbus_message_get_args(msg, NULL,

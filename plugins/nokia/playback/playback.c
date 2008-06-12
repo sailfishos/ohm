@@ -9,13 +9,12 @@
 #include <gmodule.h>
 #include <ohm-plugin.h>
 
-#include "prolog/ohm-fact.h"
-
 #include "playback.h"
 #include "client.h"
 #include "pbreq.h"
 #include "dbusif.h"
 #include "dresif.h"
+#include "fsif.h"
 
 
 static void plugin_init(OhmPlugin *);
@@ -28,6 +27,7 @@ static void plugin_init(OhmPlugin *plugin)
     pbreq_init(plugin);
     dbusif_init(plugin);
     dresif_init(plugin);
+    fsif_init(plugin);
 }
 
 static void plugin_destroy(OhmPlugin *plugin)
@@ -40,6 +40,7 @@ static void plugin_destroy(OhmPlugin *plugin)
 #include "pbreq.c"
 #include "dbusif.c"
 #include "dresif.c"
+#include "fsif.c"
 
 
 OHM_PLUGIN_REQUIRES_METHODS(playback, 1, 

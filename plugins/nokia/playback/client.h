@@ -32,12 +32,12 @@ typedef struct {
 
 static void       client_init(OhmPlugin *);
 
-static client_t  *client_create(const char *, const char *);
+static client_t  *client_create(char *, char *);
 static void       client_destroy(client_t *);
-static client_t  *client_find(const char *, const char *);
-static void       client_purge(const char *);
+static client_t  *client_find(char *, char *);
+static void       client_purge(char *);
 
-static int        client_add_factsore_entry(const char *, const char *);
+static int        client_add_factsore_entry(char *, char *);
 static void       client_delete_factsore_entry(client_t *);
 static void       client_update_factsore_entry(client_t *,char *,char *);
 
