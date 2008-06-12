@@ -3,6 +3,7 @@ SUBDIRS = 	  \
 	dres      \
 	signaling \
 	console   \
+	profile   \
 	hal       \
 	libplayback
 

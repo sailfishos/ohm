@@ -167,6 +167,7 @@ static OhmFact * get_fact(hal_plugin *plugin, const char *udi)
 
     if (g_slist_length(list) != 1) {
         /* What to do? */
+        g_print("The requested fact was not found\n");
         return NULL;
     }
 

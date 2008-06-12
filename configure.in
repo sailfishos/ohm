@@ -408,6 +408,7 @@ plugins/nokia/prolog/Makefile
 plugins/nokia/dres/Makefile
 plugins/nokia/console/Makefile
 plugins/nokia/hal/Makefile
+plugins/nokia/profile/Makefile
 plugins/nokia/signaling/Makefile
 plugins/nokia/signaling/tests/Makefile
 plugins/nokia/libplayback/Makefile
