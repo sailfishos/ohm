@@ -56,14 +56,24 @@ static gboolean profile_create_fact(const char *profile, profileval_t *values) {
         return FALSE;
     }
     else if (g_slist_length(list) == 1) {
+        g_print("A profile exists already, modifying it\n");
+        /* remove existing fields */
         fact = list->data;
         if (fact) {
-            /* TODO: if it exists, empty it */
+            /* a field is removed if the value is set to NULL */
+            GList *e = NULL, *fields = ohm_fact_get_fields(fact);
+            for (e = fields; e != NULL; e = g_list_next(e)) {
+                /* Factstore magic! */
+                GQuark qk = (GQuark)GPOINTER_TO_INT(e->data);
+                const gchar *field_name = g_quark_to_string(qk);
+                /* FIXME: do we need to free the current field value? */
+                ohm_fact_set(fact, field_name, NULL);
+            }
         }
-
     }
     else {
         /* no previous fact */
+        g_print("Creating a new profile fact\n");
         fact = ohm_fact_new(FACTSTORE_PROFILE);
     }
 

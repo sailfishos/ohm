@@ -310,16 +310,23 @@ static gboolean process_modified_properties(gpointer data)
     ohm_fact_store_transaction_push(plugin->fs); /* begin transaction */
 
     for (e = plugin->modified_properties; e != NULL; e = g_slist_next(e)) {
+
         hal_modified_property *modified_property = e->data;
         OhmFact *fact = get_fact(plugin, modified_property->udi);
         GValue *value = NULL;
+
         if (!fact) {
             g_print("No fact found to be modified, most likely unsupported type\n");
         }
         else {
-            value = get_value_from_property(plugin, modified_property->udi, modified_property->key);
-
-            if (value) {
+            if (modified_property->is_removed) {
+                /* remove the field by setting its value to NULL */
+                ohm_fact_set(fact, modified_property->key, NULL);
+            }
+            else {
+                value = get_value_from_property(plugin,
+                        modified_property->udi,
+                        modified_property->key);
                 /* FIXED: Do we need to free the original value or does the
                  * setter do it automatically? Apparently the setter
                  * does it. */
@@ -374,7 +381,8 @@ hal_property_modified_cb (LibHalContext *ctx,
     modified_property->is_removed = is_removed;
     modified_property->is_added = is_added;
 
-    plugin->modified_properties = g_slist_prepend(plugin->modified_properties,
+    /* keep the order (even if O(n)) :-P */
+    plugin->modified_properties = g_slist_append(plugin->modified_properties,
             modified_property);
 
     return;
