@@ -23,6 +23,16 @@
 #include "factstore.h"
 
 
+static int DBG_RESOLVE, DBG_PROLOG, DBG_SIGNAL, DBG_FACTS;
+
+OHM_DEBUG_PLUGIN(resolver,
+    OHM_DEBUG_FLAG("resolver", "dependency resolving", &DBG_RESOLVE),
+    OHM_DEBUG_FLAG("prolog"  , "prolog handler"      , &DBG_PROLOG),
+    OHM_DEBUG_FLAG("signal"  , "decision emission"   , &DBG_SIGNAL),
+    OHM_DEBUG_FLAG("facts"   , "fact handling"       , &DBG_FACTS));
+
+
+
 
 typedef void (*completion_cb_t)(int transid, int success);
 
@@ -69,14 +79,6 @@ static int  retval_to_facts(char ***objects, OhmFact **facts, int max);
 
 
 static dres_t *dres;
-
-static int DBG_RESOLVE, DBG_PROLOG, DBG_SIGNAL, DBG_FACTS;
-
-OHM_DEBUG_PLUGIN(resolver,
-    OHM_DEBUG_FLAG("resolver", "dependency resolving", &DBG_RESOLVE),
-    OHM_DEBUG_FLAG("prolog"  , "prolog handler"      , &DBG_PROLOG),
-    OHM_DEBUG_FLAG("signal"  , "decision emission"   , &DBG_SIGNAL),
-    OHM_DEBUG_FLAG("facts"   , "fact handling"       , &DBG_FACTS));
 
 
 /*****************************************************************************
