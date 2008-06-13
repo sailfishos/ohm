@@ -67,8 +67,7 @@ factstore_exit(void)
 static gboolean
 update_all(gpointer data)
 {
-    printf("running DRES update all...\n");
-
+    OHM_DEBUG(DBG_RESOLVE, "resolving goal \"all\"...\n");
     dres_update_goal(dres, "all", NULL);
     update = 0;
 
@@ -82,10 +81,10 @@ update_all(gpointer data)
 static void
 schedule_resolve(gpointer object, gpointer user_data)
 {
-    printf("scheduling DRES update all...\n");
-
-    if (!update)
+    if (!update) {
+        OHM_DEBUG(DBG_RESOLVE, "resolving of goal \"all\" scheduled...\n");
         update = g_idle_add(update_all, NULL);
+    }
 }
 
 
@@ -198,7 +197,7 @@ static dres_selector_t *parse_selector(char *descr)
 
     for (i = 0, str = buf;   (name = strtok(str, ",")) != NULL;   str = NULL) {
         if ((p = strchr(name, ':')) == NULL)
-            DEBUG("Invalid selctor: '%s'", descr);
+            OHM_DEBUG(DBG_FACTS, "invalid selctor: '%s'", descr);
         else {
             *p++ = '\0';
             value = p;
