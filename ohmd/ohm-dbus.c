@@ -122,7 +122,7 @@ ohm_dbus_add_method(const char *path, const char *name,
 
     g_hash_table_insert(object->methods, (gpointer)name, method);
 
-    ohm_debug("registered DBUS handler %p for %s.%s...\n", handler, path, name);
+    ohm_debug("registered DBUS handler %p for %s.%s...", handler, path, name);
 
     return TRUE;
 }
@@ -154,17 +154,17 @@ ohm_dbus_del_method(const char *path, const char *name,
     g_hash_table_remove(object->methods, name);
     g_free(method);
 
-    ohm_debug("unregistered DBUS handler %s.%s...\n", path, name);
+    ohm_debug("unregistered DBUS handler %s.%s...", path, name);
 
     if (g_hash_table_size(object->methods) == 0) {
-        ohm_debug("Object %s has no more methods, destroying it.\n", path);
+        ohm_debug("Object %s has no more methods, destroying it.", path);
         g_hash_table_destroy(object->methods);
         g_hash_table_remove(dbus_objects, path);
         g_free(object);
     }
 
     if (g_hash_table_size(dbus_objects) == 0) {
-        ohm_debug("No more DBUS objects.\n");
+        ohm_debug("No more DBUS objects.");
         g_hash_table_destroy(dbus_objects);
         dbus_objects = NULL;
     }
@@ -191,7 +191,7 @@ ohm_dbus_dispatch_method(DBusConnection *c, DBusMessage *msg, void *data)
     const char *path      = dbus_message_get_path(msg);
     const char *sender    = dbus_message_get_sender(msg);
 
-    ohm_debug("%s: got message %s.%s (%s), path=%s from %s\n", __FUNCTION__,
+    ohm_debug("%s: got message %s.%s (%s), path=%s from %s", __FUNCTION__,
               interface, member, signature, path ?: "NULL", sender);
 #endif
     
@@ -210,7 +210,7 @@ purge_dbus_method(gpointer key, gpointer data, gpointer object_path)
     const char        *path   = (const char *)object_path;
     ohm_dbus_method_t *method = (ohm_dbus_method_t *)data;
     
-    ohm_debug("Purging DBUS method %s.%s...\n", path, name);
+    ohm_debug("Purging DBUS method %s.%s...", path, name);
     g_free(method);
 
     return TRUE;
@@ -223,13 +223,13 @@ purge_dbus_object(gpointer key, gpointer data, gpointer dummy)
     const char        *path   = (const char *)key;
     ohm_dbus_object_t *object = (ohm_dbus_object_t *)data;
     
-    ohm_debug("Purging methods of DBUS object %s...\n", path);
+    ohm_debug("Purging methods of DBUS object %s...", path);
     g_hash_table_foreach_remove(object->methods, purge_dbus_method, key);
     g_hash_table_destroy(object->methods);
     g_free(object);
     
     if (!dbus_connection_unregister_object_path(conn, path))
-        ohm_debug("Failed to unregister DBUS object path %s.\n", path);
+        ohm_debug("Failed to unregister DBUS object path %s.", path);
     
     return TRUE;
 }
@@ -259,7 +259,7 @@ ohm_dbus_dispatch_signal(DBusConnection * c, DBusMessage * msg, void *data)
     const char *path      = dbus_message_get_path(msg);
 
 #if 1
-    ohm_debug("got signal %s.%s, path %s\n", interface ?: "NULL", member,
+    ohm_debug("got signal %s.%s, path %s", interface ?: "NULL", member,
               path ?: "NULL");
 #endif
 
@@ -276,29 +276,29 @@ ohm_dbus_dispatch_signal(DBusConnection * c, DBusMessage * msg, void *data)
         ohm_dbus_signal_t *signal_handler = i->data;
 
         if (!signal_handler) {
-            ohm_debug("NULL signal handler (a bug)\n");
+            ohm_debug("NULL signal handler (a bug)");
             continue;
         }
 
         if (signal_handler->interface && strcmp(signal_handler->interface, interface)) {
-            /* ohm_debug("No interface match: %s vs %s\n", 
+            /* ohm_debug("No interface match: %s vs %s", 
                          signal_handler->interface, interface); */
             continue;
         }
         
         if (signal_handler->signal && strcmp(signal_handler->signal, member)) {
-            /* ohm_debug("No signal name match: %s vs %s\n",
+            /* ohm_debug("No signal name match: %s vs %s",
                           signal_handler->signal, member); */
             continue;
         }
         
         if (signal_handler->path && strcmp(signal_handler->path, path)) {
-            /* ohm_debug("No path match: %s vs %s\n",
+            /* ohm_debug("No path match: %s vs %s",
                          signal_handler->path, path); */
             continue;
         }
         
-        /* ohm_debug("running the handler (%p)\n", signal_handler->handler); */
+        /* ohm_debug("running the handler (%p)", signal_handler->handler); */
         retval = signal_handler->handler(c, msg, signal_handler->data);
     }
 
@@ -318,7 +318,7 @@ ohm_dbus_add_signal(const char *sender, const char *interface, const char *sig,
 
     ohm_dbus_signal_t *signal_handler;
 
-    ohm_debug("Adding DBUS signal handler %p for %s...\n", handler, interface);
+    ohm_debug("Adding DBUS signal handler %p for %s...", handler, interface);
     
     if (g_slist_length(dbus_signal_handlers) == 0) {
 
@@ -331,7 +331,7 @@ ohm_dbus_add_signal(const char *sender, const char *interface, const char *sig,
         dbus_bus_add_match(conn, DBUS_SIGNAL_MATCH, &error);
         dbus_error_free(&error);
         
-        ohm_debug("Registering the signal handler.\n");
+        ohm_debug("Registering the signal handler.");
         dbus_connection_add_filter(conn, ohm_dbus_dispatch_signal, conn, NULL);
     
     }
@@ -365,7 +365,7 @@ ohm_dbus_del_signal(const char *sender, const char *interface, const char *sig,
     GSList *i = NULL;
     gboolean found;
 
-    ohm_debug("Deleting DBUS signal handler %p for %s...\n", handler,interface);
+    ohm_debug("Deleting DBUS signal handler %p for %s...", handler,interface);
 
     do  {
         found = FALSE;
@@ -394,7 +394,7 @@ ohm_dbus_del_signal(const char *sender, const char *interface, const char *sig,
         dbus_bus_remove_match(conn, DBUS_SIGNAL_MATCH, &error);
         dbus_error_free(&error);
 
-        ohm_debug("No more DBUS signals.\n");
+        ohm_debug("No more DBUS signals.");
     }
 }
 
