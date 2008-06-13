@@ -6,6 +6,10 @@
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
+#include <ohm-plugin-debug.h>
+
+static int DBG_HAL, DBG_FACTS;
+
 /* this uses libhal (for now) */
 
 #include "hal.h"
@@ -167,7 +171,7 @@ static OhmFact * get_fact(hal_plugin *plugin, const char *udi)
 
     if (g_slist_length(list) != 1) {
         /* What to do? */
-        g_print("The requested fact was not found\n");
+        OHM_DEBUG(DBG_FACTS, "The requested fact was not found");
         return NULL;
     }
 
@@ -178,7 +182,7 @@ static gboolean set_fact(hal_plugin *plugin, OhmFact *fact)
 {
     /* Inserts the OhmFact to the FactStore */
 
-    g_print("inserting fact '%p' to FactStore\n", fact);
+    OHM_DEBUG(DBG_FACTS, "inserting fact '%p' to FactStore", fact);
     return ohm_fact_store_insert(plugin->fs, fact);
 }
 
@@ -195,7 +199,7 @@ static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalProperty
         return NULL;
 
     fact = ohm_fact_new(escaped_udi);
-    g_print("created fact '%s' at '%p'\n", escaped_udi, fact);
+    OHM_DEBUG(DBG_FACTS, "created fact '%s' at '%p'", escaped_udi, fact);
     g_free(escaped_udi);
 
     if (!fact)
@@ -247,7 +251,7 @@ static gboolean delete_fact(hal_plugin *plugin, OhmFact *fact)
     /* Remove the OhmFact from the FactStore */
 
     ohm_fact_store_remove(plugin->fs, fact);
-    g_print("deleted fact '%p' from FactStore\n", fact);
+    OHM_DEBUG(DBG_FACTS, "deleted fact '%p' from FactStore", fact);
     g_object_unref(fact);
 
     /* we don't get a return value fro ohm_fact_store_unref */
@@ -269,7 +273,7 @@ hal_device_added_cb (LibHalContext *ctx,
     OhmFact *fact = NULL;
     hal_plugin *plugin = (hal_plugin *) libhal_ctx_get_user_data(ctx);
 
-    printf("> hal_device_added_cb: udi '%s'\n", udi);
+    OHM_DEBUG(DBG_HAL, "> hal_device_added_cb: udi '%s'", udi);
     
     if (!interesting(plugin, udi))
         return;
@@ -291,7 +295,7 @@ hal_device_removed_cb (LibHalContext *ctx,
     OhmFact *fact = NULL;
     hal_plugin *plugin = (hal_plugin *) libhal_ctx_get_user_data(ctx);
 
-    printf("> hal_device_removed_cb: udi '%s'\n", udi);
+    OHM_DEBUG(DBG_HAL, "> hal_device_removed_cb: udi '%s'", udi);
     
     fact = get_fact(plugin, udi);
         
@@ -305,7 +309,8 @@ static gboolean process_modified_properties(gpointer data)
 {
     hal_plugin *plugin = (hal_plugin *) data;
     GSList *e = NULL;
-    g_print("> process_modified_properties\n");
+
+    OHM_DEBUG(DBG_HAL, "> process_modified_properties");
 
     ohm_fact_store_transaction_push(plugin->fs); /* begin transaction */
 
@@ -316,7 +321,9 @@ static gboolean process_modified_properties(gpointer data)
         GValue *value = NULL;
 
         if (!fact) {
-            g_print("No fact found to be modified, most likely unsupported type\n");
+            OHM_DEBUG(DBG_HAL,
+                      "No fact found to be modified, "
+                      "most likely unsupported type");
         }
         else {
             if (modified_property->is_removed) {
@@ -364,11 +371,11 @@ hal_property_modified_cb (LibHalContext *ctx,
     hal_modified_property *modified_property = NULL;
     hal_plugin *plugin = (hal_plugin *) libhal_ctx_get_user_data(ctx);
 
-    printf("> hal_property_modified_cb: udi '%s', key '%s', %s, %s\n",
-            udi,
-            key,
-            is_removed ? "removed" : "not removed",
-            is_added ? "added" : "not added");
+    OHM_DEBUG(DBG_HAL,
+              "> hal_property_modified_cb: udi '%s', key '%s', %s, %s",
+              udi, key,
+              is_removed ? "removed" : "not removed",
+              is_added ? "added" : "not added");
 
     if (!plugin->modified_properties) {
         g_idle_add(process_modified_properties, plugin);
@@ -388,12 +395,15 @@ hal_property_modified_cb (LibHalContext *ctx,
     return;
 }
 
-hal_plugin * init_hal(DBusConnection *c)
+hal_plugin * init_hal(DBusConnection *c, int flag_hal, int flag_facts)
 {
     DBusError error;
     hal_plugin *plugin = g_new0(hal_plugin, 1);
     int i = 0, num_devices = 0;
     char **all_devices;
+
+    DBG_HAL   = flag_hal;
+    DBG_FACTS = flag_facts;
 
     if (!plugin) {
         return NULL;
@@ -469,10 +479,11 @@ hal_plugin * init_hal(DBusConnection *c)
 error:
 
     if (dbus_error_is_set(&error)) {
-        g_print("Error initializing the HAL plugin. '%s': '%s'\n", error.name, error.message);
+        OHM_DEBUG(DBG_HAL, "Error initializing the HAL plugin. '%s': '%s'",
+                  error.name, error.message);
     }
     else {
-        g_print("Error initializing the HAL plugin\n");
+        OHM_DEBUG(DBG_HAL, "Error initializing the HAL plugin");
     }
 
     return NULL;
