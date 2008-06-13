@@ -6,22 +6,28 @@
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
+#include <ohm-plugin-debug.h>
+
 #include "signaling.h"
+
+static int DBG_SIGNAL;
 
 GSList         *enforcement_points = NULL;
 DBusConnection *connection;
 GHashTable     *transactions;
 GSList         *inq = NULL;
 
-    static Transaction *
+static Transaction *
 transaction_lookup(guint txid)
 {
     return (Transaction *)g_hash_table_lookup(transactions, &txid);
 }
 
-    gboolean
-init_signaling(DBusConnection *c)
+gboolean
+init_signaling(DBusConnection *c, int dbg_flag)
 {
+    DBG_SIGNAL = dbg_flag;
+
     transactions = g_hash_table_new(g_int_hash, g_int_equal);
     if (transactions == NULL) {
         g_error("Failed to create transaction hash table.");
@@ -253,12 +259,12 @@ internal_ep_strategy_set_property(GObject *object,
 }
 
 
-    static void
+static void
 enforcement_point_base_init(gpointer g_class)
 {
     static gboolean initialized = FALSE;
 
-    g_print("interface init\n");
+    OHM_DEBUG(DBG_SIGNAL, "interface init");
 
     if (!initialized) {
         /*
@@ -312,14 +318,15 @@ enforcement_point_send_decision(EnforcementPoint * self, Transaction *transactio
 }
 
 
-    gboolean
+gboolean
 internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
 {
     guint txid;
     gboolean ret; /* return value from the signal */
 
+    
     g_object_get(transaction, "txid", &txid, NULL);
-    g_print("Internal EP send decision, txid '%u'\n", txid);
+    OHM_DEBUG(DBG_SIGNAL, "Internal EP send decision, txid '%u'", txid);
     
     if (txid == 0) {
         g_signal_emit (INTERNAL_EP_STRATEGY(self), signals [ON_KEY_CHANGE], 0, txid);
@@ -340,7 +347,7 @@ internal_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
     return TRUE;
 }
 
-    static int
+static int
 map_to_dbus_type(GValue *gval, gchar *sig, void **value)
 {
 
@@ -379,7 +386,7 @@ map_to_dbus_type(GValue *gval, gchar *sig, void **value)
     return retval;
 }
 
-    static          gboolean
+static          gboolean
 send_ipc_signal(gpointer data)
 {
     pending_signal *signal = data;
@@ -447,7 +454,7 @@ send_ipc_signal(gpointer data)
  *
  */
 
-    g_print("sending signal with txid '%u'\n", txid);
+    OHM_DEBUG(DBG_SIGNAL, "sending signal with txid '%u'", txid);
 
     if ((dbus_signal =
                 dbus_message_new_signal(path, interface, "actions")) == NULL)
@@ -468,7 +475,8 @@ send_ipc_signal(gpointer data)
         gchar *f = i->data;
         GSList *ohm_facts = ohm_fact_store_get_facts_by_name(fs, f);
         
-        printf("key: %s, facts: %s\n", f, ohm_facts ? "yes" : "ERROR: NO FACTS!");
+        OHM_DEBUG(DBG_SIGNAL, "key: %s, facts: %s", f,
+              ohm_facts ? "yes" : "ERROR: NO FACTS!");
 
         if (!ohm_facts)
             continue;
@@ -476,20 +484,20 @@ send_ipc_signal(gpointer data)
         /* open command_array_entry_iter */
         if (!dbus_message_iter_open_container(&command_array_iter, DBUS_TYPE_DICT_ENTRY,
                     NULL, &command_array_entry_iter)) {
-            printf("error opening container\n");
+            OHM_DEBUG(DBG_SIGNAL, "error opening container");
             goto fail;
         }
 
         if (!dbus_message_iter_append_basic
                 (&command_array_entry_iter, DBUS_TYPE_STRING, &f)) {
-            printf("error appending OhmFact key\n");
+            OHM_DEBUG(DBG_SIGNAL, "error appending OhmFact key");
             goto fail;
         }
         
         /* open fact_iter */
         if (!dbus_message_iter_open_container(&command_array_entry_iter, DBUS_TYPE_ARRAY,
                     "a(sv)", &fact_iter)) {
-            printf("error opening container\n");
+            OHM_DEBUG(DBG_SIGNAL, "error opening container");
             goto fail;
         }
 
@@ -498,12 +506,12 @@ send_ipc_signal(gpointer data)
             OhmFact *of = j->data;
             GList *fields = NULL;
 
-            printf("starting to process OhmFact '%p'\n", of);
+            OHM_DEBUG(DBG_SIGNAL, "starting to process OhmFact '%p'", of);
         
             /* open fact_struct_iter */
             if (!dbus_message_iter_open_container(&fact_iter, DBUS_TYPE_ARRAY,
                         "(sv)", &fact_struct_iter)) {
-                printf("error opening container\n");
+                OHM_DEBUG(DBG_SIGNAL, "error opening container");
                 goto fail;
             }
             
@@ -521,7 +529,7 @@ send_ipc_signal(gpointer data)
 
                 sig[0] = sig_c;
                 
-                printf("Field name: %s\n", field_name);
+                OHM_DEBUG(DBG_SIGNAL, "Field name: %s", field_name);
 
                 if (dbus_type == DBUS_TYPE_INVALID) {
                     /* unsupported data type */
@@ -531,24 +539,24 @@ send_ipc_signal(gpointer data)
                 /* open fact_struct_field_iter */
                 if (!dbus_message_iter_open_container(&fact_struct_iter, DBUS_TYPE_STRUCT,
                             NULL, &fact_struct_field_iter)) {
-                    printf("error opening container\n");
+                    OHM_DEBUG(DBG_SIGNAL, "error opening container");
                     goto fail;
                 }
 
                 if (!dbus_message_iter_append_basic
                         (&fact_struct_field_iter, DBUS_TYPE_STRING, &field_name)) {
-                    printf("error appending OhmFact field\n");
+                    OHM_DEBUG(DBG_SIGNAL, "error appending OhmFact field");
                     goto fail;
                 }
 
                 /* open variant_iter */
                 if (!dbus_message_iter_open_container(&fact_struct_field_iter, DBUS_TYPE_VARIANT, sig, &variant_iter)) {
-                    printf("error opening container\n");
+                    OHM_DEBUG(DBG_SIGNAL, "error opening container");
                     goto fail;
                 }
 
                 if (!dbus_message_iter_append_basic(&variant_iter, dbus_type, &value)) {
-                    printf("error appending OhmFact value\n");
+                    OHM_DEBUG(DBG_SIGNAL, "error appending OhmFact value");
                     goto fail;
                 }
 
@@ -584,7 +592,7 @@ send_ipc_signal(gpointer data)
 
 fail:
 
-    g_print("emitting the signal failed\n");
+    OHM_DEBUG(DBG_SIGNAL, "emitting the signal failed");
     g_object_unref(transaction);
     signal->klass->pending_signals = g_slist_remove(signal->klass->pending_signals, signal);
     g_free(signal);
@@ -615,7 +623,7 @@ external_ep_send_decision(EnforcementPoint * self, Transaction *transaction)
             &facts,
             NULL);
 
-    g_print("External EP send decision, txid '%u'\n", txid);
+    OHM_DEBUG(DBG_SIGNAL, "External EP send decision, txid '%u'", txid);
 
     for (i = k->pending_signals; i != NULL; i = g_slist_next(i)) {
         signal = i->data;
@@ -732,9 +740,8 @@ internal_ep_receive_ack(EnforcementPoint * self, Transaction *transaction, guint
 
     InternalEPStrategy *s = INTERNAL_EP_STRATEGY(self);
 
-    g_print("Internal enforcement_point '%s', %s received!\n",
-            s->id,
-            status ? "ACK" : "NACK");
+    OHM_DEBUG(DBG_SIGNAL, "Internal enforcement_point '%s', %s received!",
+          s->id, status ? "ACK" : "NACK");
 
     /* internal reference count */
     s->ongoing_transactions = g_slist_remove(s->ongoing_transactions, transaction);
@@ -754,7 +761,8 @@ external_ep_receive_ack(EnforcementPoint * self, Transaction *transaction, guint
     
     ExternalEPStrategy *s = EXTERNAL_EP_STRATEGY(self);
 
-    g_print("External enforcement_point '%s', ack received!\n", s->id);
+    OHM_DEBUG(DBG_SIGNAL,
+              "External enforcement_point '%s', ack received!", s->id);
     
     /* internal reference count */
     s->ongoing_transactions = g_slist_remove(s->ongoing_transactions, transaction);
@@ -790,7 +798,7 @@ transaction_instance_init(GTypeInstance * instance,
 external_ep_dispose(GObject *object)
 {
     ExternalEPStrategy *self = EXTERNAL_EP_STRATEGY(object);
-    g_print("external_ep_dispose\n");
+    OHM_DEBUG(DBG_SIGNAL, "external_ep_dispose");
     
     g_free(self->id);
     self->id = NULL;
@@ -800,7 +808,7 @@ external_ep_dispose(GObject *object)
 internal_ep_dispose(GObject *object)
 {
     InternalEPStrategy *self = INTERNAL_EP_STRATEGY(object);
-    g_print("internal_ep_dispose\n");
+    OHM_DEBUG(DBG_SIGNAL, "internal_ep_dispose");
     
     g_free(self->id);
     self->id = NULL;
@@ -811,7 +819,7 @@ transaction_dispose(GObject *object) {
 
     GSList *i = NULL;
     Transaction *self = TRANSACTION(object);
-    g_print("transaction_dispose\n");
+    OHM_DEBUG(DBG_SIGNAL, "transaction_dispose");
     
     /* Note that the EPs might have been unregistered during the transaction,
      * therefore these may be the last references to them */
@@ -946,7 +954,7 @@ transaction_class_init(gpointer g_class, gpointer class_data) {
     static void
 internal_ep_strategy_interface_init(gpointer g_iface, gpointer iface_data)
 {
-    g_print("initing internal interface\n");
+    OHM_DEBUG(DBG_SIGNAL, "initing internal interface");
 
     EnforcementPointInterface *iface =
         (EnforcementPointInterface *) g_iface;
@@ -969,7 +977,7 @@ internal_ep_strategy_instance_init(GTypeInstance * instance,
         gpointer g_class)
 {
 
-    g_print("initing internal strategy\n");
+    OHM_DEBUG(DBG_SIGNAL, "initing internal strategy");
     InternalEPStrategy *self = INTERNAL_EP_STRATEGY(instance);
     self->id = NULL;
 }
@@ -979,7 +987,7 @@ internal_ep_strategy_instance_init(GTypeInstance * instance,
 external_ep_strategy_interface_init(gpointer g_iface, gpointer iface_data)
 {
 
-    g_print("initing external interface\n");
+    OHM_DEBUG(DBG_SIGNAL, "initing external interface");
     EnforcementPointInterface *iface =
         (EnforcementPointInterface *) g_iface;
     iface->send_decision =
@@ -1001,7 +1009,7 @@ external_ep_strategy_instance_init(GTypeInstance * instance,
         gpointer g_class)
 {
 
-    g_print("initing external strategy\n");
+    OHM_DEBUG(DBG_SIGNAL, "initing external strategy");
     ExternalEPStrategy *self = EXTERNAL_EP_STRATEGY(instance);
     self->id = NULL;
 }
@@ -1144,7 +1152,8 @@ transaction_done(Transaction *self)
     if (!self->built_ready)
         return FALSE;
         
-    g_print("transaction_done unanswered ep count '%i'\n", g_slist_length(self->not_answered));
+    OHM_DEBUG(DBG_SIGNAL, "transaction_done unanswered ep count '%i'",
+          g_slist_length(self->not_answered));
 
     return g_slist_length(self->not_answered) ? FALSE : TRUE;
 
@@ -1159,13 +1168,17 @@ transaction_add_ep(Transaction *self, EnforcementPoint *ep) {
 
     self->not_answered = g_slist_prepend(self->not_answered, ep);
 
-    g_print("Added ep %p to transaction %i, unanswered ep count now %i\n", ep, self->txid, g_slist_length(self->not_answered));
+    OHM_DEBUG(DBG_SIGNAL,
+          "Added ep %p to transaction %i, unanswered ep count now %i",
+          ep, self->txid, g_slist_length(self->not_answered));
 }
 
     void
 transaction_remove_ep(Transaction *self, EnforcementPoint *ep) {
     self->not_answered = g_slist_remove(self->not_answered, ep);
-    g_print("Removed ep %p to transaction %i, unanswered ep count now %i\n", ep, self->txid, g_slist_length(self->not_answered));
+    OHM_DEBUG(DBG_SIGNAL,
+          "Removed ep %p to transaction %i, unanswered ep count now %i",
+          ep, self->txid, g_slist_length(self->not_answered));
     g_object_unref(ep);
 }
 
@@ -1196,12 +1209,12 @@ transaction_complete(Transaction *self)
 {
     GSList *i;
     
-    g_print("transaction complete!\n");
+    OHM_DEBUG(DBG_SIGNAL, "transaction complete!");
 
     if (g_slist_length(self->not_answered) != 0) {
         /* we are here because of a timeout (TODO: or because of a
          * non-transaction decision, but refactor this away soon) */
-        g_print("not all enforcement points answered\n");
+        OHM_DEBUG(DBG_SIGNAL, "not all enforcement points answered");
 
         for (i = self->not_answered; i != 0; i = g_slist_next(i)) {
             EnforcementPoint *ep = i->data;
@@ -1224,7 +1237,7 @@ transaction_complete(Transaction *self)
     static gboolean
 timeout_transaction(gpointer data)
 {
-    g_print("timer launched on transaction!\n");
+    OHM_DEBUG(DBG_SIGNAL, "timer launched on transaction!");
     transaction_complete(data);
     return FALSE;
 }
@@ -1241,7 +1254,7 @@ process_inq(gpointer data)
                    *e = NULL;
     gboolean        ret = TRUE;
 
-    g_print("> process_inq\n");
+    OHM_DEBUG(DBG_SIGNAL, "> process_inq");
 
     /*
      * incoming queue (from OHM to this plugin) 
@@ -1253,12 +1266,12 @@ process_inq(gpointer data)
 
         for (e = enforcement_points; e != NULL; e = g_slist_next(e)) {
             EnforcementPoint *ep = e->data;
-            g_print("process: ep 0x%p\n", ep);
+            OHM_DEBUG(DBG_SIGNAL, "process: ep 0x%p", ep);
 
             transaction_add_ep(t, ep);
             ret = enforcement_point_send_decision(ep, t);
             if (!ret) {
-                g_print("Error sending the decision\n");
+                OHM_DEBUG(DBG_SIGNAL, "Error sending the decision");
                 /* TODO; signal that the transaction failed? NAK? */
             }
         }
@@ -1266,7 +1279,7 @@ process_inq(gpointer data)
         /* all enforcement points are notified, the transaction is now
          * ready to be handled */
 
-        g_print("transaction '%u' is now built\n", t->txid);
+        OHM_DEBUG(DBG_SIGNAL, "transaction '%u' is now built", t->txid);
 
         t->built_ready = TRUE;
 
@@ -1287,7 +1300,7 @@ process_inq(gpointer data)
 
             g_object_get(t, "timeout", &timeout, NULL);
 
-            printf("setting timeout: %u\n", timeout);
+            OHM_DEBUG(DBG_SIGNAL, "setting timeout: %u", timeout);
             t->timeout_id = g_timeout_add(timeout, timeout_transaction, t);
         }
     }
@@ -1309,7 +1322,7 @@ register_enforcement_point(const gchar * uri, gboolean internal)
     EnforcementPoint *ep = NULL;
     gchar *id;
 
-    g_print("> register_enforcement_point\n");
+    OHM_DEBUG(DBG_SIGNAL, "> register_enforcement_point");
 
     for (i = enforcement_points; i != NULL; i = g_slist_next(i)) {
     
@@ -1324,7 +1337,8 @@ register_enforcement_point(const gchar * uri, gboolean internal)
     }
 
     if (ep != NULL) {
-        g_print("Could not register: ep '%s' already registered\n", uri);
+        OHM_DEBUG(DBG_SIGNAL,
+              "Could not register: ep '%s' already registered", uri);
         return NULL;
     }
 
@@ -1335,12 +1349,13 @@ register_enforcement_point(const gchar * uri, gboolean internal)
     }
 
     if (ep == NULL) {
-        g_print("Could not create new enforcement_point '%s'\n", uri);
+        OHM_DEBUG(DBG_SIGNAL,
+                  "Could not create new enforcement_point '%s'", uri);
     }
 
     g_object_set(ep, "id", uri, NULL);
 
-    g_print("Created ep '%s' at 0x%p\n", uri, ep);
+    OHM_DEBUG(DBG_SIGNAL, "Created ep '%s' at 0x%p", uri, ep);
 
     enforcement_points = g_slist_prepend(enforcement_points, ep);
     
@@ -1374,7 +1389,7 @@ unregister_enforcement_point(const gchar *uri)
         return FALSE;
     }
 
-    g_print("Unregister: '%s' was found\n", uri);
+    OHM_DEBUG(DBG_SIGNAL, "Unregister: '%s' was found", uri);
 
     enforcement_point_unregister(ep);
     enforcement_points = g_slist_remove(enforcement_points, ep);
@@ -1390,7 +1405,7 @@ update_external_enforcement_points(DBusConnection * c, DBusMessage * msg,
     gchar *sender = NULL, *before = NULL, *after = NULL;
     gboolean ret;
 
-    g_print("> update_external_enforcement_points\n");
+    OHM_DEBUG(DBG_SIGNAL, "> update_external_enforcement_points");
 
     ret = dbus_message_get_args(msg,
             NULL,
@@ -1406,15 +1421,16 @@ update_external_enforcement_points(DBusConnection * c, DBusMessage * msg,
         if (!strcmp(after, "")) {
             /* a service went away, unregister if it was one of ours */
             if (unregister_enforcement_point(sender)) {
-                g_print("Removed service '%s'\n", sender);
+                OHM_DEBUG(DBG_SIGNAL, "Removed service '%s'", sender);
             }
             else {
-                g_print("Terminated service '%s' wasn't registered\n", sender);
+                OHM_DEBUG(DBG_SIGNAL,
+                      "Terminated service '%s' wasn't registered", sender);
             }
         } 
     }
     
-    g_print("< update_external_enforcement_points\n");
+    OHM_DEBUG(DBG_SIGNAL, "< update_external_enforcement_points");
 
     return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -1428,7 +1444,7 @@ register_external_enforcement_point(DBusConnection * c, DBusMessage * msg,
     gint ret;
     EnforcementPoint *ep = NULL;
 
-    g_print("> register_external_enforcement_point\n");
+    OHM_DEBUG(DBG_SIGNAL, "> register_external_enforcement_point");
 
     if (msg == NULL) {
         goto err;
@@ -1466,7 +1482,7 @@ err:
     
     /* if (msg) { dbus_message_unref(msg); msg = NULL; } */
     
-    g_print("D-Bus error\n");
+    OHM_DEBUG(DBG_SIGNAL, "D-Bus error");
     return DBUS_HANDLER_RESULT_HANDLED;
 
 }
@@ -1518,7 +1534,7 @@ err:
     
     /* if (msg) { dbus_message_unref(msg); msg = NULL; } */
     
-    g_print("D-Bus error\n");
+    OHM_DEBUG(DBG_SIGNAL, "D-Bus error");
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
@@ -1617,8 +1633,8 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     Transaction *transaction = NULL;
 
 #if 1
-    g_print("got signal %s.%s, sender %s\n", interface ?: "NULL", member,
-            sender ?: "NULL");
+    OHM_DEBUG(DBG_SIGNAL, "got signal %s.%s, sender %s",
+          interface ?: "NULL", member, sender ?: "NULL");
 #endif
 
     if (member == NULL || strcmp(member, "status"))
@@ -1644,7 +1660,7 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     transaction = transaction_lookup(txid);
 
     if (transaction == NULL) {
-        g_print("unknown transaction %u, ignored\n", txid);
+        OHM_DEBUG(DBG_SIGNAL, "unknown transaction %u, ignored", txid);
         return DBUS_HANDLER_RESULT_HANDLED;
     }
 
@@ -1654,13 +1670,13 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
 
         g_object_get(tmp, "id", &id, NULL);
 
-        g_print("comparing id '%s' and sender '%s'\n", id, sender);
+        OHM_DEBUG(DBG_SIGNAL, "comparing id '%s' and sender '%s'", id, sender);
 
         if (!strcmp(id, sender)) {
             /* we found the sender */
             ep = tmp;
-            g_print("transaction 0x%x %sed by peer '%s'\n", txid,
-                    status ? "ACK" : "NAK", id);
+            OHM_DEBUG(DBG_SIGNAL, "transaction 0x%x %sed by peer '%s'", txid,
+                  status ? "ACK" : "NAK", id);
 
             g_free(id);
             break;
@@ -1669,7 +1685,8 @@ dbus_ack(DBusConnection * c, DBusMessage * msg, void *data)
     }
 
     if (ep == NULL) {
-        g_print("transaction ACK/NAK from unknown peer %s, ignored...\n", sender);
+        OHM_DEBUG(DBG_SIGNAL,
+              "transaction ACK/NAK from unknown peer %s, ignored...", sender);
         return DBUS_HANDLER_RESULT_HANDLED;
     }
 

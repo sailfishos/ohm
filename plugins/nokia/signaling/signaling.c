@@ -6,8 +6,16 @@
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
-#include "signaling.h"
 #include <ohm-plugin.h>
+#include <ohm-plugin-debug.h>
+
+#include "signaling.h"
+
+
+static int DBG_SIGNAL;
+
+OHM_DEBUG_PLUGIN(signaling,
+    OHM_DEBUG_FLAG("signal", "decision point signaling", &DBG_SIGNAL));
 
 /* completion cb type */
 typedef void (*completion_cb_t)(int transid, int success);
@@ -96,9 +104,12 @@ OHM_EXPORTABLE(int, signal_changed, (char *signal, int transid, int factc, char 
     int i;
 
     /* Get facts to a list */
-
-    printf("signaling.signal_changed: signal '%s' with txid '%i', factcount '%i' with timeout '%li', %s a callback\n",
-            signal, transid, factc, timeout, callback ? "requires" : "doesn't require");
+    
+    OHM_DEBUG(DBG_SIGNAL, "signaling.signal_changed: "
+              "signal '%s' with txid '%i', "
+              "factcount '%i' with timeout '%li', %s a callback",
+              signal, transid, factc, timeout,
+              callback ? "requires" : "doesn't require");
 
     for (i = 0; i < factc; i++) {
         facts = g_slist_prepend(facts, g_strdup(factv[i]));
@@ -130,7 +141,11 @@ plugin_init(OhmPlugin * plugin)
 {
     DBusConnection *c = ohm_plugin_dbus_get_connection();
     /* should we ref the connection? */
-    init_signaling(c);
+
+    if (!OHM_DEBUG_INIT(signaling))
+        g_warning("Failed to initialize signaling plugin debugging.");
+    
+    init_signaling(c, DBG_SIGNAL);
     return;
 }
 
