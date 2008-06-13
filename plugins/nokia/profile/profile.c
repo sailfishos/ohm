@@ -37,7 +37,8 @@ OHM_PLUGIN_DESCRIPTION("profile",
         NULL);
 
 
-static gboolean profile_create_fact(const char *profile, profileval_t *values) {
+static gboolean profile_create_fact(const char *profile, profileval_t *values)
+{
 
     OhmFactStore *fs = ohm_fact_store_get_fact_store();
     GSList *list = NULL;
@@ -83,13 +84,16 @@ static gboolean profile_create_fact(const char *profile, profileval_t *values) {
     gval = ohm_str_value(profile);
     ohm_fact_set(fact, PROFILE_NAME_KEY, gval);
 
-    while (values->pv_key) {
-        if (values->pv_val) {
-            g_print("setting key %s with value %s\n", values->pv_key, values->pv_val);
-            gval = ohm_str_value(values->pv_val);
-            ohm_fact_set(fact, values->pv_key, gval);
+    if (values) {
+        while (values->pv_key) {
+            g_print("3\n");
+            if (values->pv_val) {
+                g_print("setting key %s with value %s\n", values->pv_key, values->pv_val);
+                gval = ohm_str_value(values->pv_val);
+                ohm_fact_set(fact, values->pv_key, gval);
+            }
+            values++;
         }
-        values++;
     }
 
     /* put the fact in the factstore */
@@ -99,21 +103,41 @@ static gboolean profile_create_fact(const char *profile, profileval_t *values) {
 
 static void profile_value_change(const char *profile, const char *key, const char *val, const char *type)
 {
-    /* TODO */
+
+    /* A value has changed in the currently active value */
+
+    OhmFactStore *fs = ohm_fact_store_get_fact_store();
+    OhmFact *fact = NULL;
 
     /* get the previous fact with the profile name */
+    GSList *list = ohm_fact_store_get_facts_by_name(fs, FACTSTORE_PROFILE);
 
-    /* get the previous value from the fact */
+    if (g_slist_length(list) != 1) {
+        g_print("Error: there isn't an unique profile fact\n");
+        return;
+    }
+    fact = list->data;
+    if (fact && key) {
+        GValue *gval = NULL;
 
-    /* see that the type matches */
+        /* change the value */
+        if (val)
+            gval = ohm_str_value(val);
 
-    /* change the value */
+        g_print("setting key %s with value %s\n", key, val);
+        ohm_fact_set(fact, key, gval);
+    }
+    else {
+        g_print("Error\n");
+    }
 
     return;
 }
 
 static void profile_name_change(const char *profile)
 {
+    /* Active profile has changed */
+
     /* get values for the new profile */
 
     profileval_t *values = NULL;
