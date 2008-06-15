@@ -1,13 +1,13 @@
 /**
- * @file hal.h
- * @brief OHM HAL plugin header file
+ * @file profile.h
+ * @brief OHM Profile plugin header file
  * @author ismo.h.puustinen@nokia.com
  *
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
-#ifndef HAL_H
-#define HAL_H
+#ifndef Profile_H
+#define Profile_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,23 +21,26 @@
 #include <glib-object.h>
 #include <dbus/dbus.h>
 
-#include <libhal.h>
+#include <profiled/libprofile.h>
 
 #include <ohm-plugin.h>
 #include <dres/dres.h>
 #include <dres/variables.h>
 #include <prolog/ohm-fact.h>
 
-typedef struct _hal_plugin {
-    LibHalContext *hal_ctx;
-    DBusConnection *c;
-    GSList *modified_properties;
-    OhmFactStore *fs;
-} hal_plugin;
+#define FACTSTORE_PREFIX "com.nokia.policy"
+#define FACTSTORE_PROFILE             FACTSTORE_PREFIX ".profile"
+#define PROFILE_NAME_KEY "profile_name"
+
+typedef struct _profile_plugin {
+    gchar *current_profile;
+    profile_track_profile_fn name_change;
+    profile_track_value_fn value_change;
+} profile_plugin;
 
 
-hal_plugin * init_hal(DBusConnection *c);
-void deinit_hal(hal_plugin *plugin);
+profile_plugin * init_profile();
+void deinit_profile(profile_plugin *plugin);
 
 #endif
 
