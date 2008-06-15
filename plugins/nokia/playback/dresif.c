@@ -6,9 +6,10 @@ static void dresif_init(OhmPlugin *plugin)
 }
 
 
-static int dresif_state_request(client_t *pb, char *state, int cb)
+static int dresif_state_request(client_t *pb, char *state, int transid)
 {
     char *vars[32];
+    char  buf[64];
     int   i;
     int   err;
 
@@ -21,9 +22,13 @@ static int dresif_state_request(client_t *pb, char *state, int cb)
     vars[++i] = "playback_media";
     vars[++i] = "unknown";
 
-    if (cb) {
+    if (transid > 0) {
+        snprintf(buf, sizeof(buf), "%d", transid);
+
         vars[++i] = "completion_callback";
         vars[++i] = "playback.completion_cb";
+        vars[++i] = "transaction_id";
+        vars[++i] = buf;
     }
 
     vars[++i] = NULL;
@@ -34,35 +39,27 @@ static int dresif_state_request(client_t *pb, char *state, int cb)
     return err ? FALSE : TRUE;
 }
 
-OHM_EXPORTABLE(void, completion_cb, (int transid, int success))
+OHM_EXPORTABLE(void, completion_cb, (int trid, int success))
 {
-    static char *stop = "Stop";
-
     pbreq_t     *req;
-    client_t    *pb;
+    client_t    *cl;
+    sm_evdata_t  evdata;
+    sm_evdata_pbreply_t *rply;
 
-    DEBUG("*** playback.%s(%d, %s)\n", __FUNCTION__,
-           transid, success ? "OK":"FAILED");
+    DEBUG("playback.%s(%d, %s)\n", __FUNCTION__, trid, success?"OK":"FAILED");
 
-    if ((req = pbreq_get_first()) == NULL) {
-        DEBUG("libplayback completion_cb: Can't find the request");
+    if ((req = pbreq_get_by_trid(trid)) == NULL) {
+        DEBUG("Cam't find request with transaction ID %d", trid);
         return;
     }
 
-    if (req->sts != pbreq_pending) {
-        DEBUG("libplayback completion_cb: bad state %d", req->sts);
-        return;
-    }
+    cl = req->cl;
+    rply = &evdata.pbreply;
 
-    pb = req->pb;
-    
-    if (pb->state != NULL)
-        free(pb->state);
-    pb->state = strdup(success ? req->state : stop);
+    rply->evid = success ? evid_playback_complete : evid_playback_failed;
+    rply->req  = req;
 
-    dbusif_reply_to_req_state(req->msg, pb->state);
-
-    pbreq_destroy(req);
+    sm_process_event(cl->sm, &evdata);
 }
 
 

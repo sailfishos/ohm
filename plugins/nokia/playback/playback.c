@@ -12,6 +12,7 @@
 #include "playback.h"
 #include "client.h"
 #include "pbreq.h"
+#include "sm.h"
 #include "dbusif.h"
 #include "dresif.h"
 #include "fsif.h"
@@ -25,6 +26,7 @@ static void plugin_init(OhmPlugin *plugin)
 {
     client_init(plugin);
     pbreq_init(plugin);
+    sm_init(plugin);
     dbusif_init(plugin);
     dresif_init(plugin);
     fsif_init(plugin);
@@ -38,6 +40,7 @@ static void plugin_destroy(OhmPlugin *plugin)
 
 #include "client.c"
 #include "pbreq.c"
+#include "sm.c"
 #include "dbusif.c"
 #include "dresif.c"
 #include "fsif.c"

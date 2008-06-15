@@ -79,7 +79,7 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
                         key,
                         NULL);
 
-                value = ohm_str_value(hal_value);
+                value = ohm_value_from_string(hal_value);
                 libhal_free_string(hal_value);
                 break;
             }
@@ -91,7 +91,7 @@ static GValue * get_value_from_property(hal_plugin *plugin, const char *udi, con
                         key,
                         NULL);
 
-                value = ohm_int_value(hal_value);
+                value = ohm_value_from_int(hal_value);
                 break;
             }
 #if 0
@@ -218,14 +218,14 @@ static OhmFact * create_fact(hal_plugin *plugin, const char *udi, LibHalProperty
             case LIBHAL_PROPERTY_TYPE_INT32:
                 {
                     dbus_int32_t hal_value = libhal_psi_get_int(&iter);
-                    val = ohm_int_value(hal_value);
+                    val = ohm_value_from_int(hal_value);
                     break;
                 }
             case LIBHAL_PROPERTY_TYPE_STRING:
                 {
                     /* freed with propertyset*/
                     char *hal_value = libhal_psi_get_string(&iter);
-                    val = ohm_str_value(hal_value);
+                    val = ohm_value_from_string(hal_value);
                     break;
                 }
             default:

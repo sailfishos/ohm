@@ -13,28 +13,41 @@ static client_t *client_create(char *dbusid, char *object)
     client_t *cl = client_find(dbusid, object);
     client_t *next;
     client_t *prev;
+    sm_t     *sm;
+    char      smname[256];
+    char     *p, *q;
 
     if (cl == NULL) {
+        p = (q = strrchr(object, '/')) ? q+1 : object;
+        snprintf(smname, sizeof(smname), "%s:%s", dbusid, p);
+
         if ((cl = malloc(sizeof(*cl))) != NULL) {
-            memset(cl, 0, sizeof(*cl));
-
-            cl->dbusid = strdup(dbusid);
-            cl->object = strdup(object);
-
-            next = (client_t *)&cl_head;
-            prev = cl_head.prev;
-
-            prev->next = cl;
-            cl->next   = next;
-
-            next->prev = cl;
-            cl->prev   = prev;
-
-            if (client_add_factsore_entry(dbusid, object))
-                DEBUG("playback %s%s created", dbusid, object);
-            else {
-                client_destroy(cl);
+            if ((sm = sm_create(smname, (void *)cl)) == NULL) {
+                free(cl);
                 cl = NULL;
+            }                
+            else {
+                memset(cl, 0, sizeof(*cl));
+
+                cl->dbusid = strdup(dbusid);
+                cl->object = strdup(object);
+                cl->sm     = sm;  
+
+                next = (client_t *)&cl_head;
+                prev = cl_head.prev;
+                
+                prev->next = cl;
+                cl->next   = next;
+                
+                next->prev = cl;
+                cl->prev   = prev;
+                
+                if (client_add_factsore_entry(dbusid, object))
+                    DEBUG("playback %s%s created", dbusid, object);
+                else {
+                    client_destroy(cl);
+                    cl = NULL;
+                }
             }
         }
     }
@@ -48,7 +61,8 @@ static void client_destroy(client_t *cl)
 
     if (cl != NULL) {
         DEBUG("playback %s%s going to be destroyed", cl->dbusid, cl->object);
-
+        
+        sm_destroy(cl->sm);
         client_delete_factsore_entry(cl);
         pbreq_purge(cl);
 

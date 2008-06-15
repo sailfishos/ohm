@@ -60,6 +60,8 @@ static int  prolog_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
 static int  signal_handler (dres_t *dres,
                             char *name, dres_action_t *action, void **ret);
+static char *getarg(dres_t *dres, dres_action_t *action, int argidx,
+                    char *namebuf, int len);
 static void dump_signal_changed_args(char *signame, int transid, int factc,
                                      char**factv, completion_cb_t callback,
                                      unsigned long timeout);
@@ -322,21 +324,22 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 {
 #define MAX_FACTS 128
 #define MAX_LENGTH 64
-    static int        transid = 1;
-
     dres_variable_t  *var;
     char             *signature;
     unsigned long     timeout;
     int               factc;
     char              signal_name[MAX_LENGTH];
     char             *cb_name;
+    char             *trid_str;
+    int               trid;
     char              prefix[MAX_LENGTH];
     char              arg[MAX_LENGTH];
     char             *factv[MAX_FACTS + 1];
     char              buf[MAX_FACTS * MAX_LENGTH];
     char              namebuf[MAX_LENGTH];
+    char              tridbuf[MAX_LENGTH];
     char             *p;
-    int               i, j;
+    int               i;
     int               offs;
     int               success;
     
@@ -351,37 +354,13 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     signal_name[0] = '\0';
     dres_name(dres, action->arguments[0], signal_name, MAX_LENGTH);
 
-    namebuf[0] = '\0';
-    dres_name(dres, action->arguments[1], namebuf, MAX_LENGTH);
+    cb_name  = getarg(dres, action, 1, namebuf, MAX_LENGTH);
+    trid_str = getarg(dres, action, 2, tridbuf, MAX_LENGTH);
 
-    prefix[MAX_LENGTH-1] = '\0';
-    strncpy(prefix, dres_get_prefix(dres), MAX_LENGTH-1);
+    trid  = strtol(trid_str, NULL, 10);
 
-    if ((j = strlen(prefix)) > 0 && j < MAX_LENGTH-2 && prefix[j-1] != '.')
-        strcpy(prefix+j, ".");
-
-    switch (namebuf[0]) {
-
-    case '&':
-        cb_name = dres_scope_getvar(dres->scope, namebuf+1);
-        break;
-
-    case '$':
-        cb_name = "";
-        if ((var = dres_lookup_variable(dres, action->arguments[1]))) {
-            dres_var_get_field(var->var, "value",NULL, VAR_STRING, &cb_name);
-        }
-        break;
-
-    default:
-        cb_name = namebuf;
-        break;
-    }
-
-    if (cb_name == NULL)
-        cb_name = "";
-    DEBUG("%s(): cb_name='%s'\n", __FUNCTION__, cb_name);
-
+    DEBUG("%s(): cb_name='%s' tridstr='%s' trid=%d\n",
+          __FUNCTION__, cb_name, tridstr, trid);
     
     timeout = 5 * 1000;
 
@@ -425,9 +404,9 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
         signature = (char *)completion_cb_SIGNATURE;
 
         if (ohm_module_find_method(cb_name,&signature,(void *)&completion_cb)){
-            dump_signal_changed_args(signal_name, transid, factc,factv,
+            dump_signal_changed_args(signal_name, trid, factc,factv,
                                      completion_cb, timeout);
-            success = signal_changed(signal_name, transid++, factc,factv,
+            success = signal_changed(signal_name, trid, factc,factv,
                                      completion_cb, timeout);
         }
         else {
@@ -440,6 +419,40 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
 #undef MAX_LENGTH
 #undef MAX_FACTS
+}
+
+static char *getarg(dres_t *dres, dres_action_t *action,
+                    int argidx, char *namebuf, int len)
+{
+    dres_variable_t  *var;
+    char             *value;
+
+    value = "";
+
+    if (argidx < 0 || argidx >= action->nvariable) {
+        namebuf[0] = '\0';
+        dres_name(dres, action->arguments[argidx], namebuf, len);
+
+        switch (namebuf[0]) {
+
+        case '&':
+            value = dres_scope_getvar(dres->scope, namebuf+1);
+            break;
+
+        case '$':
+            value = "";
+            if ((var = dres_lookup_variable(dres, action->arguments[argidx]))){
+                dres_var_get_field(var->var, "value",NULL, VAR_STRING, &value);
+            }
+            break;
+
+        default:
+            value = namebuf;
+            break;
+        }
+    }
+
+    return value;
 }
 
 static void dump_signal_changed_args(char *signame, int transid, int factc,

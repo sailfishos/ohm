@@ -1,6 +1,7 @@
 #ifndef __OHM_PLAYBACK_CLIENT_H__
 #define __OHM_PLAYBACK_CLIENT_H__
 
+#include "sm.h"
 #include "dbusif.h"
 
 /* FactStore prefix */
@@ -21,6 +22,7 @@ typedef struct client_s {
         int play;
         int stop;
     }               allow;
+    sm_t           *sm;           /* state machine instance */
 } client_t;
 
 typedef struct {
