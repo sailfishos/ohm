@@ -17,6 +17,16 @@
  * - Add support to adding/removing device capabilities (new fields in
  *   OhmFacts
  * - How do the 64-bit uints map to any allowed OhmFact types?
+ * - Refactor the "interesting" list as a map and add reference counting
+ *   to it
+ *
+ * FIXED:
+ * - How is the "interestingness" defined? Who sets it?
+ *     - If a module is interested in a key, it needs to call the
+ *       "interested" function with the UDI to get it mapped to the
+ *       factstore. Calling "uninterested" is supposed to be the
+ *       symmetric counterpart, but it currently doesn't delete the
+ *       existing OhmFact (for safety reasons).
  */
 
 
@@ -257,8 +267,14 @@ static gboolean delete_fact(hal_plugin *plugin, OhmFact *fact)
 static gboolean interesting(hal_plugin *plugin, const char *udi)
 {
     /* see if we are interested in the OhmFact */ 
-    /* TODO */
-    return TRUE;
+    GSList *e = NULL;
+
+    for (e = plugin->interesting; e != NULL; e = g_slist_next(e)) {
+        gchar *interesting_udi = e->data;
+        if (strcmp(interesting_udi, udi) == 0)
+            return TRUE;
+    }
+    return FALSE;
 }
 
 static void
@@ -388,6 +404,74 @@ hal_property_modified_cb (LibHalContext *ctx,
     return;
 }
 
+gboolean mark_interesting(hal_plugin *plugin, gchar *udi)
+{
+    GSList *e = NULL;
+    gchar *new_udi = NULL;
+    DBusError error;
+    LibHalPropertySet *properties = NULL;
+    OhmFact *fact;
+    
+    if (!plugin)
+        return FALSE;
+    
+    dbus_error_init(&error);
+
+    /* check if we are already interested in the udi */
+    for (e = plugin->interesting; e != NULL; e = g_slist_next(e)) {
+        gchar *interesting_udi = e->data;
+        if (strcmp(interesting_udi, udi) == 0)
+            return TRUE;
+    }
+
+    /* ok, start processing the request */
+
+    new_udi = g_strdup(udi);
+    
+    if (!new_udi)
+        return FALSE;
+
+    /* get the fact from the HAL */
+    properties = libhal_device_get_all_properties(plugin->hal_ctx, new_udi, &error);
+    
+    if (dbus_error_is_set(&error)) {
+        g_print("Error getting data for HAL object %s. '%s': '%s'\n", new_udi, error.name, error.message);
+        g_free(new_udi);
+        return FALSE;
+    }
+
+    fact = create_fact(plugin, udi, properties);
+    if (fact)
+        set_fact(plugin, fact);
+
+    libhal_free_property_set(properties);
+
+    /* mark the HAL object as interesting */
+    plugin->interesting = g_slist_append(plugin->interesting, new_udi);
+    
+    return TRUE;
+}
+
+gboolean mark_uninteresting(hal_plugin *plugin, gchar *udi)
+{
+    GSList *e = NULL;
+    
+    if (!plugin)
+        return FALSE;
+    
+    /* check if we are already interested in the udi */
+    for (e = plugin->interesting; e != NULL; e = g_slist_next(e)) {
+        gchar *interesting_udi = e->data;
+        if (strcmp(interesting_udi, udi) == 0) {
+            g_free(e->data);
+            /* is this really O(n**2) now? :-P */
+            plugin->interesting = g_slist_delete_link(plugin->interesting, e);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 hal_plugin * init_hal(DBusConnection *c)
 {
     DBusError error;
@@ -480,8 +564,16 @@ error:
 
 void deinit_hal(hal_plugin *plugin)
 {
+    GSList *e = NULL;
+
     libhal_ctx_shutdown(plugin->hal_ctx, NULL);
     libhal_ctx_free(plugin->hal_ctx);
+
+    for (e = plugin->interesting; e != NULL; e = g_slist_next(e)) {
+        g_free(e->data);
+    }
+    g_slist_free(plugin->interesting);
+
     return;
 }
 

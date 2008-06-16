@@ -32,12 +32,16 @@ typedef struct _hal_plugin {
     LibHalContext *hal_ctx;
     DBusConnection *c;
     GSList *modified_properties;
+    /* TODO: make the "interesting" variable a map */
+    GSList *interesting;
     OhmFactStore *fs;
 } hal_plugin;
 
 
 hal_plugin * init_hal(DBusConnection *c);
 void deinit_hal(hal_plugin *plugin);
+gboolean mark_interesting(hal_plugin *plugin, gchar *udi);
+gboolean mark_uninteresting(hal_plugin *plugin, gchar *udi);
 
 #endif
 
