@@ -27,6 +27,7 @@
 #include <dres/dres.h>
 #include <dres/variables.h>
 #include <prolog/ohm-fact.h>
+#include <ohm-plugin-debug.h>
 
 typedef struct _hal_plugin {
     LibHalContext *hal_ctx;
@@ -38,7 +39,7 @@ typedef struct _hal_plugin {
 } hal_plugin;
 
 
-hal_plugin * init_hal(DBusConnection *c);
+hal_plugin * init_hal(DBusConnection *c, int flag_hal, int flag_facts);
 void deinit_hal(hal_plugin *plugin);
 gboolean mark_interesting(hal_plugin *plugin, gchar *udi);
 gboolean mark_uninteresting(hal_plugin *plugin, gchar *udi);

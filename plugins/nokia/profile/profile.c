@@ -81,15 +81,14 @@ static gboolean profile_create_fact(const char *profile, profileval_t *values)
     /* fill the fact with the profile name and the values */
 
     g_print("setting key %s with value %s\n", PROFILE_NAME_KEY, profile);
-    gval = ohm_str_value(profile);
+    gval = ohm_value_from_string(profile);
     ohm_fact_set(fact, PROFILE_NAME_KEY, gval);
 
     if (values) {
         while (values->pv_key) {
-            g_print("3\n");
             if (values->pv_val) {
                 g_print("setting key %s with value %s\n", values->pv_key, values->pv_val);
-                gval = ohm_str_value(values->pv_val);
+                gval = ohm_value_from_string(values->pv_val);
                 ohm_fact_set(fact, values->pv_key, gval);
             }
             values++;
@@ -122,7 +121,7 @@ static void profile_value_change(const char *profile, const char *key, const cha
 
         /* change the value */
         if (val)
-            gval = ohm_str_value(val);
+            gval = ohm_value_from_string(val);
 
         g_print("setting key %s with value %s\n", key, val);
         ohm_fact_set(fact, key, gval);
