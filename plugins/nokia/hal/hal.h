@@ -36,7 +36,7 @@ typedef struct _hal_plugin {
 } hal_plugin;
 
 
-hal_plugin * init_hal(DBusConnection *c, int flag_hal, int flag_facts);
+hal_plugin * init_hal(DBusConnection *c);
 void deinit_hal(hal_plugin *plugin);
 
 #endif

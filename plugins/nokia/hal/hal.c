@@ -6,15 +6,7 @@
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
-#include <ohm-plugin-debug.h>
-
 #include "hal.h"
-
-static int DBG_HAL, DBG_FACTS;
-
-OHM_DEBUG_PLUGIN(hal,
-    OHM_DEBUG_FLAG("hal"  , "HAL events"       , &DBG_HAL),
-    OHM_DEBUG_FLAG("facts", "fact manipulation", &DBG_FACTS));
 
 hal_plugin *hal_plugin_p;
 
@@ -22,14 +14,10 @@ static void
 plugin_init(OhmPlugin * plugin)
 {
     DBusConnection *c = ohm_plugin_dbus_get_connection();
-
-    if (!OHM_DEBUG_INIT(hal))
-        g_warning("Failed to initialize HAL plugin debugging.");
-
-    OHM_DEBUG(DBG_HAL, "> HAL plugin init");
+    g_print("> HAL plugin init\n");
     /* should we ref the connection? */
-    hal_plugin_p = init_hal(c, DBG_HAL, DBG_FACTS);
-    OHM_DEBUG(DBG_HAL, "< HAL plugin init");
+    hal_plugin_p = init_hal(c);
+    g_print("< HAL plugin init\n");
     return;
 }
 
