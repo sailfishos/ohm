@@ -8,25 +8,7 @@
 
 #include "hal.h"
 
-/* this uses libhal (for now) */
-
-/* FIXME:
- *
- * - How are the OhmFacts reference counted? We don't want to remove
- *   them if they are scheduled to be signaled or something
- * - Add support to adding/removing device capabilities (new fields in
- *   OhmFacts
- * - How do the 64-bit uints map to any allowed OhmFact types?
- */
-
-typedef struct _hal_modified_property {
-    char *udi;
-    char *key;
-    dbus_bool_t is_removed;
-    dbus_bool_t is_added;
-} hal_modified_property;
-
-hal_plugin *hal_plugin_p;
+hal_plugin *hal_plugin_p = NULL;
 
 static void
 plugin_init(OhmPlugin * plugin)
@@ -37,6 +19,23 @@ plugin_init(OhmPlugin * plugin)
     hal_plugin_p = init_hal(c);
     g_print("< HAL plugin init\n");
     return;
+}
+
+/**
+ * Marks the udi as interesting. Interesting HAL devices are mapped to
+ * factstore.
+ */
+OHM_EXPORTABLE(gboolean, interested, (gchar *udi))
+{
+    return mark_interesting(hal_plugin_p, udi);
+}
+
+/**
+ * Marks the udi as uninteresting.
+ */
+OHM_EXPORTABLE(gboolean, uninterested, (gchar *udi))
+{
+    return mark_uninteresting(hal_plugin_p, udi);
 }
 
 static void
@@ -55,6 +54,9 @@ OHM_PLUGIN_DESCRIPTION("hal",
         OHM_LICENSE_NON_FREE, plugin_init, plugin_exit,
         NULL);
 
+OHM_PLUGIN_PROVIDES_METHODS(hal, 2,
+        OHM_EXPORT(interested, "interested"),
+        OHM_EXPORT(uninterested, "uninterested"));
 /*
  * Local Variables:
  * c-basic-offset: 4

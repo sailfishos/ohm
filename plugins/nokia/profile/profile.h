@@ -6,8 +6,8 @@
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
-#ifndef Profile_H
-#define Profile_H
+#ifndef PROFILE_H
+#define PROFILE_H
 
 #include <stdlib.h>
 #include <stdio.h>

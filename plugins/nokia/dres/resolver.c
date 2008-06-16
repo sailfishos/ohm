@@ -17,9 +17,20 @@
 #include <prolog/ohm-fact.h>           /* XXX */
 
 #include <ohm-plugin.h>
+#include <ohm-plugin-debug.h>
 
 #include "console.h"
 #include "factstore.h"
+
+
+static int DBG_RESOLVE, DBG_PROLOG, DBG_SIGNAL, DBG_FACTS;
+
+OHM_DEBUG_PLUGIN(resolver,
+    OHM_DEBUG_FLAG("resolver", "dependency resolving", &DBG_RESOLVE),
+    OHM_DEBUG_FLAG("prolog"  , "prolog handler"      , &DBG_PROLOG),
+    OHM_DEBUG_FLAG("signal"  , "decision emission"   , &DBG_SIGNAL),
+    OHM_DEBUG_FLAG("facts"   , "fact handling"       , &DBG_FACTS));
+
 
 
 
@@ -70,7 +81,7 @@ static int  retval_to_facts(char ***objects, OhmFact **facts, int max);
 
 
 static dres_t *dres;
- 
+
 
 /*****************************************************************************
  *                       *** initialization & cleanup ***                    *
@@ -105,6 +116,9 @@ plugin_init(OhmPlugin *plugin)
         NULL
     };
 
+    if (!OHM_DEBUG_INIT(resolver))
+        FAIL("failed to initialize debugging");
+
     if ((dres = dres_init(NULL)) == NULL)
         FAIL("failed to initialize DRES library");
     
@@ -128,6 +142,8 @@ plugin_init(OhmPlugin *plugin)
     if (factstore_init())
         FAIL("factstore initialization failed");
     
+    OHM_DEBUG(DBG_RESOLVE, "resolver initialized");
+
     return;
 
  fail:
@@ -261,6 +277,8 @@ prolog_handler(dres_t *dres, char *actname, dres_action_t *action, void **ret)
     int                 nfact, err;
     char               *args[32];
     int                 i, narg;
+
+    OHM_DEBUG(DBG_RESOLVE, "prolog handler entered...");
     
     if (action->nargument < 1)
         return EINVAL;
@@ -276,15 +294,10 @@ prolog_handler(dres_t *dres, char *actname, dres_action_t *action, void **ret)
     if ((narg = action_arguments(dres, action, args, narg)) < 0)
         FAIL(EINVAL);
 
-#if 0
-    if (!prolog_invoke(predicate, &retval))
-        FAIL(EINVAL);
-#else
     if (!prolog_ainvoke(predicate, &retval, (void **)args, narg))
         FAIL(EINVAL);
-#endif
 
-    DEBUG("rule engine gave the following results:");
+    OHM_DEBUG(DBG_RESOLVE, "rule engine gave the following results:");
     prolog_dump(retval);
 
     if ((facts = ALLOC_ARR(OhmFact *, MAX_FACTS + 1)) == NULL)
@@ -359,8 +372,8 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
 
     trid  = strtol(trid_str, NULL, 10);
 
-    DEBUG("%s(): cb_name='%s' tridstr='%s' trid=%d\n",
-          __FUNCTION__, cb_name, tridstr, trid);
+    OHM_DEBUG(DBG_SIGNAL, "%s(): cb_name='%s' tridstr='%s' trid=%d\n",
+              __FUNCTION__, cb_name, trid_str, trid);
     
     timeout = 5 * 1000;
 
@@ -410,7 +423,7 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
                                      completion_cb, timeout);
         }
         else {
-            DEBUG("Could not resolve signal.\n");
+            OHM_DEBUG(DBG_SIGNAL, "could not resolve signal.\n");
             success = FALSE;
         }
     }
@@ -436,7 +449,8 @@ static char *getarg(dres_t *dres, dres_action_t *action,
         switch (namebuf[0]) {
 
         case '&':
-            value = dres_scope_getvar(dres->scope, namebuf+1);
+            if ((value = dres_scope_getvar(dres->scope, namebuf+1)) == NULL)
+                value = "";
             break;
 
         case '$':
@@ -461,11 +475,11 @@ static void dump_signal_changed_args(char *signame, int transid, int factc,
 {
     int i;
 
-    DEBUG("calling signal_changed(%s, %d,  %d, %p, %p, %lu)",
+    OHM_DEBUG(DBG_SIGNAL, "calling signal_changed(%s, %d,  %d, %p, %p, %lu)",
           signame, transid, factc, factv, callback, timeout);
 
     for (i = 0;  i < factc;  i++) {
-        DEBUG("   fact[%d]: '%s'", i, factv[i]);
+        OHM_DEBUG(DBG_SIGNAL, "   fact[%d]: '%s'", i, factv[i]);
     }
 }
 

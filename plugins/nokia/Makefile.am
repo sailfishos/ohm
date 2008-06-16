@@ -3,9 +3,10 @@ SUBDIRS = 	  \
 	dres      \
 	signaling \
 	console   \
-	profile   \
 	hal       \
 	playback
+
+#	profile
 
 clean-local:
 	rm -f *~

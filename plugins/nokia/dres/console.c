@@ -14,6 +14,7 @@ static void command_prolog (int id, char *input);
 static void command_bye    (int id, char *input);
 static void command_grab   (int id, char *input);
 static void command_release(int id, char *input);
+static void command_debug  (int id, char *input);
 
 #define COMMAND(c, a, d) {                                      \
     name:       #c,                                             \
@@ -32,6 +33,7 @@ static command_t commands[] = {
     COMMAND(bye    , NULL       , "Close the resolver terminal session."    ),
     COMMAND(grab   , NULL       , "Grab stdout and stderr to this terminal."),
     COMMAND(release, NULL       , "Release any previous grabs."             ),
+    COMMAND(debug  , "list|set...", "Configure runtime debugging/tracing."  ),
     END
 };
 
@@ -112,8 +114,10 @@ console_input(int id, char *input, void *data)
     char       name[64], *args, *s, *d;
     int        n;
 
-    if (!input[0])
+    if (!input[0]) {
+        console_printf(id, CONSOLE_PROMPT);
         return;
+    }
     
     n = 0;
     s = input;
@@ -274,6 +278,36 @@ command_release(int id, char *input)
     console_ungrab(id, 0);
     console_ungrab(id, 1);
     console_ungrab(id, 2);
+}
+
+
+/********************
+ * command_debug
+ ********************/
+static void
+command_debug(int id, char *input)
+{
+    char buf[1024];
+
+    if (!strcmp(input, "list") || !strcmp(input, "help")) {
+        trace_list_flags(NULL, buf, sizeof(buf),
+                         "  %-25.25F %-30.30d [%-3.3s]", NULL);
+        console_printf(id, "The available debug flags are:\n%s\n", buf);
+    }
+    else if (!strcmp(input, "disable") || !strcmp(input, "off")) {
+        trace_disable(NULL);
+        console_printf(id, "Debugging is now turned off.\n");
+    }
+    else if (!strcmp(input, "enable") || !strcmp(input, "on")) {
+        trace_enable(NULL);
+        console_printf(id, "Debugging is now turned on.\n");
+    }
+    else if (!strncmp(input, "set ", 4)) {
+        if (trace_parse_flags(input + 4))
+            console_printf(id, "failed to parse debugging flags.\n");
+        else
+            console_printf(id, "Debugging configuration updated.\n");
+    }
 }
 
 
