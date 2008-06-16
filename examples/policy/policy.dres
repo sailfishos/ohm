@@ -41,28 +41,13 @@ $volume_limit += { group: ringtone  , limit: 100 }
 
 $audio_playback_request = { value: }
 $audio_playback         = { value: }
-$cpu_load               = { value: }
 $privacy_override       = { value: default }
 $current_profile        = { value: general }
-$temperature            = { value: }
-$cpu_frequency          = { value: }
-$max_cpu_frequency      = { value: }
-$min_cpu_frequency      = { value: }
-$idle                   = { value: }
-$battery                = { value: }
-$sleeping_state         = { value: }
-$sleeping_request       = { value: }
+$privacy_override       = { value: default }
 
-all: sleeping_state cpu_frequency audio_route audio_volume_limit audio_cork
-	signal_changed(audio_policy, &completion_callback, audio_route, volume_limit, audio_cork)
-
-sleeping_state: $sleeping_request $battery $idle
-	$sleeping_state = prolog(set_sleeping_state, &sleeping_request, \
-                                 $battery, $idle)
-
-cpu_frequency: sleeping_state $min_cpu_frequency $max_cpu_frequency \
-			$battery $temperature
-	$cpu_frequency[type:arm] = prolog(set_cpu_frequency, &min_cpu_frequency, &max_cpu_frequency)
+all: audio_route audio_volume_limit audio_cork
+	signal_changed(audio_policy, &completion_callback, &transaction_id, \
+	               audio_route, volume_limit, audio_cork)
 
 audio_route: $current_profile $privacy_override $accessories \
              $audio_active_policy_group
@@ -75,14 +60,7 @@ audio_cork: audio_route $audio_active_policy_group
 	$audio_cork = prolog(set_corks)
 
 audio_playback_request:
-	echo(audio_playback_request, &playback_state, &completion_callback, \
-	     &playback_group, &playback_media)
 	$audio_active_policy_group = prolog(playback_request, &playback_group,\
 	                                    &playback_state, &playback_media)
-	resolve(all, &completion_callback=&completion_callback)
-
-#
-#wlancheck:
-#	&netdev[type:WLAN].status = prolog(wlancheck, \
-#	                                   $wlandevice[type: WLAN, status: 1])
-
+	resolve(all, &completion_callback=&completion_callback, \
+	        &transaction_id=&transaction_id)

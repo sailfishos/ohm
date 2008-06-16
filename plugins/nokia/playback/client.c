@@ -1,8 +1,6 @@
 
 static client_listhead_t  cl_head;
 
-static OhmFact  *find_factstore_entry(client_t *);
-
 
 static void client_init(OhmPlugin *plugin)
 {
@@ -10,33 +8,46 @@ static void client_init(OhmPlugin *plugin)
     cl_head.prev = (client_t *)&cl_head;
 }
 
-static client_t *client_create(const char *dbusid, const char *object)
+static client_t *client_create(char *dbusid, char *object)
 {
     client_t *cl = client_find(dbusid, object);
     client_t *next;
     client_t *prev;
+    sm_t     *sm;
+    char      smname[256];
+    char     *p, *q;
 
     if (cl == NULL) {
+        p = (q = strrchr(object, '/')) ? q+1 : object;
+        snprintf(smname, sizeof(smname), "%s:%s", dbusid, p);
+
         if ((cl = malloc(sizeof(*cl))) != NULL) {
-            memset(cl, 0, sizeof(*cl));
-
-            cl->dbusid = strdup(dbusid);
-            cl->object = strdup(object);
-
-            next = (client_t *)&cl_head;
-            prev = cl_head.prev;
-
-            prev->next = cl;
-            cl->next   = next;
-
-            next->prev = cl;
-            cl->prev   = prev;
-
-            if (client_add_factsore_entry(dbusid, object))
-                DEBUG("playback %s%s created", dbusid, object);
-            else {
-                client_destroy(cl);
+            if ((sm = sm_create(smname, (void *)cl)) == NULL) {
+                free(cl);
                 cl = NULL;
+            }                
+            else {
+                memset(cl, 0, sizeof(*cl));
+
+                cl->dbusid = strdup(dbusid);
+                cl->object = strdup(object);
+                cl->sm     = sm;  
+
+                next = (client_t *)&cl_head;
+                prev = cl_head.prev;
+                
+                prev->next = cl;
+                cl->next   = next;
+                
+                next->prev = cl;
+                cl->prev   = prev;
+                
+                if (client_add_factsore_entry(dbusid, object))
+                    DEBUG("playback %s%s created", dbusid, object);
+                else {
+                    client_destroy(cl);
+                    cl = NULL;
+                }
             }
         }
     }
@@ -46,12 +57,18 @@ static client_t *client_create(const char *dbusid, const char *object)
 
 static void client_destroy(client_t *cl)
 {
+    static sm_evdata_t  evdata = { .evid = evid_client_gone };
+
     client_t *prev, *next;
 
     if (cl != NULL) {
         DEBUG("playback %s%s going to be destroyed", cl->dbusid, cl->object);
 
+        sm_process_event(cl->sm, &evdata);
+        sm_destroy(cl->sm);
+
         client_delete_factsore_entry(cl);
+
         pbreq_purge(cl);
 
         if (cl->dbusid)
@@ -63,6 +80,9 @@ static void client_destroy(client_t *cl)
         if (cl->group)
             free(cl->group);
 
+        if (cl->state)
+            free(cl->state);
+
         next = cl->next;
         prev = cl->prev;
 
@@ -73,7 +93,7 @@ static void client_destroy(client_t *cl)
     }
 }
 
-static client_t *client_find(const char *dbusid, const char *object)
+static client_t *client_find(char *dbusid, char *object)
 {
     client_t *cl;
 
@@ -86,7 +106,7 @@ static client_t *client_find(const char *dbusid, const char *object)
     return NULL;
 }
 
-static void client_purge(const char *dbusid)
+static void client_purge(char *dbusid)
 {
     client_t *cl, *nxcl;
 
@@ -98,97 +118,44 @@ static void client_purge(const char *dbusid)
     }
 }
 
-static int client_add_factsore_entry(const char *client, const char *object)
+static int client_add_factsore_entry(char *dbusid, char *object)
 {
-    OhmFactStore   *fs;
-    OhmFact        *fact;
-    GValue         *gval;
+    fsif_field_t  fldlist[] = {
+        { fldtype_string , "dbusid", .value.string = dbusid       },
+        { fldtype_string , "object", .value.string = object       },
+        { fldtype_string , "group" , .value.string = "othermedia" },
+        { fldtype_string , "state" , .value.string = "none"       },
+        { fldtype_invalid, NULL    , .value.string = NULL         }
+    };
 
-    fs = ohm_fact_store_get_fact_store();
-    fact = ohm_fact_new(FACTSTORE_PLAYBACK);
-
-    gval = ohm_str_value(client);
-    ohm_fact_set(fact, "dbusid", gval);
-    
-    gval = ohm_str_value(object);
-    ohm_fact_set(fact, "object", gval);
-
-    gval = ohm_str_value("othermedia");
-    ohm_fact_set(fact, "group", gval);
-
-    gval = ohm_str_value("none");
-    ohm_fact_set(fact, "state", gval);
-
-    if (ohm_fact_store_insert(fs, fact))
-        DEBUG("factstore entry %s created", FACTSTORE_PLAYBACK);
-    else {
-        DEBUG("Can't add %s to factsore", FACTSTORE_PLAYBACK);
-        return FALSE;
-    }
-    
-    return TRUE;
+    return fsif_add_factstore_entry(FACTSTORE_PLAYBACK, fldlist);
 }
 
 static void client_delete_factsore_entry(client_t *cl)
 {
-    OhmFactStore *fs;
-    OhmFact      *fact;
-
-    fs = ohm_fact_store_get_fact_store();
-
-    if ((fact = find_factstore_entry(cl)) != NULL) {
-        ohm_fact_store_remove(fs, fact);
-
-        g_object_unref(fact);
-
-        DEBUG("Factstore entry %s deleted", FACTSTORE_PLAYBACK);
-    }
+    fsif_field_t  selist[] = {
+        { fldtype_string , "dbusid", .value.string = cl->dbusid },
+        { fldtype_string , "object", .value.string = cl->object },
+        { fldtype_invalid, NULL    , .value.string = NULL       }
+    };
+ 
+    fsif_delete_factstore_entry(FACTSTORE_PLAYBACK, selist);
 }
 
-static void client_update_factsore_entry(client_t *cl,char *member,char *value)
+static void client_update_factsore_entry(client_t *cl, char *field,char *value)
 {
-    OhmFact *fact;
-    GValue  *gval;
+    fsif_field_t  selist[] = {
+        { fldtype_string , "dbusid", .value.string = cl->dbusid },
+        { fldtype_string , "object", .value.string = cl->object },
+        { fldtype_invalid, NULL    , .value.string = NULL       }
+    };
 
-    if ((fact = find_factstore_entry(cl)) && member && value) {
+    fsif_field_t  fldlist[] = {
+        { fldtype_string , field, .value.string = value },
+        { fldtype_invalid, NULL , .value.string = NULL  }
+    };
 
-        gval = ohm_str_value(value);
-        ohm_fact_set(fact, member, gval);
-
-        DEBUG("Factstore entry update %s[dbusid:%s,object:%s].%s = %s",
-              FACTSTORE_PLAYBACK, cl->dbusid, cl->object, member, value);
-    }
-}
-
-static OhmFact *find_factstore_entry(client_t *cl)
-{
-    OhmFactStore *fs;
-    OhmFact      *fact;
-    GSList       *list;
-    GValue       *gval;
-
-    if (cl != NULL) {
-        fs = ohm_fact_store_get_fact_store();
-
-        for (list  = ohm_fact_store_get_facts_by_name(fs, FACTSTORE_PLAYBACK);
-             list != NULL;
-             list  = g_slist_next(list))
-        {
-            fact = (OhmFact *)list->data;
-
-            if ((gval = ohm_fact_get(fact, "dbusid")) == NULL ||
-                strcmp(cl->dbusid, g_value_get_string(gval))     )
-                continue;
-                
-            if ((gval = ohm_fact_get(fact, "object")) == NULL ||
-                strcmp(cl->object, g_value_get_string(gval))     )
-                continue;
-            
-            return fact;
-        }
-    }
-
-    return NULL;
+    fsif_update_factstore_entry(FACTSTORE_PLAYBACK, selist, fldlist);
 }
 
 static void client_get_property(client_t *cl, char *prname,

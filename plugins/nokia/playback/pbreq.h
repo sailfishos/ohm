@@ -3,17 +3,10 @@
 
 #include <dbus/dbus.h>
 
-/* playback request statuses */
-#define PBREQ_PENDING       1
-#define PBREQ_FINISHED      0
-#define PBREQ_ERROR        -1
-
 typedef enum {
-    pbreq_unknown = 0,
-    pbreq_queued,
-    pbreq_pending,
-    pbreq_handled
-} pbreq_status_e;
+    pbreq_invalid = 0,
+    pbreq_state,
+} pbreq_type_t;
 
 #define PBREQ_LIST \
     struct pbreq_s  *next; \
@@ -21,10 +14,15 @@ typedef enum {
 
 typedef struct pbreq_s {
     PBREQ_LIST;
-    struct client_s  *pb;
-    pbreq_status_e    sts;
+    struct client_s  *cl;
     DBusMessage      *msg;
-    char             *state;
+    int               trid;     /* transaction id */
+    pbreq_type_t      type;
+    union {
+        struct {
+            char *name;
+        }             state;
+    };
 } pbreq_t;
 
 typedef struct {
@@ -32,10 +30,10 @@ typedef struct {
 } pbreq_listhead_t;
 
 static void      pbreq_init(OhmPlugin *);
-static pbreq_t  *pbreq_create(struct client_s *, DBusMessage *, const char *);
+static pbreq_t  *pbreq_create(struct client_s *, DBusMessage *);
 static void      pbreq_destroy(pbreq_t *);
-static pbreq_t  *pbreq_get_first(void);
-static int       pbreq_process(void);
+static pbreq_t  *pbreq_get_first(struct client_s *);
+static pbreq_t  *pbreq_get_by_trid(int);
 static void      pbreq_purge(struct client_s *);
 
 

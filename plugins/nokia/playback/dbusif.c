@@ -13,7 +13,6 @@ static DBusHandlerResult hello(DBusConnection *, DBusMessage *, void *);
 static DBusHandlerResult notify(DBusConnection *, DBusMessage *, void *);
 static DBusHandlerResult req_state(DBusConnection *, DBusMessage *, void *);
 
-static void  get_class_cb(char *, char *, char *, char *);
 
 static void  get_property_cb(DBusPendingCall *, void *);
 static void  free_get_property_cb_data(void *);
@@ -125,10 +124,26 @@ static void dbusif_reply_to_req_state(DBusMessage *msg, const char *state)
         DEBUG("replying to playback request with '%s'", state);
 
         dbus_connection_send(sess_conn, reply, &serial);
-#if 0
-        dbus_message_unref(reply);
-#endif
     }
+}
+
+
+static void dbusif_reply_with_error(DBusMessage *msg,
+                                    const char  *error,
+                                    const char  *description)
+{
+    DBusMessage    *reply;
+    dbus_uint32_t   serial;
+
+    if (error == NULL)
+        error = DBUS_MAEMO_ERROR_FAILED;
+
+    serial = dbus_message_get_serial(msg);
+    reply  = dbus_message_new_error(msg, error, description);
+
+    DEBUG("replying to playback request with error '%s'", description);
+
+    dbus_connection_send(sess_conn, reply, &serial);
 }
 
 
@@ -228,10 +243,11 @@ static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,
 static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
                                void *user_data)
 {
-    const char        *path;
-    const char        *sender;
+    char              *path;
+    char              *sender;
     client_t          *cl;
     int                success;
+    sm_evdata_t        evdata;
     DBusHandlerResult  result;
 
     success = dbus_message_is_signal(msg, DBUS_PLAYBACK_INTERFACE,
@@ -242,14 +258,15 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        path   = dbus_message_get_path(msg);
-        sender = dbus_message_get_sender(msg);
+        path   = (char *)dbus_message_get_path(msg);
+        sender = (char *)dbus_message_get_sender(msg);
 
         DEBUG("Hello from %s%s", sender, path);
         
         cl = client_create(sender, path);
 
-        client_get_property(cl, "Class", get_class_cb);
+        evdata.evid = evid_hello_signal;
+        sm_process_event(cl->sm, &evdata);        
     }
 
     return result;
@@ -259,11 +276,11 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
 static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
                                 void *user_data)
 {
-    const char        *dbusid;
-    const char        *object;
-    const char        *iface;
-    const char        *prop;
-    const char        *value;
+    char              *dbusid;
+    char              *object;
+    char              *iface;
+    char              *prop;
+    char              *value;
     client_t          *cl;
     int                success;
     DBusError          err;
@@ -277,8 +294,8 @@ static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        dbusid = dbus_message_get_sender(msg);
-        object = dbus_message_get_path(msg);
+        dbusid = (char *)dbus_message_get_sender(msg);
+        object = (char *)dbus_message_get_path(msg);
 
         if ((cl = client_find(dbusid, object)) != NULL) {
             dbus_error_init(&err);
@@ -315,14 +332,15 @@ static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
 static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
                                    void *user_data)
 {
-    static const char  *stop = "Stop";
+    static sm_evdata_t  evdata = { .evid = evid_playback_request };
 
-    const char         *msgpath;
-    const char         *objpath;
-    const char         *sender;
-    const char         *state;
+    char               *msgpath;
+    char               *objpath;
+    char               *sender;
+    char               *state;
     client_t           *cl;
     pbreq_t            *req;
+    const char         *errmsg;
     int                 success;
     DBusHandlerResult   result;
 
@@ -334,25 +352,38 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
     else {
         result = DBUS_HANDLER_RESULT_HANDLED;
 
-        msgpath = dbus_message_get_path(msg);
-        sender  = dbus_message_get_sender(msg);
+        msgpath = (char *)dbus_message_get_path(msg);
+        sender  = (char *)dbus_message_get_sender(msg);
         req     = NULL;
 
         success = dbus_message_get_args(msg, NULL,
                                         DBUS_TYPE_OBJECT_PATH, &objpath,
                                         DBUS_TYPE_STRING, &state,
                                         DBUS_TYPE_INVALID);
-        if (success) {
-            if ((cl  = client_find(sender, objpath)) != NULL &&
-                (req = pbreq_create(cl, msg, state))   != NULL    ) {
-
-                    if (pbreq_process() != PBREQ_ERROR ||
-                        req->sts != pbreq_handled)
-                        return result;
-            }
+        if (!success) {
+            errmsg = "failed to parse playback request for state change";
+            goto failed;
         }
 
-        dbusif_reply_to_req_state(msg, stop);
+        if ((cl = client_find(sender, objpath)) == NULL) {
+            errmsg = "unable to find playback object";
+            goto failed;
+        }
+
+        if ((req = pbreq_create(cl, msg)) == NULL) {
+            errmsg = "internal server error";
+            goto failed;
+        }
+
+        req->type = pbreq_state;
+        req->state.name = strdup(state);
+        
+        sm_process_event(cl->sm, &evdata);
+        
+        return result;
+
+    failed:
+        dbusif_reply_with_error(msg, NULL, errmsg);
 
         pbreq_destroy(req);     /* copes with NULL */
     }
@@ -360,41 +391,6 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
     return result;
 }
 
-
-
-static void get_class_cb(char *dbusid,char *object, char *prname,char *prvalue)
-{
-    static struct {char *klass; char *group;}  map[] = {
-        {"None"      , "othermedia"},
-        {"Test"      , "othermedia"},
-        {"Event"     , "ringtone"  },
-        {"VoIP"      , "ipcall"    },
-        {"Media"     , "player"    },
-        {"Background", "othermedia"},
-        {NULL        , "othermedia"}
-    };
-
-    client_t *cl;
-    int       i;
-
-    if ((cl = client_find(dbusid, object)) == NULL) {
-        DEBUG("%s(): Can't find client %s%s any more",
-              __FUNCTION__, dbusid, object);
-        return;
-    }
-
-    for (i = 0;   map[i].klass != NULL;   i++) {
-        if (!strcmp(prvalue, map[i].klass))
-            break;
-    }
-
-    cl->group = strdup(map[i].group);
-    client_update_factsore_entry(cl, "group", cl->group);
-
-    DEBUG("playback group is set to %s", cl->group);
-
-    pbreq_process();
-}
 
 
 static void get_property_cb(DBusPendingCall *pend, void *data)

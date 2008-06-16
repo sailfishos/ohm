@@ -1,6 +1,7 @@
 #ifndef __OHM_PLAYBACK_CLIENT_H__
 #define __OHM_PLAYBACK_CLIENT_H__
 
+#include "sm.h"
 #include "dbusif.h"
 
 /* FactStore prefix */
@@ -21,6 +22,7 @@ typedef struct client_s {
         int play;
         int stop;
     }               allow;
+    sm_t           *sm;           /* state machine instance */
 } client_t;
 
 typedef struct {
@@ -32,12 +34,12 @@ typedef struct {
 
 static void       client_init(OhmPlugin *);
 
-static client_t  *client_create(const char *, const char *);
+static client_t  *client_create(char *, char *);
 static void       client_destroy(client_t *);
-static client_t  *client_find(const char *, const char *);
-static void       client_purge(const char *);
+static client_t  *client_find(char *, char *);
+static void       client_purge(char *);
 
-static int        client_add_factsore_entry(const char *, const char *);
+static int        client_add_factsore_entry(char *, char *);
 static void       client_delete_factsore_entry(client_t *);
 static void       client_update_factsore_entry(client_t *,char *,char *);
 
