@@ -39,18 +39,18 @@ sm_evdef_t  evdef[evid_max] = {
     { evid_hello_signal     ,  "hello signal"      },
     { evid_property_received,  "property received" }, 
     { evid_setup_complete   ,  "setup complete"    },
+    { evid_playback_request ,  "playback request"  },
     { evid_playback_complete,  "playback complete" },
     { evid_playback_failed  ,  "playback failed"   },
+    { evid_client_gone      ,  "client gone"       },
 };
 
 static int read_property(sm_evdata_t *, void *);
 static int store_property(sm_evdata_t *, void *);
 static int process_pbreq(sm_evdata_t *, void *);
 static int reply_pbreq(sm_evdata_t *, void *);
-
-#if 0
-static sm_stid_t property_done(void *);
-#endif
+static int abort_pbreq(sm_evdata_t *, void *);
+static int check_queue(sm_evdata_t *, void *);
 
 
 #define EXEC(f)  f, # f "()"
@@ -64,63 +64,55 @@ sm_def_t  sm_def = {
     {                           /* stdef */
 
         {stid_invalid, "initial state", {
-         /* event                 transition             new state          */ 
+         /* event                 transition            new state           */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                 , STATE(invalid)      },
-         {evid_hello_signal     , EXEC(read_property)  , STATE(setup)        },
-         {evid_property_received, GOTO                 , STATE(invalid)      },
-         {evid_setup_complete   , GOTO                 , STATE(invalid)      },
-         {evid_playback_request , GOTO                 , STATE(invalid)      },
-         {evid_playback_complete, GOTO                 , STATE(invalid)      },
-         {evid_playback_failed  , GOTO                 , STATE(invalid)      }}
+         {evid_invalid          , GOTO                , STATE(invalid)       },
+         {evid_hello_signal     , EXEC(read_property) , STATE(setup)         },
+         {evid_property_received, GOTO                , STATE(invalid)       },
+         {evid_setup_complete   , GOTO                , STATE(invalid)       },
+         {evid_playback_request , GOTO                , STATE(invalid)       },
+         {evid_playback_complete, GOTO                , STATE(invalid)       },
+         {evid_playback_failed  , GOTO                , STATE(invalid)       },
+         {evid_client_gone      , GOTO                , STATE(invalid)       }}
         },
 
         {stid_setup, "setup", {
-         /* event                 transition             new state          */ 
+         /* event                 transition            new state           */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                 , STATE(setup)        },
-         {evid_hello_signal     , GOTO                 , STATE(setup)        },
-         {evid_property_received, EXEC(store_property) , STATE(setup)        },
-         {evid_setup_complete   , GOTO                 , STATE(idle)         },
-         {evid_playback_request , GOTO                 , STATE(setup)        },
-         {evid_playback_complete, GOTO                 , STATE(setup)        },
-         {evid_playback_failed  , GOTO                 , STATE(setup)        }}
-        },
-
-        {stid_setup_qreq, "setup with queued request", {
-         /* event                 transition             new state          */ 
-         /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                 , STATE(setup_qreq)   },
-         {evid_hello_signal     , GOTO                 , STATE(setup_qreq)   },
-         {evid_property_received, GOTO                 , STATE(setup_qreq)   },
-         {evid_setup_complete   , EXEC(process_pbreq)  , STATE(do_pbreq)     },
-         {evid_playback_request , GOTO                 , STATE(setup_qreq)   },
-         {evid_playback_complete, GOTO                 , STATE(setup_qreq)   },
-         {evid_playback_failed  , GOTO                 , STATE(setup_qreq)   }}
+         {evid_invalid          , GOTO                , STATE(setup)         },
+         {evid_hello_signal     , GOTO                , STATE(setup)         },
+         {evid_property_received, EXEC(store_property), STATE(setup)         },
+         {evid_setup_complete   , EXEC(check_queue)   , STATE(idle)          },
+         {evid_playback_request , GOTO                , STATE(setup)         },
+         {evid_playback_complete, GOTO                , STATE(setup)         },
+         {evid_playback_failed  , GOTO                , STATE(setup)         },
+         {evid_client_gone      , GOTO                , STATE(invalid)       }}
         },
 
         {stid_idle, "idle", {
-         /* event                 transition             new state          */ 
+         /* event                 transition            new state           */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                 , STATE(idle)         },
-         {evid_hello_signal     , GOTO                 , STATE(idle)         },
-         {evid_property_received, GOTO                 , STATE(idle)         },
-         {evid_setup_complete   , GOTO                 , STATE(idle)         },
-         {evid_playback_request , EXEC(process_pbreq)  , STATE(do_pbreq)     },
-         {evid_playback_complete, GOTO                 , STATE(idle)         },
-         {evid_playback_failed  , GOTO                 , STATE(idle)         }}
+         {evid_invalid          , GOTO                , STATE(idle)          },
+         {evid_hello_signal     , GOTO                , STATE(idle)          },
+         {evid_property_received, GOTO                , STATE(idle)          },
+         {evid_setup_complete   , GOTO                , STATE(idle)          },
+         {evid_playback_request , EXEC(process_pbreq) , STATE(process_pbreq) },
+         {evid_playback_complete, GOTO                , STATE(idle)          },
+         {evid_playback_failed  , GOTO                , STATE(idle)          },
+         {evid_client_gone      , GOTO                , STATE(invalid)       }}
         },
 
-        {stid_do_pbreq, "do playback", {
-         /* event                 transition             new state          */ 
+        {stid_process_pbreq, "process playback request", {
+         /* event                 transition            new state           */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                 , STATE(do_pbreq)     },
-         {evid_hello_signal     , GOTO                 , STATE(do_pbreq)     },
-         {evid_property_received, GOTO                 , STATE(do_pbreq)     },
-         {evid_setup_complete   , GOTO                 , STATE(do_pbreq)     },
-         {evid_playback_request , GOTO                 , STATE(do_pbreq)     },
-         {evid_playback_complete, EXEC(reply_pbreq)    , STATE(idle)         },
-         {evid_playback_failed  , GOTO                 , STATE(do_pbreq)     }}
+         {evid_invalid          , GOTO                , STATE(process_pbreq) },
+         {evid_hello_signal     , GOTO                , STATE(process_pbreq) },
+         {evid_property_received, GOTO                , STATE(process_pbreq) },
+         {evid_setup_complete   , GOTO                , STATE(process_pbreq) },
+         {evid_playback_request , GOTO                , STATE(process_pbreq) },
+         {evid_playback_complete, EXEC(reply_pbreq)   , STATE(idle)          },
+         {evid_playback_failed  , EXEC(abort_pbreq)   , STATE(idle)          },
+         {evid_client_gone      , GOTO                , STATE(invalid)       }}
         },
 
     }                           /* stdef */
@@ -133,11 +125,11 @@ sm_def_t  sm_def = {
 
 static void  verify_state_machine(void);
 static int   fire_scheduled_event(void *);
-#if 0
 static void  free_evdata(sm_evdata_t *);
-#endif
 static void  read_property_cb(char *, char *, char *, char *);
+static char *strncpylower(char *, const char *, int);
 static char *class_to_group(char *);
+static void  schedule_next_request(client_t *);
 
 
 static void sm_init(OhmPlugin *plugin)
@@ -327,6 +319,12 @@ static void verify_state_machine()
 
     verified = TRUE;
 
+    for (i = 0;  i < evid_max;  i++) {
+        if (evdef[i].id != i) {
+            DEBUG("event definition entry %d is in wron position", i);
+            verified = FALSE;
+        }
+    }
     
     if (sm_def.stid < 0 || sm_def.stid >= stid_max) {
         DEBUG("Initial state %d is out of range (0 - %d)",
@@ -395,7 +393,6 @@ static int fire_scheduled_event(void *data)
 }
 
 
-#if 0
 static void free_evdata(sm_evdata_t *evdata)
 {
 #define FREE(d)                 \
@@ -421,7 +418,6 @@ static void free_evdata(sm_evdata_t *evdata)
 
 #undef FREE
 }
-#endif
 
 
 static int read_property(sm_evdata_t *evdata, void *usrdata)
@@ -429,6 +425,7 @@ static int read_property(sm_evdata_t *evdata, void *usrdata)
     client_t  *cl = (client_t *)usrdata;
 
     client_get_property(cl, "Class", read_property_cb);
+    client_get_property(cl, "State", read_property_cb);
 
     return TRUE;
 }
@@ -440,6 +437,7 @@ static int store_property(sm_evdata_t *evdata, void *usrdata)
     sm_evdata_property_t *property = &evdata->property;
     client_t  *cl = (client_t *)usrdata;
     char      *group;
+    char       state[64];
 
     if (!strcmp(property->name, "Class")) {
         group = class_to_group(property->value);
@@ -449,11 +447,19 @@ static int store_property(sm_evdata_t *evdata, void *usrdata)
         
         DEBUG("playback group is set to %s", cl->group);
     }
+    else if (!strcmp(property->name, "State")) {
+        strncpylower(state, property->value, sizeof(state));
+
+        cl->state = strdup(state);
+        client_update_factsore_entry(cl, "state", cl->state);
+        
+        DEBUG("playback state is set to %s", cl->state);
+    }
     else {
         DEBUG("Do not know anything about property '%s'", property->name);
     }
 
-    if (cl->group != NULL) {
+    if (cl->group != NULL && cl->state != NULL) {
         sm_schedule_event(cl->sm, &setup_complete, NULL);
     }
 
@@ -463,11 +469,14 @@ static int store_property(sm_evdata_t *evdata, void *usrdata)
 
 static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
 {
-    client_t *cl = (client_t *)usrdata;
-    sm_t     *sm = cl->sm;
-    pbreq_t  *req;
-    char      state[64];
-    char     *p, *q, *e, c;
+    static sm_evdata_t  static_evdata = { .evid = evid_playback_failed };
+
+    client_t    *cl = (client_t *)usrdata;
+    sm_t        *sm = cl->sm;
+    pbreq_t     *req;
+    sm_evdata_t *evrply;
+    sm_evfree_t  evfree;
+    char         state[64];
 
     if ((req = pbreq_get_first(cl)) == NULL)
         goto request_failure;
@@ -475,11 +484,7 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
     switch (req->type) {
 
     case pbreq_state:
-        p = req->state.name;
-        e = (q = state) + sizeof(state) - 1;
-        while ((c = *p++) && q < e)
-            *q++ = tolower(c);
-        *q = '\0';
+        strncpylower(state, req->state.name, sizeof(state));
 
         if (!dresif_state_request(cl, state, req->trid))
             goto request_failure;
@@ -493,7 +498,27 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
     return TRUE;
 
  request_failure:
-    /* schedule some pseudo event here */
+    if (req == NULL) {
+        evrply = &static_evdata;
+        evfree = NULL;
+    }
+    else {
+        evrply = malloc(sizeof(*evrply));
+        evfree = free_evdata;
+
+        if (evrply == NULL) {
+            DEBUG("[%s] failed to schedule '%s' event: malloc() failed",
+                  sm->name, evdef[evid_playback_failed].name);
+            return FALSE;
+        }
+
+        memset(evrply, 0, sizeof(*evrply));
+        evrply->pbreply.evid = evid_playback_failed;
+        evrply->pbreply.req  = req;
+    }
+
+    sm_schedule_event(sm, evrply, evfree);
+
     return FALSE;               /* remain in the same state */
 }
 
@@ -517,21 +542,46 @@ static int reply_pbreq(sm_evdata_t *evdata, void *usrdata)
 
     pbreq_destroy(req);
 
+    schedule_next_request(cl);
+
     return TRUE;
 }
 
 
-#if 0
-static sm_stid_t property_done(void *usrdata)
+static int abort_pbreq(sm_evdata_t *evdata, void *usrdata)
 {
-    client_t  *cl = (client_t *)usrdata;
+    client_t *cl  = (client_t *)usrdata;
+    sm_t     *sm  = cl->sm;
+    pbreq_t  *req = evdata->pbreply.req;
 
-    if (cl->group != NULL) {
+    if (req != NULL) {
+        switch (req->type) {
+
+        case pbreq_state:
+            dbusif_reply_to_req_state(req->msg, "Stop");
+            break;
+
+        default:
+            DEBUG("[%s] invalid request type %d", sm->name, req->type);
+            break;
+        }
+
+        pbreq_destroy(req);
     }
 
-    return evid_same_state;     /* stay in the same state */
+    schedule_next_request(cl);
+
+    return TRUE;
 }
-#endif
+
+static int check_queue(sm_evdata_t *evdata, void *usrdata)
+{
+    client_t *cl  = (client_t *)usrdata;
+
+    schedule_next_request(cl);
+
+    return TRUE;
+}
 
 static void read_property_cb(char *dbusid, char *object,
                              char *prname, char *prvalue)
@@ -550,6 +600,21 @@ static void read_property_cb(char *dbusid, char *object,
     property->value = prvalue; 
 
     sm_process_event(cl->sm, &evdata);
+}
+
+static char *strncpylower(char *to, const char *from, int tolen)
+{
+    const char *p;
+    char *q, *e, c;
+
+    p = from;
+    e = (q = to) + tolen - 1;
+
+    while ((c = *p++) && q < e)
+        *q++ = tolower(c);
+    *q = '\0';
+    
+    return to;
 }
 
 static char *class_to_group(char *klass)
@@ -575,6 +640,13 @@ static char *class_to_group(char *klass)
 }
 
 
+static void schedule_next_request(client_t *cl)
+{
+    static sm_evdata_t  evdata = { .evid = evid_playback_request };
+
+    if (pbreq_get_first(cl))
+        sm_schedule_event(cl->sm, &evdata, NULL);
+}
 
 /* 
  * Local Variables:

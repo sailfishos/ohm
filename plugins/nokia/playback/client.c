@@ -57,13 +57,18 @@ static client_t *client_create(char *dbusid, char *object)
 
 static void client_destroy(client_t *cl)
 {
+    static sm_evdata_t  evdata = { .evid = evid_client_gone };
+
     client_t *prev, *next;
 
     if (cl != NULL) {
         DEBUG("playback %s%s going to be destroyed", cl->dbusid, cl->object);
-        
+
+        sm_process_event(cl->sm, &evdata);
         sm_destroy(cl->sm);
+
         client_delete_factsore_entry(cl);
+
         pbreq_purge(cl);
 
         if (cl->dbusid)
@@ -74,6 +79,9 @@ static void client_destroy(client_t *cl)
 
         if (cl->group)
             free(cl->group);
+
+        if (cl->state)
+            free(cl->state);
 
         next = cl->next;
         prev = cl->prev;

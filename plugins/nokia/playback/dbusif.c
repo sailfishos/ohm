@@ -124,10 +124,26 @@ static void dbusif_reply_to_req_state(DBusMessage *msg, const char *state)
         DEBUG("replying to playback request with '%s'", state);
 
         dbus_connection_send(sess_conn, reply, &serial);
-#if 0
-        dbus_message_unref(reply);
-#endif
     }
+}
+
+
+static void dbusif_reply_with_error(DBusMessage *msg,
+                                    const char  *error,
+                                    const char  *description)
+{
+    DBusMessage    *reply;
+    dbus_uint32_t   serial;
+
+    if (error == NULL)
+        error = DBUS_MAEMO_ERROR_FAILED;
+
+    serial = dbus_message_get_serial(msg);
+    reply  = dbus_message_new_error(msg, error, description);
+
+    DEBUG("replying to playback request with error '%s'", description);
+
+    dbus_connection_send(sess_conn, reply, &serial);
 }
 
 
@@ -317,7 +333,6 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
                                    void *user_data)
 {
     static sm_evdata_t  evdata = { .evid = evid_playback_request };
-    static const char  *stop   = "Stop";
 
     char               *msgpath;
     char               *objpath;
@@ -325,6 +340,7 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
     char               *state;
     client_t           *cl;
     pbreq_t            *req;
+    const char         *errmsg;
     int                 success;
     DBusHandlerResult   result;
 
@@ -344,20 +360,30 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
                                         DBUS_TYPE_OBJECT_PATH, &objpath,
                                         DBUS_TYPE_STRING, &state,
                                         DBUS_TYPE_INVALID);
-        if (success) {
-            if ((cl  = client_find(sender, objpath)) != NULL &&
-                (req = pbreq_create(cl, msg)) != NULL) {
-
-                req->type = pbreq_state;
-                req->state.name = strdup(state);
-
-                sm_process_event(cl->sm, &evdata);
-
-                return result;
-            }
+        if (!success) {
+            errmsg = "failed to parse playback request for state change";
+            goto failed;
         }
 
-        dbusif_reply_to_req_state(msg, stop);
+        if ((cl = client_find(sender, objpath)) == NULL) {
+            errmsg = "unable to find playback object";
+            goto failed;
+        }
+
+        if ((req = pbreq_create(cl, msg)) == NULL) {
+            errmsg = "internal server error";
+            goto failed;
+        }
+
+        req->type = pbreq_state;
+        req->state.name = strdup(state);
+        
+        sm_process_event(cl->sm, &evdata);
+        
+        return result;
+
+    failed:
+        dbusif_reply_with_error(msg, NULL, errmsg);
 
         pbreq_destroy(req);     /* copes with NULL */
     }

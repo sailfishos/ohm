@@ -3,6 +3,11 @@
 
 #include <dbus/dbus.h>
 
+/* D-Bus errors */
+#define DBUS_MAEMO_ERROR_PREFIX        "org.maemo.Error"
+
+#define DBUS_MAEMO_ERROR_FAILED        DBUS_MAEMO_ERROR_PREFIX ".Failed"
+
 /* D-Bus service names */
 #define DBUS_PLAYBACK_SERVICE          "org.maemo.Playback"
 
@@ -27,6 +32,7 @@ typedef void  (*set_property_cb_t)(char *, char *, int, char *);
 
 static void dbusif_init(OhmPlugin *);
 static void dbusif_reply_to_req_state(DBusMessage *, const char *);
+static void dbusif_reply_with_error(DBusMessage *, const char *, const char *);
 static void dbusif_get_property(char *, char *, char *, get_property_cb_t);
 
 #endif /*  __OHM_PLAYBACK_DBUSIF_H__ */

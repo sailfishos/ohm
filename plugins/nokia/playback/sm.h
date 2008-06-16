@@ -10,15 +10,15 @@ typedef enum {
     evid_playback_request,
     evid_playback_complete,
     evid_playback_failed,
+    evid_client_gone,
     evid_max
 } sm_evid_t;
 
 typedef enum {
     stid_invalid = 0,
     stid_setup,
-    stid_setup_qreq,
     stid_idle,
-    stid_do_pbreq,
+    stid_process_pbreq,
     stid_max
 } sm_stid_t;
 
