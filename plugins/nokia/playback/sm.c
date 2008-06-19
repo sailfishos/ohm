@@ -37,6 +37,7 @@ typedef struct {
 sm_evdef_t  evdef[evid_max] = {
     { evid_invalid          ,  "invalid event"     },
     { evid_hello_signal     ,  "hello signal"      },
+    { evid_state_signal     ,  "state signal"      },
     { evid_property_received,  "property received" }, 
     { evid_setup_complete   ,  "setup complete"    },
     { evid_playback_request ,  "playback request"  },
@@ -46,14 +47,17 @@ sm_evdef_t  evdef[evid_max] = {
 };
 
 static int read_property(sm_evdata_t *, void *);
-static int store_property(sm_evdata_t *, void *);
+static int save_property(sm_evdata_t *, void *);
 static int process_pbreq(sm_evdata_t *, void *);
 static int reply_pbreq(sm_evdata_t *, void *);
-static int abort_pbreq(sm_evdata_t *, void *);
+static int reply_pbreq_deq(sm_evdata_t *, void *);
+static int abort_pbreq_deq(sm_evdata_t *, void *);
 static int check_queue(sm_evdata_t *, void *);
+static int update_state(sm_evdata_t *, void *);
+static int update_state_deq(sm_evdata_t *, void *);
 
 
-#define EXEC(f)  f, # f "()"
+#define DO(f)  f, # f "()"
 #define GOTO     NULL, NULL
 #define STATE(s) stid_##s, NULL, NULL
 #define COND(f)  -1, f, # f "()"
@@ -63,56 +67,88 @@ sm_def_t  sm_def = {
     evdef,                      /* evdef */
     {                           /* stdef */
 
-        {stid_invalid, "initial state", {
-         /* event                 transition            new state           */ 
+        {stid_invalid, "initial", {
+         /* event                 transition               new state        */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                , STATE(invalid)       },
-         {evid_hello_signal     , EXEC(read_property) , STATE(setup)         },
-         {evid_property_received, GOTO                , STATE(invalid)       },
-         {evid_setup_complete   , GOTO                , STATE(invalid)       },
-         {evid_playback_request , GOTO                , STATE(invalid)       },
-         {evid_playback_complete, GOTO                , STATE(invalid)       },
-         {evid_playback_failed  , GOTO                , STATE(invalid)       },
-         {evid_client_gone      , GOTO                , STATE(invalid)       }}
+         {evid_invalid          , GOTO                   , STATE(invalid)    },
+         {evid_hello_signal     , DO(read_property)      , STATE(setup)      },
+         {evid_state_signal     , GOTO                   , STATE(invalid)    },
+         {evid_property_received, GOTO                   , STATE(invalid)    },
+         {evid_setup_complete   , GOTO                   , STATE(invalid)    },
+         {evid_playback_request , GOTO                   , STATE(invalid)    },
+         {evid_playback_complete, GOTO                   , STATE(invalid)    },
+         {evid_playback_failed  , GOTO                   , STATE(invalid)    },
+         {evid_client_gone      , GOTO                   , STATE(invalid)    }}
         },
 
         {stid_setup, "setup", {
-         /* event                 transition            new state           */ 
+         /* event                 transition               new state        */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                , STATE(setup)         },
-         {evid_hello_signal     , GOTO                , STATE(setup)         },
-         {evid_property_received, EXEC(store_property), STATE(setup)         },
-         {evid_setup_complete   , EXEC(check_queue)   , STATE(idle)          },
-         {evid_playback_request , GOTO                , STATE(setup)         },
-         {evid_playback_complete, GOTO                , STATE(setup)         },
-         {evid_playback_failed  , GOTO                , STATE(setup)         },
-         {evid_client_gone      , GOTO                , STATE(invalid)       }}
+         {evid_invalid          , GOTO                   , STATE(setup)      },
+         {evid_hello_signal     , GOTO                   , STATE(setup)      },
+         {evid_state_signal     , GOTO                   , STATE(setup)      },
+         {evid_property_received, DO(save_property)      , STATE(setup)      },
+         {evid_setup_complete   , DO(check_queue)        , STATE(idle)       },
+         {evid_playback_request , GOTO                   , STATE(setup)      },
+         {evid_playback_complete, GOTO                   , STATE(setup)      },
+         {evid_playback_failed  , GOTO                   , STATE(setup)      },
+         {evid_client_gone      , GOTO                   , STATE(invalid)    }}
         },
 
         {stid_idle, "idle", {
-         /* event                 transition            new state           */ 
+         /* event                 transition               new state        */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                , STATE(idle)          },
-         {evid_hello_signal     , GOTO                , STATE(idle)          },
-         {evid_property_received, GOTO                , STATE(idle)          },
-         {evid_setup_complete   , GOTO                , STATE(idle)          },
-         {evid_playback_request , EXEC(process_pbreq) , STATE(process_pbreq) },
-         {evid_playback_complete, GOTO                , STATE(idle)          },
-         {evid_playback_failed  , GOTO                , STATE(idle)          },
-         {evid_client_gone      , GOTO                , STATE(invalid)       }}
+         {evid_invalid          , GOTO                   , STATE(idle)       },
+         {evid_hello_signal     , GOTO                   , STATE(idle)       },
+         {evid_state_signal     , GOTO                   , STATE(idle)       },
+         {evid_property_received, GOTO                   , STATE(idle)       },
+         {evid_setup_complete   , GOTO                   , STATE(idle)       },
+         {evid_playback_request , DO(process_pbreq)      , STATE(pbreq)      },
+         {evid_playback_complete, GOTO                   , STATE(idle)       },
+         {evid_playback_failed  , GOTO                   , STATE(idle)       },
+         {evid_client_gone      , GOTO                   , STATE(invalid)    }}
         },
 
-        {stid_process_pbreq, "process playback request", {
-         /* event                 transition            new state           */ 
+        {stid_pbreq, "playback request", {
+         /* event                 transition           new state        */ 
          /*-----------------------------------------------------------------*/
-         {evid_invalid          , GOTO                , STATE(process_pbreq) },
-         {evid_hello_signal     , GOTO                , STATE(process_pbreq) },
-         {evid_property_received, GOTO                , STATE(process_pbreq) },
-         {evid_setup_complete   , GOTO                , STATE(process_pbreq) },
-         {evid_playback_request , GOTO                , STATE(process_pbreq) },
-         {evid_playback_complete, EXEC(reply_pbreq)   , STATE(idle)          },
-         {evid_playback_failed  , EXEC(abort_pbreq)   , STATE(idle)          },
-         {evid_client_gone      , GOTO                , STATE(invalid)       }}
+         {evid_invalid          , GOTO                   , STATE(pbreq)      },
+         {evid_hello_signal     , GOTO                   , STATE(pbreq)      },
+         {evid_state_signal     , DO(update_state)       , STATE(acked_pbreq)},
+         {evid_property_received, GOTO                   , STATE(pbreq)      },
+         {evid_setup_complete   , GOTO                   , STATE(pbreq)      },
+         {evid_playback_request , GOTO                   , STATE(pbreq)      },
+         {evid_playback_complete, DO(reply_pbreq)        , STATE(waitack)    },
+         {evid_playback_failed  , DO(abort_pbreq_deq)    , STATE(idle)       },
+         {evid_client_gone      , GOTO                   , STATE(invalid)    }}
+        },
+
+        {stid_acked_pbreq, "acknowledged playback request", {
+         /* event                 transition           new state            */ 
+         /*-----------------------------------------------------------------*/
+         {evid_invalid          , GOTO               , STATE(acked_pbreq)},
+         {evid_hello_signal     , GOTO               , STATE(acked_pbreq)    },
+         {evid_state_signal     , GOTO               , STATE(acked_pbreq)    },
+         {evid_property_received, GOTO               , STATE(acked_pbreq)    },
+         {evid_setup_complete   , GOTO               , STATE(acked_pbreq)    },
+         {evid_playback_request , GOTO               , STATE(acked_pbreq)    },
+         {evid_playback_complete, DO(reply_pbreq_deq), STATE(idle)           },
+         {evid_playback_failed  , DO(abort_pbreq_deq), STATE(idle)           },
+         {evid_client_gone      , GOTO               , STATE(invalid)        }}
+        },
+
+        {stid_waitack, "wait for acknowledgement", {
+         /* event                 transition               new state        */ 
+         /*-----------------------------------------------------------------*/
+         {evid_invalid          , GOTO                   , STATE(waitack)    },
+         {evid_hello_signal     , GOTO                   , STATE(acked_pbreq)},
+         {evid_state_signal     , DO(update_state_deq)   , STATE(idle)       },
+         {evid_property_received, GOTO                   , STATE(acked_pbreq)},
+         {evid_setup_complete   , GOTO                   , STATE(acked_pbreq)},
+         {evid_playback_request , GOTO                   , STATE(acked_pbreq)},
+         {evid_playback_complete, GOTO                   , STATE(acked_pbreq)},
+         {evid_playback_failed  , GOTO                   , STATE(acked_pbreq)},
+         {evid_client_gone      , GOTO                   , STATE(invalid)    }}
         },
 
     }                           /* stdef */
@@ -121,11 +157,17 @@ sm_def_t  sm_def = {
 #undef COND
 #undef STATE
 #undef GOTO
-#undef EXEC
+#undef DO
+
+/********************** hack ***************************/
+void *foo = (void *)dbusif_set_property;
+/****************** end of hack ************************/
 
 static void  verify_state_machine(void);
 static int   fire_scheduled_event(void *);
 static void  free_evdata(sm_evdata_t *);
+static void  fire_hello_signal_event(char *, char *);
+static void  fire_state_signal_event(char *, char *, char *, char *);
 static void  read_property_cb(char *, char *, char *, char *);
 static char *strncpylower(char *, const char *, int);
 static char *class_to_group(char *);
@@ -135,6 +177,9 @@ static void  schedule_next_request(client_t *);
 static void sm_init(OhmPlugin *plugin)
 {
     verify_state_machine();
+
+    dbusif_add_hello_notification(fire_hello_signal_event);
+    dbusif_add_property_notification("State", fire_state_signal_event);
 }
 
 static sm_t *sm_create(char *name, void *user_data)
@@ -404,6 +449,7 @@ static void free_evdata(sm_evdata_t *evdata)
     if (evdata != NULL) {
         switch (evdata->evid) {
 
+        case evid_state_signal:
         case evid_property_received:
             FREE(evdata->property.name);
             FREE(evdata->property.value);
@@ -419,31 +465,73 @@ static void free_evdata(sm_evdata_t *evdata)
 #undef FREE
 }
 
+static void fire_hello_signal_event(char *dbusid, char *object)
+{
+    sm_evdata_t  evdata;
+    client_t    *cl;
+
+    cl = client_create(dbusid, object);
+
+    evdata.evid = evid_hello_signal;
+    sm_process_event(cl->sm, &evdata);        
+}
+
+static void fire_state_signal_event(char *dbusid, char *object,
+                                    char *prname, char *value)
+{
+    sm_evdata_t  evdata;
+    client_t    *cl;
+
+    if ((cl = client_find(dbusid, object)) == NULL)
+        DEBUG("Can't find client for %s%s", dbusid, object);
+    else {
+        evdata.property.evid  = evid_state_signal;
+        evdata.property.name  = prname; /* supposed to be 'State' */
+        evdata.property.value = value;
+
+        sm_process_event(cl->sm, &evdata);
+    }
+}
 
 static int read_property(sm_evdata_t *evdata, void *usrdata)
 {
     client_t  *cl = (client_t *)usrdata;
 
+    client_get_property(cl, "PID"  , read_property_cb);
     client_get_property(cl, "Class", read_property_cb);
     client_get_property(cl, "State", read_property_cb);
 
     return TRUE;
 }
 
-static int store_property(sm_evdata_t *evdata, void *usrdata)
+static int save_property(sm_evdata_t *evdata, void *usrdata)
 {
     static sm_evdata_t setup_complete = { .evid = evid_setup_complete };
 
     sm_evdata_property_t *property = &evdata->property;
     client_t  *cl = (client_t *)usrdata;
+    pid_t      pid;
+    char      *end;
     char      *group;
     char       state[64];
 
-    if (!strcmp(property->name, "Class")) {
+    if (!strcmp(property->name, "PID")) {
+        pid = strtoul(property->value, &end, 10);
+
+        if (*end != '\0')
+            DEBUG("invalid pid value '%s'", property->value);
+        else {
+            cl->pid = pid;
+            client_update_factstore_entry(cl, "pid", property->value);
+
+            DEBUG("playback pid is set to %ul", cl->pid);
+        }
+    }
+    else if (!strcmp(property->name, "Class")) {
         group = class_to_group(property->value);
 
         cl->group = strdup(group);
-        client_update_factsore_entry(cl, "group", cl->group);
+        client_update_factstore_entry(cl, "group", cl->group);
         
         DEBUG("playback group is set to %s", cl->group);
     }
@@ -451,7 +539,7 @@ static int store_property(sm_evdata_t *evdata, void *usrdata)
         strncpylower(state, property->value, sizeof(state));
 
         cl->state = strdup(state);
-        client_update_factsore_entry(cl, "state", cl->state);
+        client_update_factstore_entry(cl, "state", cl->state);
         
         DEBUG("playback state is set to %s", cl->state);
     }
@@ -488,6 +576,9 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
 
         if (!dresif_state_request(cl, state, req->trid))
             goto request_failure;
+
+        client_update_factstore_entry(cl, "reqstate", state);
+
         break;
 
     default:
@@ -542,13 +633,23 @@ static int reply_pbreq(sm_evdata_t *evdata, void *usrdata)
 
     pbreq_destroy(req);
 
+    return TRUE;
+}
+
+
+static int reply_pbreq_deq(sm_evdata_t *evdata, void *usrdata)
+{
+    client_t *cl  = (client_t *)usrdata;
+
+    reply_pbreq(evdata, usrdata);
+
     schedule_next_request(cl);
 
     return TRUE;
 }
 
 
-static int abort_pbreq(sm_evdata_t *evdata, void *usrdata)
+static int abort_pbreq_deq(sm_evdata_t *evdata, void *usrdata)
 {
     client_t *cl  = (client_t *)usrdata;
     sm_t     *sm  = cl->sm;
@@ -577,6 +678,31 @@ static int abort_pbreq(sm_evdata_t *evdata, void *usrdata)
 static int check_queue(sm_evdata_t *evdata, void *usrdata)
 {
     client_t *cl  = (client_t *)usrdata;
+
+    schedule_next_request(cl);
+
+    return TRUE;
+}
+
+static int update_state(sm_evdata_t *evdata, void *usrdata)
+{
+    sm_evdata_property_t *property = &evdata->property;
+    client_t             *cl       = (client_t *)usrdata;
+    char                  state[64];
+
+    strncpylower(state, property->value, sizeof(state));
+    client_update_factstore_entry(cl, "state", state);
+
+    DEBUG("playback state is set to %s", state);
+
+    return TRUE;
+}
+
+static int update_state_deq(sm_evdata_t *evdata, void *usrdata)
+{
+    client_t *cl = (client_t *)usrdata;
+
+    update_state(evdata, usrdata);
 
     schedule_next_request(cl);
 

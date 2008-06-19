@@ -7,6 +7,7 @@ static void     get_field(OhmFact *, fsif_fldtype_t, char *, void *);
 static void     set_field(OhmFact *, fsif_fldtype_t, char *, void *);
 static char    *print_selector(fsif_field_t *, char *, int);
 static char    *print_value(fsif_fldtype_t, void *, char *, int);
+static char    *time_str(unsigned long long, char *, int);
 
 static void fsif_init(OhmPlugin *plugin)
 {
@@ -96,12 +97,14 @@ static int fsif_update_factstore_entry(char *name, fsif_field_t *selist,
 
 static OhmFact *find_entry(char *name, fsif_field_t *selist)
 {
-    OhmFact      *fact;
-    GSList       *list;
-    fsif_field_t *se;
-    char         *strval;
-    long          intval;
-    double        fltval;
+    OhmFact            *fact;
+    GSList             *list;
+    fsif_field_t       *se;
+    char               *strval;
+    long                intval;
+    unsigned long       unsval;
+    double              fltval;
+    unsigned long long  timeval;
 
     for (list  = ohm_fact_store_get_facts_by_name(fs, name);
          list != NULL;
@@ -125,9 +128,21 @@ static OhmFact *find_entry(char *name, fsif_field_t *selist)
                         continue;
                     break;
                     
+                case fldtype_unsignd:
+                    get_field(fact, fldtype_unsignd, se->name, &unsval);
+                    if (unsval != se->value.unsignd)
+                        continue;
+                    break;
+                    
                 case fldtype_floating:
-                    get_field(fact, fldtype_integer, se->name, &fltval);
+                    get_field(fact, fldtype_floating, se->name, &fltval);
                     if (fltval != se->value.floating)
+                        continue;
+                    break;
+                    
+                case fldtype_time:
+                    get_field(fact, fldtype_time, se->name, &timeval);
+                    if (timeval != se->value.time)
                         continue;
                     break;
                     
@@ -169,11 +184,25 @@ static void get_field(OhmFact *fact, fsif_fldtype_t type,char *name,void *vptr)
             *(long *)vptr = g_value_get_long(gv);
         break;
 
+    case fldtype_unsignd:
+        if (G_VALUE_TYPE(gv) != G_TYPE_ULONG)
+            goto type_mismatch;
+        else
+            *(unsigned long *)vptr = g_value_get_ulong(gv);
+        break;
+
     case fldtype_floating:
         if (G_VALUE_TYPE(gv) != G_TYPE_DOUBLE)
             goto type_mismatch;
         else
             *(double *)vptr = g_value_get_double(gv);
+        break;
+
+    case fldtype_time:
+        if (G_VALUE_TYPE(gv) != G_TYPE_UINT64)
+            goto type_mismatch;
+        else
+            *(time_t *)vptr = g_value_get_uint64(gv);
         break;
 
     default:
@@ -187,10 +216,12 @@ static void get_field(OhmFact *fact, fsif_fldtype_t type,char *name,void *vptr)
 
  return_empty_value:
     switch (type) {
-    case fldtype_string:       *(char  **)vptr = NULL;         break;
-    case fldtype_integer:      *(long   *)vptr = 0;            break;
-    case fldtype_floating:     *(double *)vptr = 0.0;          break;
-    default:                                                   break;
+    case fldtype_string:      *(char              **)vptr = NULL;       break;
+    case fldtype_integer:     *(long               *)vptr = 0;          break;
+    case fldtype_unsignd:     *(unsigned long      *)vptr = 0;          break;
+    case fldtype_floating:    *(double             *)vptr = 0.0;        break;
+    case fldtype_time:        *(unsigned long long *)vptr = 0ULL;       break;
+    default:                                                            break;
     }
 } 
 
@@ -200,10 +231,12 @@ static void set_field(OhmFact *fact, fsif_fldtype_t type,char *name,void *vptr)
     GValue       *gv;
 
     switch (type) {
-    case fldtype_string:    gv = ohm_value_from_string(v->string);    break;
-    case fldtype_integer:   gv = ohm_value_from_int(v->integer);      break;
-    case fldtype_floating:  gv = ohm_value_from_double(v->floating);  break;
-    default:                DEBUG("Invalid type for %s", name);       return;
+    case fldtype_string:    gv = ohm_value_from_string(v->string);      break;
+    case fldtype_integer:   gv = ohm_value_from_int(v->integer);        break;
+    case fldtype_unsignd:   gv = ohm_value_from_unsigned(v->unsignd);   break;
+    case fldtype_floating:  gv = ohm_value_from_double(v->floating);    break;
+    case fldtype_time:      gv = ohm_value_from_time(v->time);          break;
+    default:                DEBUG("Invalid type for %s", name);         return;
     }
 
     ohm_fact_set(fact, name, gv);
@@ -233,7 +266,9 @@ static char *print_selector(fsif_field_t *selist, char *buf, int len)
         switch (se->type) {
         case fldtype_string:   val = v->string;                         break;
         case fldtype_integer:  val = vb; sprintf(vb,"%ld",v->integer);  break;
+        case fldtype_unsignd:  val = vb; sprintf(vb,"%lu",v->unsignd);  break;
         case fldtype_floating: val = vb; sprintf(vb,"%lf",v->floating); break;
+        case fldtype_time:     val = time_str(v->time,vb,sizeof(vb));   break;
         default:               val = "???";                             break;
         }
 
@@ -256,13 +291,31 @@ static char *print_value(fsif_fldtype_t type, void *vptr, char *buf, int len)
     switch (type) {
     case fldtype_string:   s = v->string;                                break;
     case fldtype_integer:  s = buf; snprintf(buf,len,"%ld",v->integer);  break;
+    case fldtype_unsignd:  s = buf; snprintf(buf,len,"%lu",v->unsignd);  break;
     case fldtype_floating: s = buf; snprintf(buf,len,"%lf",v->floating); break;
+    case fldtype_time:     s = time_str(v->time,buf,len);                break;
     default:               s = "???";                                    break;
     }
 
     return s;
 }
 
+static char *time_str(unsigned long long t, char *buf , int len)
+{
+    time_t       sec;
+    unsigned int ms;
+    struct tm    tm;
+
+    sec = t / 1000ULL;
+    ms  = t % 1000ULL;
+
+    localtime_r(&sec, &tm);
+
+    snprintf(buf, len, "%02d/%02d %02d:%02d:%02d.%03d",
+             tm.tm_mday,tm.tm_mon+1,  tm.tm_hour,tm.tm_min,tm.tm_sec, ms);
+
+    return buf;
+}
 
 /* 
  * Local Variables:

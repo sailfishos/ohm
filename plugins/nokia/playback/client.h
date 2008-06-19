@@ -1,6 +1,8 @@
 #ifndef __OHM_PLAYBACK_CLIENT_H__
 #define __OHM_PLAYBACK_CLIENT_H__
 
+#include <sys/types.h>
+
 #include "sm.h"
 #include "dbusif.h"
 
@@ -16,6 +18,7 @@ typedef struct client_s {
     CLIENT_LIST;
     char           *dbusid;       /* D-Bus id of the client */
     char           *object;       /* path of the playback object */
+    pid_t           pid;          /* process ID of the client */
     char           *group;
     char           *state;
     struct {
@@ -41,7 +44,7 @@ static void       client_purge(char *);
 
 static int        client_add_factsore_entry(char *, char *);
 static void       client_delete_factsore_entry(client_t *);
-static void       client_update_factsore_entry(client_t *,char *,char *);
+static void       client_update_factstore_entry(client_t *, char *, char *);
 
 static void       client_get_property(client_t *, char *, get_property_cb_t);
 #if 0

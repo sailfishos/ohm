@@ -5,6 +5,7 @@ typedef enum {
     evid_same_state = -1,
     evid_invalid = 0,
     evid_hello_signal,
+    evid_state_signal,
     evid_property_received,
     evid_setup_complete,
     evid_playback_request,
@@ -18,7 +19,9 @@ typedef enum {
     stid_invalid = 0,
     stid_setup,
     stid_idle,
-    stid_process_pbreq,
+    stid_pbreq,
+    stid_acked_pbreq,
+    stid_waitack,
     stid_max
 } sm_stid_t;
 

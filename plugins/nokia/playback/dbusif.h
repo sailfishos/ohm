@@ -28,12 +28,19 @@
 #define DBUS_PLAYBACK_MANAGER_PATH      "/org/maemo/Playback/Manager"
 
 typedef void  (*get_property_cb_t)(char *, char *, char *, char *);
-typedef void  (*set_property_cb_t)(char *, char *, int, char *);
+typedef void  (*set_property_cb_t)(char *, char *, char *, char *,
+                                   int, const char *);
+typedef void  (*notify_property_cb_t)(char *, char *, char *, char *);
+typedef void  (*hello_cb_t)(char *, char *);
 
 static void dbusif_init(OhmPlugin *);
 static void dbusif_reply_to_req_state(DBusMessage *, const char *);
 static void dbusif_reply_with_error(DBusMessage *, const char *, const char *);
 static void dbusif_get_property(char *, char *, char *, get_property_cb_t);
+static void dbusif_set_property(char *, char *, char *, char *,
+                                set_property_cb_t);
+static void dbusif_add_property_notification(char *, notify_property_cb_t);
+static void dbusif_add_hello_notification(hello_cb_t);
 
 #endif /*  __OHM_PLAYBACK_DBUSIF_H__ */
 

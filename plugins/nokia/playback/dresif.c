@@ -13,7 +13,7 @@ static int dresif_state_request(client_t *pb, char *state, int transid)
     int   i;
     int   err;
 
-    client_update_factsore_entry(pb, "state", state);
+    client_update_factstore_entry(pb, "state", state);
 
     vars[i=0] = "playback_state";
     vars[++i] = state;

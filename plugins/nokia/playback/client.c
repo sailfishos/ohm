@@ -97,10 +97,12 @@ static client_t *client_find(char *dbusid, char *object)
 {
     client_t *cl;
 
-    for (cl = cl_head.next;   cl != (client_t *)&cl_head;   cl = cl->next){
-        if (!strcmp(dbusid, cl->dbusid) &&
-            !strcmp(object, cl->object)   )
-            return cl;
+    if (dbusid && object) {
+        for (cl = cl_head.next;   cl != (client_t *)&cl_head;   cl = cl->next){
+            if (!strcmp(dbusid, cl->dbusid) &&
+                !strcmp(object, cl->object)   )
+                return cl;
+        }
     }
     
     return NULL;
@@ -120,12 +122,20 @@ static void client_purge(char *dbusid)
 
 static int client_add_factsore_entry(char *dbusid, char *object)
 {
+    time_t current_time = time(NULL);
+
     fsif_field_t  fldlist[] = {
-        { fldtype_string , "dbusid", .value.string = dbusid       },
-        { fldtype_string , "object", .value.string = object       },
-        { fldtype_string , "group" , .value.string = "othermedia" },
-        { fldtype_string , "state" , .value.string = "none"       },
-        { fldtype_invalid, NULL    , .value.string = NULL         }
+        { fldtype_string , "dbusid"   , .value.string  = dbusid       },
+        { fldtype_string , "object"   , .value.string  = object       },
+        { fldtype_unsignd, "pid"      , .value.unsignd = 0            },
+        { fldtype_string , "group"    , .value.string  = "othermedia" },
+        { fldtype_string , "state"    , .value.string  = "none"       },
+        { fldtype_string , "reqstate" , .value.string  = "none"       },
+        { fldtype_string , "setstate" , .value.string  = "none"       },
+        { fldtype_time   , "tstate"   , .value.integer = current_time },
+        { fldtype_time   , "treqstate", .value.integer = current_time },
+        { fldtype_time   , "tsetstate", .value.integer = current_time },
+        { fldtype_invalid, NULL       , .value.string  = NULL         }
     };
 
     return fsif_add_factstore_entry(FACTSTORE_PLAYBACK, fldlist);
@@ -142,7 +152,7 @@ static void client_delete_factsore_entry(client_t *cl)
     fsif_delete_factstore_entry(FACTSTORE_PLAYBACK, selist);
 }
 
-static void client_update_factsore_entry(client_t *cl, char *field,char *value)
+static void client_update_factstore_entry(client_t *cl,char *field,char *value)
 {
     fsif_field_t  selist[] = {
         { fldtype_string , "dbusid", .value.string = cl->dbusid },
@@ -152,8 +162,40 @@ static void client_update_factsore_entry(client_t *cl, char *field,char *value)
 
     fsif_field_t  fldlist[] = {
         { fldtype_string , field, .value.string = value },
+        { fldtype_invalid, NULL , .value.string = NULL  },
         { fldtype_invalid, NULL , .value.string = NULL  }
     };
+
+    char              *end;
+    char               tsname[64];
+    struct timeval     tv;
+    unsigned long long cur_time;
+
+    if (!strcmp(field, "pid")) {
+        fldlist[0].type = fldtype_unsignd;
+        fldlist[0].value.unsignd = strtoul(value, &end, 10);
+
+        if (*end != '\0') {
+            DEBUG("Invalid PID value '%s'", value);
+            return;
+        }
+    }
+
+
+    if (!strcmp(field, "state")    ||
+        !strcmp(field, "reqstate") ||
+        !strcmp(field, "setstate")   )
+    {
+        snprintf(tsname, sizeof(tsname), "t%s", field);
+
+        gettimeofday(&tv, NULL);
+        cur_time  = (unsigned long long)tv.tv_sec * 1000ULL;
+        cur_time += (unsigned long long)(tv.tv_usec / 1000);
+
+        fldlist[1].type = fldtype_time;
+        fldlist[1].name = tsname;
+        fldlist[1].value.time = cur_time;
+    }
 
     fsif_update_factstore_entry(FACTSTORE_PLAYBACK, selist, fldlist);
 }
@@ -212,6 +254,7 @@ static void client_set_property(ohm_playback_t *cl, char *prname,
     return;
 }
 #endif
+
 
 /* 
  * Local Variables:

@@ -1,17 +1,23 @@
 #ifndef __OHM_PLAYBACK_FSIF_H__
 #define __OHM_PLAYBACK_FSIF_H__
 
+#include <sys/time.h>
+
 typedef enum {
     fldtype_invalid = 0,
     fldtype_string,
     fldtype_integer,
-    fldtype_floating
+    fldtype_unsignd,
+    fldtype_floating,
+    fldtype_time,
 } fsif_fldtype_t;
 
 typedef union {
-    char          *string;
-    long           integer;
-    double         floating;
+    char               *string;
+    long                integer;
+    unsigned long       unsignd;
+    double              floating;
+    unsigned long long  time;
 } fsif_value_t;
 
 typedef struct {
