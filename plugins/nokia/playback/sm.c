@@ -470,7 +470,7 @@ static void fire_hello_signal_event(char *dbusid, char *object)
     sm_evdata_t  evdata;
     client_t    *cl;
 
-    cl = client_create(dbusid, object);
+    cl = client_create(dbusid, object, NULL, NULL);
 
     evdata.evid = evid_hello_signal;
     sm_process_event(cl->sm, &evdata);        
@@ -482,7 +482,7 @@ static void fire_state_signal_event(char *dbusid, char *object,
     sm_evdata_t  evdata;
     client_t    *cl;
 
-    if ((cl = client_find(dbusid, object)) == NULL)
+    if ((cl = client_find_by_dbus(dbusid, object)) == NULL)
         DEBUG("Can't find client for %s%s", dbusid, object);
     else {
         evdata.property.evid  = evid_state_signal;
@@ -510,22 +510,14 @@ static int save_property(sm_evdata_t *evdata, void *usrdata)
 
     sm_evdata_property_t *property = &evdata->property;
     client_t  *cl = (client_t *)usrdata;
-    pid_t      pid;
-    char      *end;
     char      *group;
     char       state[64];
 
     if (!strcmp(property->name, "PID")) {
-        pid = strtoul(property->value, &end, 10);
-
-        if (*end != '\0')
-            DEBUG("invalid pid value '%s'", property->value);
-        else {
-            cl->pid = pid;
-            client_update_factstore_entry(cl, "pid", property->value);
-
-            DEBUG("playback pid is set to %ul", cl->pid);
-        }
+        cl->pid = strdup(property->value);
+        client_update_factstore_entry(cl, "pid", cl->pid);
+        
+        DEBUG("playback pid is set to %s", cl->pid);
     }
     else if (!strcmp(property->name, "Class")) {
         group = class_to_group(property->value);
@@ -574,10 +566,13 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
     case pbreq_state:
         strncpylower(state, req->state.name, sizeof(state));
 
+        client_save_state(cl, client_reqstate, state);
+        client_update_factstore_entry(cl, "reqstate", state);
+
         if (!dresif_state_request(cl, state, req->trid))
             goto request_failure;
 
-        client_update_factstore_entry(cl, "reqstate", state);
+        client_save_state(cl, client_setstate, state);
 
         break;
 
@@ -691,6 +686,7 @@ static int update_state(sm_evdata_t *evdata, void *usrdata)
     char                  state[64];
 
     strncpylower(state, property->value, sizeof(state));
+    client_save_state(cl, client_state, state);
     client_update_factstore_entry(cl, "state", state);
 
     DEBUG("playback state is set to %s", state);
@@ -716,7 +712,7 @@ static void read_property_cb(char *dbusid, char *object,
     sm_evdata_t           evdata;
     sm_evdata_property_t *property = &evdata.property;
 
-    if ((cl = client_find(dbusid, object)) == NULL) {
+    if ((cl = client_find_by_dbus(dbusid, object)) == NULL) {
         DEBUG("Can't find client %s%s any more", dbusid, object);
         return;
     }

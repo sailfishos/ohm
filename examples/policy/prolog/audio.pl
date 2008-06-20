@@ -1,7 +1,8 @@
 :- module(audio,
-	  [set_routes/1, set_volume_limits/1, set_corks/1, playback_request/4,
-	  available_accessory/2, privacy_override/1, active_policy_group/1,
-	  current_route/2, privacy/1, connected/1]).
+	  [set_routes/1, set_volume_limits/1, set_corks/1,
+	   group_playback_request/4, update_playback_entries/4
+	   available_accessory/2, privacy_override/1, active_policy_group/1,
+	   current_route/2, privacy/1, connected/1]).
 
 /*
  * Generic rules
@@ -117,7 +118,7 @@ set_corks(ActionList) :-
 
 
 /*
- * Requests
+ * Group Playback Requests
  */
 policy_group_state_list_elem(GrantedGroup, GrantedState, Elem) :-
     policy_group_state(Group, State),
@@ -131,18 +132,58 @@ policy_group_state_list(GrantedGroup, GrantedState, List) :-
     findall(E, policy_group_state_list_elem(GrantedGroup, GrantedState, E),
 	    List).
 
-playback(PolicyGroup, play, MediaType, GroupStateList) :-
-    not(reject_audio_play_request(PolicyGroup, MediaType)),
+group_playback(PolicyGroup, play, MediaType, GroupStateList) :-
+    not(reject_group_play_request(PolicyGroup, MediaType)),
     policy_group_state_list(PolicyGroup, '1', GroupStateList).
 	    
-playback(PolicyGroup, stop, _, GroupStateList) :-
+group_playback(PolicyGroup, stop, _, GroupStateList) :-
     policy_group_state_list(PolicyGroup, '0', GroupStateList).
 	    
 
-playback_request(PolicyGroup, State, MediaType, GroupStateList) :-
-    playback(PolicyGroup, State, MediaType, GroupStateList).
+group_playback_request(PolicyGroup, State, MediaType, GroupStateList) :-
+    group_playback(PolicyGroup, State, MediaType, GroupStateList).
 
 
+/*
+ *
+ */
+playback_entry_elem(DBusID,Object, Pid,Stream, Group,
+		    ReqState,State,SetState, Elem) :-
+    Elem = [playback,
+	    [dbusid, DBusID], [object, Object],
+	    [pid, Pid], [stream, Stream],
+	    [group, Group],
+	    [reqstate, ReqState], [state, State], [setstate, SetState]
+           ].
+
+playback_entry(ReqPid, ReqStream, stop, Elem) :-
+    current_playback(DBusID,Object,Pid,Stream, Group, ReqState,State,SetState),
+    (Pid = ReqPid, Stream = ReqStream *->
+         playback_entry_elem(DBusID,Object, Pid,Stream, Group,
+			     ReqState,State,stop, Elem)
+     ;
+         playback_entry_elem(DBusID,Object, Pid,Stream, Group,
+			     ReqState,State,SetState, Elem)
+    ).
+
+playback_entry(ReqPid, ReqStream, play, Elem) :- 
+    current_playback(_,_, ReqPid,ReqStream, ReqGroup, _,_,_),
+    current_playback(DBusID,Object,Pid,Stream, Group, ReqState,State,SetState),
+    (Group = ReqGroup *->
+         (Pid = ReqPid, Stream = ReqStream *->
+	      playback_entry_elem(DBusID,Object, Pid,Stream, Group,
+				  ReqState,State,play, Elem)
+	  ;
+	      playback_entry_elem(DBusID,Object, Pid,Stream, Group,
+				  ReqState,State,stop, Elem)
+	 )
+     ;
+         playback_entry_elem(DBusID,Object, Pid,Stream, Group,
+			     ReqState,State,SetState, Elem)
+    ).
+
+update_playback_entries(Pid, Stream, State, PlaybackList) :-
+    findall(E, playback_entry(Pid, Stream, State, E), PlaybackList).
 
 /*
  * system state
@@ -182,7 +223,10 @@ current_cork(PolicyGroup, Corked) :-
 		[group, cork],
 		[PolicyGroup, Corked]).
 
-current_playback(Client, Object, PolicyGroup, State) :-
+current_playback(DBusID,Object, Pid,Stream, PolicyGroup,
+		 ReqState, State, SetState) :-
     fact_exists('com.nokia.policy.playback',
-		[client, object, group, state],
-		[Client, Object, PolicyGroup, State]).
+		[dbusid,object, pid,stream, group,
+		 reqstate, state, setstate],
+		[DBusID,Object, Pid,Stream, PolicyGroup,
+		 ReqState, State, SetState]).

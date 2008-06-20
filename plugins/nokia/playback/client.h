@@ -18,15 +18,25 @@ typedef struct client_s {
     CLIENT_LIST;
     char           *dbusid;       /* D-Bus id of the client */
     char           *object;       /* path of the playback object */
-    pid_t           pid;          /* process ID of the client */
+    char           *pid;          /* process ID of the client */
+    char           *stream;       /* stream name */
     char           *group;
-    char           *state;
+    char           *reqstate;     /* what the client requested */
+    char           *state;        /* what the client reported via prop.notify*/
+    char           *setstate;     /* what the policy requested */
     struct {
         int play;
         int stop;
     }               allow;
     sm_t           *sm;           /* state machine instance */
 } client_t;
+
+typedef enum {
+    client_invalid = 0,
+    client_reqstate,
+    client_state,
+    client_setstate
+} client_stype_t;
 
 typedef struct {
     CLIENT_LIST;
@@ -37,12 +47,15 @@ typedef struct {
 
 static void       client_init(OhmPlugin *);
 
-static client_t  *client_create(char *, char *);
+static client_t  *client_create(char *, char *, char *, char *);
 static void       client_destroy(client_t *);
-static client_t  *client_find(char *, char *);
+static client_t  *client_find_by_dbus(char *, char *);
+#if 0
+static client_t  *client_find_by_stream(char *, char *);
+#endif
 static void       client_purge(char *);
 
-static int        client_add_factsore_entry(char *, char *);
+static int        client_add_factstore_entry(char *, char *, char *, char *);
 static void       client_delete_factsore_entry(client_t *);
 static void       client_update_factstore_entry(client_t *, char *, char *);
 
@@ -51,6 +64,7 @@ static void       client_get_property(client_t *, char *, get_property_cb_t);
 static void       client_set_property(playback_t *, char *, char *,
                                       set_property_cb_t);
 #endif
+static void       client_save_state(client_t *, client_stype_t, char *);
 
 
 #endif /* __OHM_PLAYBACK_CLIENT_H__ */

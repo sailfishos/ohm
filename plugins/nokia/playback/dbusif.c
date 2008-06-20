@@ -408,7 +408,7 @@ static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
         dbusid = (char *)dbus_message_get_sender(msg);
         object = (char *)dbus_message_get_path(msg);
 
-        if ((cl = client_find(dbusid, object)) != NULL) {
+        if ((cl = client_find_by_dbus(dbusid, object)) != NULL) {
             dbus_error_init(&err);
 
             success = dbus_message_get_args(msg, &err,
@@ -476,7 +476,7 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
             goto failed;
         }
 
-        if ((cl = client_find(sender, objpath)) == NULL) {
+        if ((cl = client_find_by_dbus(sender, objpath)) == NULL) {
             errmsg = "unable to find playback object";
             goto failed;
         }
@@ -517,7 +517,7 @@ static void get_property_cb(DBusPendingCall *pend, void *data)
         return;
     }
 
-    if ((cl = client_find(cbd->dbusid, cbd->object)) == NULL) {
+    if ((cl = client_find_by_dbus(cbd->dbusid, cbd->object)) == NULL) {
         DEBUG("Property receiving failed: playback is gone");
         return;
     }
@@ -566,7 +566,7 @@ static void set_property_cb(DBusPendingCall *pend, void *data)
         return;
     }
 
-    if ((cl = client_find(cbd->dbusid, cbd->object)) == NULL) {
+    if ((cl = client_find_by_dbus(cbd->dbusid, cbd->object)) == NULL) {
         DEBUG("Property setting failed: playback is gone");
         return;
     }

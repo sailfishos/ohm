@@ -6,19 +6,21 @@ static void dresif_init(OhmPlugin *plugin)
 }
 
 
-static int dresif_state_request(client_t *pb, char *state, int transid)
+static int dresif_state_request(client_t *cl, char *state, int transid)
 {
     char *vars[32];
     char  buf[64];
     int   i;
     int   err;
 
-    client_update_factstore_entry(pb, "state", state);
-
-    vars[i=0] = "playback_state";
+    vars[i=0] = "playback_pid";
+    vars[++i] = cl->pid ? cl->pid : "";
+    vars[++i] = "playback_stream";
+    vars[++i] = cl->stream ? cl->stream : "";
+    vars[++i] = "playback_state";
     vars[++i] = state;
     vars[++i] = "playback_group";
-    vars[++i] = pb->group;
+    vars[++i] = cl->group;
     vars[++i] = "playback_media";
     vars[++i] = "unknown";
 

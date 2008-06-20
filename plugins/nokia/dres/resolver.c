@@ -136,7 +136,7 @@ plugin_init(OhmPlugin *plugin)
     if (prolog_setup(extensions, rules) != 0)
         FAIL("failed to load extensions and rules to prolog interpreter");
 
-    if (console_init("127.0.0.1:3000"))
+    if (console_init("127.0.0.1:4000"))
         g_warning("resolver plugin: failed to open console");
 
     if (factstore_init())

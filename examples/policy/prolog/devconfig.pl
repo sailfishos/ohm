@@ -95,9 +95,9 @@ enforce_pausing(player, earpiece) :-
  */
 /*
 audio_play_preconditions(PolicyGroup, MediaType, PreCondList) :-
-*/
 audio_play_preconditions(_, _, PreCondList) :-
     PreCondList=[[cpu_frequency_request, 300], [cpu_load, lt, 50]].
+*/
 
-reject_audio_play_request(_, _) :-
+reject_group_play_request(_, _) :-
     fail.
