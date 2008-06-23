@@ -302,6 +302,9 @@ hal_device_added_cb (LibHalContext *ctx,
         set_fact(plugin, fact);
 
     libhal_free_property_set(properties);
+    
+    /* start watching the properties */
+    libhal_device_add_property_watch(ctx, udi, NULL);
 }
 
 static void
@@ -319,6 +322,11 @@ hal_device_removed_cb (LibHalContext *ctx,
 
     if (fact)
         delete_fact(plugin, fact);
+    
+    if (interesting(plugin, udi)) {
+        /* we were watching this object */
+        libhal_device_remove_property_watch(ctx, udi, NULL);
+    }
 }
 
 static gboolean process_modified_properties(gpointer data) 
