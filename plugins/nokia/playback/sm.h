@@ -4,14 +4,17 @@
 typedef enum {
     evid_same_state = -1,
     evid_invalid = 0,
-    evid_hello_signal,
-    evid_state_signal,
-    evid_property_received,
-    evid_setup_complete,
-    evid_playback_request,
-    evid_playback_complete,
-    evid_playback_failed,
-    evid_client_gone,
+    evid_hello_signal,          /* D-Bus hello signal */
+    evid_state_signal,          /* D-Bus property notify: State property */
+    evid_property_received,     /* D-Bus reply for get property method call */
+    evid_setup_complete,        /* all requested properties has been received*/
+    evid_playback_request,      /* D-Bus incoming set state method call */
+    evid_playback_complete,     /* audio policies are successfully set */
+    evid_playback_failed,       /* audio policy setting failed */
+    evid_setstate_changed,      /* internal request to change player's state */
+    evid_setprop_succeeded,     /* outgoing set property method succeeded */
+    evid_setprop_failed,        /* outgoing set property method failed */
+    evid_client_gone,           /* D-Bus peer (i.e. the client) is gone */
     evid_max
 } sm_evid_t;
 
@@ -21,6 +24,7 @@ typedef enum {
     stid_idle,
     stid_pbreq,
     stid_acked_pbreq,
+    stid_setstreq,
     stid_waitack,
     stid_max
 } sm_stid_t;
@@ -37,19 +41,26 @@ typedef struct {
  * event data
  */
 typedef struct {
-    sm_evid_t  evid;
-    char      *name;
-    char      *value;
+    sm_evid_t        evid;
+    char            *name;
+    char            *value;
 } sm_evdata_property_t;
 
 typedef struct {
-    sm_evid_t       evid;
-    struct pbreq_s *req;
+    sm_evid_t        evid;
+    char            *value;
+} sm_evdata_watch_t;
+
+typedef struct {
+    sm_evid_t        evid;
+    struct pbreq_s  *req;
 } sm_evdata_pbreply_t;
 
-typedef union {
+
+typedef union sm_evdata_u {
     sm_evid_t             evid;
     sm_evdata_property_t  property;
+    sm_evdata_watch_t     watch;
     sm_evdata_pbreply_t   pbreply;
 } sm_evdata_t;
 
@@ -62,8 +73,10 @@ typedef void (*sm_evfree_t)(sm_evdata_t *);
 static void  sm_init(OhmPlugin *);
 static sm_t *sm_create(char *, void *);
 static int   sm_destroy(sm_t *);
+static void  sm_rename(sm_t *, char *);
 static int   sm_process_event(sm_t *, sm_evdata_t *);
 static void  sm_schedule_event(sm_t *, sm_evdata_t *, sm_evfree_t);
+static void  sm_free_evdata(sm_evdata_t *);
 
 
 #endif /* __OHM_PLAYBACK_SM_H__ */

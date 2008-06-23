@@ -10,25 +10,29 @@
 #define FACTSTORE_PREFIX                "com.nokia.policy"
 #define FACTSTORE_PLAYBACK              FACTSTORE_PREFIX ".playback"
 
-#define CLIENT_LIST \
-    struct client_s *next; \
-    struct client_s *prev
+#define CLIENT_LIST          \
+    struct client_s   *next; \
+    struct client_s   *prev
 
 typedef struct client_s {
     CLIENT_LIST;
-    char           *dbusid;       /* D-Bus id of the client */
-    char           *object;       /* path of the playback object */
-    char           *pid;          /* process ID of the client */
-    char           *stream;       /* stream name */
-    char           *group;
-    char           *reqstate;     /* what the client requested */
-    char           *state;        /* what the client reported via prop.notify*/
-    char           *setstate;     /* what the policy requested */
+    char              *dbusid;    /* D-Bus id of the client */
+    char              *object;    /* path of the playback object */
+    char              *pid;       /* process ID of the client */
+    char              *stream;    /* stream name */
+    char              *group;
+    char              *reqstate;  /* what the client requested */
+    char              *state;     /* what the client reported via prop.notify*/
+    char              *setstate;  /* what the policy requested */
     struct {
         int play;
         int stop;
-    }               allow;
-    sm_t           *sm;           /* state machine instance */
+    }                  allow;
+    struct {
+        unsigned int evsrc;
+        char        *value;
+    }                  rqsetst;
+    sm_t              *sm;        /* state machine instance */
 } client_t;
 
 typedef enum {
@@ -50,9 +54,7 @@ static void       client_init(OhmPlugin *);
 static client_t  *client_create(char *, char *, char *, char *);
 static void       client_destroy(client_t *);
 static client_t  *client_find_by_dbus(char *, char *);
-#if 0
 static client_t  *client_find_by_stream(char *, char *);
-#endif
 static void       client_purge(char *);
 
 static int        client_add_factstore_entry(char *, char *, char *, char *);
@@ -60,10 +62,8 @@ static void       client_delete_factsore_entry(client_t *);
 static void       client_update_factstore_entry(client_t *, char *, char *);
 
 static void       client_get_property(client_t *, char *, get_property_cb_t);
-#if 0
-static void       client_set_property(playback_t *, char *, char *,
+static void       client_set_property(client_t *, char *, char *,
                                       set_property_cb_t);
-#endif
 static void       client_save_state(client_t *, client_stype_t, char *);
 
 

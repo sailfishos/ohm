@@ -13,12 +13,12 @@ static void client_init(OhmPlugin *plugin)
 static client_t *client_create(char *dbusid, char *object,
                                char *pid, char *stream)
 {
-    client_t *cl = client_find_by_dbus(dbusid, object);
-    client_t *next;
-    client_t *prev;
-    sm_t     *sm;
-    char      smname[256];
-    char     *p, *q;
+    client_t    *cl = client_find_by_dbus(dbusid, object);
+    client_t    *next;
+    client_t    *prev;
+    sm_t        *sm;
+    char         smname[256];
+    char        *p, *q;
 
     if (cl == NULL) {
         p = (q = strrchr(object, '/')) ? q+1 : object;
@@ -32,11 +32,11 @@ static client_t *client_create(char *dbusid, char *object,
             else {
                 memset(cl, 0, sizeof(*cl));
 
-                cl->dbusid = dbusid ? strdup(dbusid) : NULL;
-                cl->object = object ? strdup(object) : NULL;
-                cl->pid    = pid    ? strdup(pid)    : NULL;
-                cl->stream = stream ? strdup(stream) : NULL;
-                cl->sm     = sm;  
+                cl->dbusid  = dbusid ? strdup(dbusid) : NULL;
+                cl->object  = object ? strdup(object) : NULL;
+                cl->pid     = pid    ? strdup(pid)    : NULL;
+                cl->stream  = stream ? strdup(stream) : NULL;
+                cl->sm      = sm;  
 
                 next = (client_t *)&cl_head;
                 prev = cl_head.prev;
@@ -90,6 +90,10 @@ static void client_destroy(client_t *cl)
         FREE(cl->reqstate);
         FREE(cl->state);
         FREE(cl->setstate);
+        FREE(cl->rqsetst.value);
+        
+        if (cl->rqsetst.evsrc != 0)
+            g_source_remove(cl->rqsetst.evsrc);
 
         next = cl->next;
         prev = cl->prev;
@@ -118,7 +122,6 @@ static client_t *client_find_by_dbus(char *dbusid, char *object)
     return NULL;
 }
 
-#if 0
 static client_t *client_find_by_stream(char *pid, char *stream)
 {
     client_t *cl;
@@ -137,7 +140,6 @@ static client_t *client_find_by_stream(char *pid, char *stream)
     
     return NULL;
 }
-#endif
 
 static void client_purge(char *dbusid)
 {
@@ -156,10 +158,6 @@ static int client_add_factstore_entry(char *dbusid, char *object,
 {
 #define STRING(s) ((s) ? (s) : "")
 
-# if 0
-    time_t current_time = time(NULL);
-#endif
-
     fsif_field_t  fldlist[] = {
         { fldtype_string , "dbusid"   , .value.string  = STRING(dbusid)},
         { fldtype_string , "object"   , .value.string  = STRING(object)},
@@ -169,11 +167,6 @@ static int client_add_factstore_entry(char *dbusid, char *object,
         { fldtype_string , "state"    , .value.string  = "none"        },
         { fldtype_string , "reqstate" , .value.string  = "none"        },
         { fldtype_string , "setstate" , .value.string  = "none"        },
-#if 0
-        { fldtype_time   , "tstate"   , .value.integer = current_time },
-        { fldtype_time   , "treqstate", .value.integer = current_time },
-        { fldtype_time   , "tsetstate", .value.integer = current_time },
-#endif
         { fldtype_invalid, NULL       , .value.string  = NULL         }
     };
 
@@ -197,35 +190,11 @@ static void client_update_factstore_entry(client_t *cl,char *field,char *value)
     fsif_field_t  selist[SELIST_DIM];
     fsif_field_t  fldlist[] = {
         { fldtype_string , field, .value.string = value },
-#if 0
-        { fldtype_invalid, NULL , .value.string = NULL  },
-#endif
         { fldtype_invalid, NULL , .value.string = NULL  }
     };
 
     if (!init_selist(cl, selist, SELIST_DIM))
         return;
-
-#if 0
-    char               tsname[64];
-    struct timeval     tv;
-    unsigned long long cur_time;
-
-    if (!strcmp(field, "state")    ||
-        !strcmp(field, "reqstate") ||
-        !strcmp(field, "setstate")   )
-    {
-        snprintf(tsname, sizeof(tsname), "t%s", field);
-
-        gettimeofday(&tv, NULL);
-        cur_time  = (unsigned long long)tv.tv_sec * 1000ULL;
-        cur_time += (unsigned long long)(tv.tv_usec / 1000);
-
-        fldlist[1].type = fldtype_time;
-        fldlist[1].name = tsname;
-        fldlist[1].value.time = cur_time;
-    }
-#endif
 
     fsif_update_factstore_entry(FACTSTORE_PLAYBACK, selist, fldlist);
 }
@@ -236,54 +205,11 @@ static void client_get_property(client_t *cl, char *prname,
     dbusif_get_property(cl->dbusid, cl->object, prname, usercb);
 }
 
-#if 0
-static void client_set_property(ohm_playback_t *cl, char *prname,
-                                char *prvalue, set_property_cb_t usercb)
+static void client_set_property(client_t *cl, char *prname, char *prvalue,
+                                set_property_cb_t usercb)
 {
-    static char        *ifname = DBUS_PLAYBACK_INTERFACE;
-
-    DBusMessage        *msg;
-    DBusPendingCall    *pend;
-    int                 success;
-
-    msg = dbus_message_new_method_call(DBUS_PLAYBACK_SERVICE,
-                                       cl->object,
-                                       DBUS_INTERFACE_PROPERTIES,
-                                       "Set");
-    if (msg == NULL) {
-        DEBUG("Failed to create D-Dbus message to set properties");
-        return;
-    }
-
-    success = dbus_message_append_args(msg,
-                                       DBUS_TYPE_STRING, &ifname,
-                                       DBUS_TYPE_STRING, &prname,
-                                       DBUS_TYPE_STRING, &prvalue,
-                                       DBUS_TYPE_INVALID);
-    if (!success) {
-        DEBUG("Can't setup D-Bus message to set properties");
-        goto failed;
-    }
-    
-    success = dbus_connection_send_with_reply(sess_conn, msg, &pend, 1000);
-    if (!success) {
-        DEBUG("Failed to set properties");
-        goto failed;
-    }
-
-    success = dbus_pending_call_set_notify(pend, get_property_cb, ud,
-                                           free_set_property_cb_data);
-    if (!success) {
-        DEBUG("Can't set notification for pending call");
-    }
-
-    return;
-
- failed:
-    dbus_message_unref(msg);
-    return;
+    dbusif_set_property(cl->dbusid, cl->object, prname, prvalue, usercb);
 }
-#endif
 
 static void client_save_state(client_t *cl, client_stype_t type, char *value)
 {

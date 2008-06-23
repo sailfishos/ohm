@@ -279,7 +279,6 @@ static void dbusif_set_property(char *dbusid, char *object, char *prname,
         DEBUG("Can't set notification for pending call");
     }
 
-
  failed:
     dbus_message_unref(msg);
     return;
