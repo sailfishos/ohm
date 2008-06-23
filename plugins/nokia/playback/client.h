@@ -39,7 +39,8 @@ typedef enum {
     client_invalid = 0,
     client_reqstate,
     client_state,
-    client_setstate
+    client_setstate,
+    client_rqsetst,
 } client_stype_t;
 
 typedef struct {
@@ -64,6 +65,8 @@ static void       client_update_factstore_entry(client_t *, char *, char *);
 static void       client_get_property(client_t *, char *, get_property_cb_t);
 static void       client_set_property(client_t *, char *, char *,
                                       set_property_cb_t);
+
+static char      *client_get_state(client_t *, client_stype_t, char *, int);
 static void       client_save_state(client_t *, client_stype_t, char *);
 
 

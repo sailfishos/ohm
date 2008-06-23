@@ -166,7 +166,7 @@ static int client_add_factstore_entry(char *dbusid, char *object,
         { fldtype_string , "group"    , .value.string  = "othermedia"  },
         { fldtype_string , "state"    , .value.string  = "none"        },
         { fldtype_string , "reqstate" , .value.string  = "none"        },
-        { fldtype_string , "setstate" , .value.string  = "none"        },
+        { fldtype_string , "setstate" , .value.string  = "stop"        },
         { fldtype_invalid, NULL       , .value.string  = NULL         }
     };
 
@@ -209,6 +209,39 @@ static void client_set_property(client_t *cl, char *prname, char *prvalue,
                                 set_property_cb_t usercb)
 {
     dbusif_set_property(cl->dbusid, cl->object, prname, prvalue, usercb);
+}
+
+static char *client_get_state(client_t *cl, client_stype_t type,
+                              char *buf, int len)
+{
+#define EMPTY_STATE ""
+
+    char *state;
+
+    if (cl == NULL)
+        state = EMPTY_STATE;
+    else {
+        switch (type) {
+        case client_reqstate:   state = cl->reqstate;       break;
+        case client_state:      state = cl->state;          break;
+        case client_setstate:   state = cl->setstate;       break;
+        case client_rqsetst:    state = cl->rqsetst.value;  break;
+        default:                state = EMPTY_STATE;        break;
+        }
+
+        if (state == NULL)
+            state = EMPTY_STATE;
+    }
+
+    if (buf != NULL && len > 1) {
+        strncpy(buf, state, len);
+        buf[len-1] = '\0';
+        state = buf;
+    }
+
+    return state;
+
+#undef EMPTY_STATE
 }
 
 static void client_save_state(client_t *cl, client_stype_t type, char *value)

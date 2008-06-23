@@ -8,6 +8,7 @@ typedef enum {
     evid_state_signal,          /* D-Bus property notify: State property */
     evid_property_received,     /* D-Bus reply for get property method call */
     evid_setup_complete,        /* all requested properties has been received*/
+    evid_setup_state_denied,    /* player's initial state is unacceptable */
     evid_playback_request,      /* D-Bus incoming set state method call */
     evid_playback_complete,     /* audio policies are successfully set */
     evid_playback_failed,       /* audio policy setting failed */

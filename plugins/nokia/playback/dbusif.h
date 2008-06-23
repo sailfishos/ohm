@@ -7,6 +7,7 @@
 #define DBUS_MAEMO_ERROR_PREFIX        "org.maemo.Error"
 
 #define DBUS_MAEMO_ERROR_FAILED        DBUS_MAEMO_ERROR_PREFIX ".Failed"
+#define DBUS_MAEMO_ERROR_DENIED        DBUS_MAEMO_ERROR_PREFIX ".RequestDenied"
 
 /* D-Bus service names */
 #define DBUS_PLAYBACK_SERVICE          "org.maemo.Playback"
