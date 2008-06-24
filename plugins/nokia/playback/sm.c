@@ -60,6 +60,7 @@ static int abort_pbreq_deq(sm_evdata_t *, void *);
 static int check_queue(sm_evdata_t *, void *);
 static int update_state(sm_evdata_t *, void *);
 static int update_state_deq(sm_evdata_t *, void *);
+static int fake_stop_pbreq(sm_evdata_t *, void *);
 
 
 #define DO(f)  f, # f "()"
@@ -123,7 +124,7 @@ sm_def_t  sm_def = {
          {evid_setstate_changed  , DO(write_property)    , STATE(setstreq)   },
          {evid_setprop_succeeded , GOTO                  , STATE(idle)       },
          {evid_setprop_failed    , GOTO                  , STATE(idle)       },
-         {evid_client_gone       , GOTO                  , STATE(invalid)    }}
+         {evid_client_gone       , DO(fake_stop_pbreq)   , STATE(invalid)    }}
         },
 
         {stid_pbreq, "playback request", {
@@ -141,7 +142,7 @@ sm_def_t  sm_def = {
          {evid_setstate_changed  , GOTO                  , STATE(pbreq)      },
          {evid_setprop_succeeded , GOTO                  , STATE(pbreq)      },
          {evid_setprop_failed    , GOTO                  , STATE(pbreq)      },
-         {evid_client_gone       , GOTO                  , STATE(invalid)    }}
+         {evid_client_gone       , DO(fake_stop_pbreq)   , STATE(invalid)    }}
         },
 
         {stid_acked_pbreq, "acknowledged playback request", {
@@ -159,7 +160,7 @@ sm_def_t  sm_def = {
          {evid_setstate_changed  , GOTO                  , STATE(acked_pbreq)},
          {evid_setprop_succeeded , GOTO                  , STATE(acked_pbreq)},
          {evid_setprop_failed    , GOTO                  , STATE(acked_pbreq)},
-         {evid_client_gone       , GOTO                  , STATE(invalid)    }}
+         {evid_client_gone       , DO(fake_stop_pbreq)   , STATE(invalid)    }}
         },
 
         {stid_setstreq, "set state request", {
@@ -177,7 +178,7 @@ sm_def_t  sm_def = {
          {evid_setstate_changed  , GOTO                  , STATE(setstreq)   },
          {evid_setprop_succeeded , GOTO                  , STATE(waitack)    },
          {evid_setprop_failed    , GOTO                  , STATE(idle)       },
-         {evid_client_gone       , GOTO                  , STATE(invalid)    }}
+         {evid_client_gone       , DO(fake_stop_pbreq)   , STATE(invalid)    }}
         },
 
         {stid_waitack, "wait for acknowledgement", {
@@ -195,7 +196,7 @@ sm_def_t  sm_def = {
          {evid_setstate_changed  , GOTO                  , STATE(waitack)    },
          {evid_setprop_succeeded , GOTO                  , STATE(waitack)    },
          {evid_setprop_failed    , GOTO                  , STATE(waitack)    },
-         {evid_client_gone       , GOTO                  , STATE(invalid)    }}
+         {evid_client_gone       , DO(fake_stop_pbreq)   , STATE(invalid)    }}
         },
 
     }                           /* stdef */
@@ -863,6 +864,20 @@ static int update_state_deq(sm_evdata_t *evdata, void *usrdata)
     update_state(evdata, usrdata);
 
     schedule_next_request(cl);
+
+    return TRUE;
+}
+
+static int fake_stop_pbreq(sm_evdata_t *evdata, void *usrdata)
+{
+    static char *state = "stop";
+
+    client_t *cl = (client_t *)usrdata;
+
+    client_save_state(cl, client_reqstate, state);
+    client_update_factstore_entry(cl, "reqstate", state);
+    
+    dresif_state_request(cl, state, 0);
 
     return TRUE;
 }
