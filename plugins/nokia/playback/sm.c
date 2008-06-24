@@ -237,12 +237,12 @@ static sm_t *sm_create(char *name, void *user_data)
     sm_t *sm;
 
     if (!name) {
-        DEBUG("name is <null>");
+        OHM_ERROR("[%s] name is <null>", __FUNCTION__);
         return NULL;
     }
 
     if ((sm = malloc(sizeof(*sm))) == NULL) {
-        DEBUG("[%s] Failed to allocate memory for state machine", name);
+        OHM_ERROR("[%s] Failed to allocate memory for state machine", name);
         return NULL;
     }
 
@@ -251,7 +251,7 @@ static sm_t *sm_create(char *name, void *user_data)
     sm->stid = sm_def.stid;
     sm->data = user_data;
 
-    DEBUG("[%s] state machine created", sm->name);
+    OHM_DEBUG(DBG_SM, "[%s] state machine created", sm->name);
 
     return sm;
 }
@@ -262,11 +262,11 @@ static int sm_destroy(sm_t *sm)
         return FALSE;
 
     if (sm->busy) {
-        DEBUG("[%s] state machine is busy", sm->name);
+        OHM_ERROR("[%s] [%s] state machine is busy", __FUNCTION__, sm->name);
         return FALSE;
     }
 
-    DEBUG("[%s] state machine is going to be destroyed", sm->name);
+    OHM_DEBUG(DBG_SM, "[%s] state machine is going to be destroyed", sm->name);
 
     if (sm->sched != 0)
         g_source_remove(sm->sched);
@@ -280,7 +280,7 @@ static int sm_destroy(sm_t *sm)
 static void sm_rename(sm_t *sm, char *newname)
 {
     if (newname != NULL) {
-        DEBUG("[%s] renamed to '%s'", sm->name, newname);
+        OHM_DEBUG(DBG_SM, "[%s] renamed to '%s'", sm->name, newname);
 
         free(sm->name);
         sm->name = strdup(newname);
@@ -299,7 +299,7 @@ static int sm_process_event(sm_t *sm, sm_evdata_t *evdata)
         return FALSE;
 
     if (sm->busy) {
-        DEBUG("[%s] attempt for nested event processing", sm->name);
+        OHM_ERROR("[%s] attempt for nested event processing", sm->name);
         return FALSE;
     }
 
@@ -307,14 +307,14 @@ static int sm_process_event(sm_t *sm, sm_evdata_t *evdata)
     stid = sm->stid;
 
     if (evid <= evid_invalid || evid >= evid_max) {
-        DEBUG("[%s] Event ID %d is out of range (%d - %d)",
-              sm->name, evid, evid_invalid+1, evid_max-1);
+        OHM_ERROR("[%s] Event ID %d is out of range (%d - %d)",
+                  sm->name, evid, evid_invalid+1, evid_max-1);
         return FALSE;
     }
 
     if (stid < 0 || stid >= stid_max) {
-        DEBUG("[%s] current state %d is out of range (0 - %d)",
-              sm->name, stid, stid_max-1);
+        OHM_ERROR("[%s] current state %d is out of range (0 - %d)",
+                  sm->name, stid, stid_max-1);
         return FALSE;
     }
 
@@ -322,26 +322,26 @@ static int sm_process_event(sm_t *sm, sm_evdata_t *evdata)
     state   = sm_def.stdef + stid;
     transit = state->trtbl + evid;
 
-    DEBUG("[%s] recieved '%s' event in '%s' state",
-          sm->name, event->name, state->name);
+    OHM_DEBUG(DBG_SM, "[%s] recieved '%s' event in '%s' state",
+              sm->name, event->name, state->name);
 
     sm->busy = TRUE;
 
     if (transit->func == NULL)
         next_stid = transit->stid;
     else {
-        DEBUG("[%s] executing transition function '%s'",
-              sm->name, transit->fname);
+        OHM_DEBUG(DBG_TRANS, "[%s] executing transition function '%s'",
+                  sm->name, transit->fname);
 
         if (transit->func(evdata, sm->data)) {
-            DEBUG("[%s] transition function '%s' succeeded",
-                  sm->name, transit->fname);
+            OHM_DEBUG(DBG_TRANS, "[%s] transition function '%s' succeeded",
+                      sm->name, transit->fname);
 
             next_stid = transit->stid;
         }
         else {
-            DEBUG("[%s] transition function '%s' failed",
-                  sm->name, transit->fname);
+            OHM_DEBUG(DBG_TRANS, "[%s] transition function '%s' failed",
+                      sm->name, transit->fname);
 
             next_stid = stid;
         }
@@ -349,12 +349,13 @@ static int sm_process_event(sm_t *sm, sm_evdata_t *evdata)
     }
 
     if (next_stid < 0) {
-        DEBUG("[%s] conditional transition. '%s' is called to find "
-              "the next state", sm->name, transit->cname);
+        OHM_DEBUG(DBG_TRANS, "[%s] conditional transition. '%s' is called to "
+                  "find the next state", sm->name, transit->cname);
 
         next_stid = transit->cond(sm->data);
 
-        DEBUG("[%s] '%s' returned %d", sm->name, transit->cname, next_stid);
+        OHM_DEBUG(DBG_TRANS, "[%s] '%s' returned %d",
+                  sm->name, transit->cname, next_stid);
 
         if (next_stid < 0)
             next_stid = stid;
@@ -362,8 +363,8 @@ static int sm_process_event(sm_t *sm, sm_evdata_t *evdata)
 
     next_state = sm_def.stdef + next_stid;
 
-    DEBUG("[%s] %s '%s' state", sm->name,
-          (next_stid == stid) ? "stays in" : "goes to", next_state->name);
+    OHM_DEBUG(DBG_SM, "[%s] %s '%s' state", sm->name,
+              (next_stid == stid) ? "stays in" : "goes to", next_state->name);
 
     sm->stid = next_stid;
     sm->busy = FALSE;
@@ -376,23 +377,23 @@ static void sm_schedule_event(sm_t *sm, sm_evdata_t *evdata,sm_evfree_t evfree)
     sm_schedule_t *schedule;
 
     if (!sm || !evdata) {
-        DEBUG("[%s] failed to schedule event: <null> argument", sm->name);
+        OHM_ERROR("[%s] failed to schedule event: <null> argument", sm->name);
         return;
     }
 
     if (evdata->evid < 0 || evdata->evid >= evid_max) {
-        DEBUG("[%s] failed to schedule event: invalid event ID %d",
-              sm->name, evdata->evid);
+        OHM_ERROR("[%s] failed to schedule event: invalid event ID %d",
+                  sm->name, evdata->evid);
         return;
     }
 
     if (sm->sched != 0) {
-        DEBUG("[%s] failed to schedule event: multiple requests", sm->name);
+        OHM_ERROR("[%s] failed to schedule event: multiple requests",sm->name);
         return;
     }
 
     if ((schedule = malloc(sizeof(*schedule))) == NULL) {
-        DEBUG("[%s] failed to schedule event: malloc failed", sm->name);
+        OHM_ERROR("[%s] failed to schedule event: malloc failed", sm->name);
         return;
     }
 
@@ -403,7 +404,8 @@ static void sm_schedule_event(sm_t *sm, sm_evdata_t *evdata,sm_evfree_t evfree)
     sm->sched = g_idle_add(fire_scheduled_event, schedule);
 
     if (sm->sched == 0) {
-        DEBUG("[%s] failed to schedule event: g_idle_add() failed", sm->name);
+        OHM_ERROR("[%s] failed to schedule event: g_idle_add() failed",
+                  sm->name);
 
         free(schedule);
 
@@ -411,7 +413,8 @@ static void sm_schedule_event(sm_t *sm, sm_evdata_t *evdata,sm_evfree_t evfree)
             evfree(evdata);
     }
     else {
-        DEBUG("[%s] schedule event '%s'", sm->name, evdef[evdata->evid].name);
+        OHM_DEBUG(DBG_SM, "[%s] schedule event '%s'",
+                  sm->name, evdef[evdata->evid].name);
     }
 }
 
@@ -457,14 +460,14 @@ static void verify_state_machine()
 
     for (i = 0;  i < evid_max;  i++) {
         if (evdef[i].id != i) {
-            DEBUG("event definition entry %d is in wron position", i);
+            OHM_ERROR("event definition entry %d is in wron position", i);
             verified = FALSE;
         }
     }
     
     if (sm_def.stid < 0 || sm_def.stid >= stid_max) {
-        DEBUG("Initial state %d is out of range (0 - %d)",
-              sm_def.stid, stid_max-1);
+        OHM_ERROR("Initial state %d is out of range (0 - %d)",
+                  sm_def.stid, stid_max-1);
         verified = FALSE;
     }
 
@@ -473,7 +476,7 @@ static void verify_state_machine()
 
         if (stdef->id != i) {
             verified = FALSE;
-            DEBUG("stid mismatch at sm.stdef[%d]", i);
+            OHM_ERROR("stid mismatch at sm.stdef[%d]", i);
             continue;
         }
 
@@ -483,22 +486,23 @@ static void verify_state_machine()
             if (tr->stid < 0) {
                 if (tr->cond == NULL) {
                     verified = FALSE;
-                    DEBUG("Missing cond() at state '%s' for event '%s'",
-                          stdef->name, evdef[j].name);
+                    OHM_ERROR("Missing cond() at state '%s' for event '%s'",
+                              stdef->name, evdef[j].name);
                 }
             }
             else {
                 if (tr->stid >= stid_max) {
                     verified = FALSE;
-                    DEBUG("invalid transition at state '%s' for event '%s': "
-                          "state %d is out of range (0-%d)", stdef->name,
-                          sm_def.evdef[j].name, tr->stid, stid_max-1);
+                    OHM_ERROR("invalid transition at state '%s' for event "
+                              "'%s': state %d is out of range (0-%d)",
+                              stdef->name, sm_def.evdef[j].name,
+                              tr->stid, stid_max-1);
                 }
                 if (tr->cond) {
                     verified = FALSE;
-                    DEBUG("can't set 'stid' to a valid state & specify 'cond' "
-                          "at the same time in state '%s' for event '%s'",
-                          stdef->name, evdef[j].name);
+                    OHM_ERROR("can't set 'stid' to a valid state & specify "
+                              "'cond' at the same time in state '%s' for "
+                              "event '%s'", stdef->name, evdef[j].name);
                 }
             }
         }
@@ -516,7 +520,7 @@ static int fire_scheduled_event(void *data)
 
     sm->sched = 0;
 
-    DEBUG("[%s] fire event", sm->name);
+    OHM_DEBUG(DBG_SM, "[%s] fire event", sm->name);
 
     sm_process_event(sm, evdata);
 
@@ -537,12 +541,12 @@ static int fire_setstate_changed_event(void *data)
     cl->rqsetst.evsrc = 0;
 
     if (cl->rqsetst.value == NULL)
-        DEBUG("something went twrong: rqsetst.value == NULL");
+        OHM_ERROR("something went twrong: rqsetst.value == NULL");
     else {
         evdata.watch.evid  = evid_setstate_changed;
         evdata.watch.value = cl->rqsetst.value; 
 
-        DEBUG("[%s] fire event (%s)", sm->name, evdata.watch.value);
+        OHM_DEBUG(DBG_SM, "[%s] fire event (%s)", sm->name,evdata.watch.value);
 
         sm_process_event(sm, &evdata);
     }
@@ -569,7 +573,7 @@ static void fire_state_signal_event(char *dbusid, char *object,
     client_t    *cl;
 
     if ((cl = client_find_by_dbus(dbusid, object)) == NULL)
-        DEBUG("Can't find client for %s%s", dbusid, object);
+        OHM_ERROR("Can't find client for %s%s", dbusid, object);
     else {
         evdata.property.evid  = evid_state_signal;
         evdata.property.name  = prname; /* supposed to be 'State' */
@@ -608,7 +612,7 @@ static int save_property(sm_evdata_t *evdata, void *usrdata)
         cl->pid = strdup(property->value);
         client_update_factstore_entry(cl, "pid", cl->pid);
         
-        DEBUG("playback pid is set to %s", cl->pid);
+        OHM_DEBUG(DBG_TRANS, "playback pid is set to %s", cl->pid);
     }
     else if (!strcmp(property->name, "Class")) {
         group = class_to_group(property->value);
@@ -616,7 +620,7 @@ static int save_property(sm_evdata_t *evdata, void *usrdata)
         cl->group = strdup(group);
         client_update_factstore_entry(cl, "group", cl->group);
         
-        DEBUG("playback group is set to %s", cl->group);
+        OHM_DEBUG(DBG_TRANS, "playback group is set to %s", cl->group);
     }
     else if (!strcmp(property->name, "State")) {
         strncpylower(state, property->value, sizeof(state));
@@ -624,10 +628,11 @@ static int save_property(sm_evdata_t *evdata, void *usrdata)
         client_save_state(cl, client_state, state);
         client_update_factstore_entry(cl, "state", cl->state);
         
-        DEBUG("playback state is set to %s", cl->state);
+        OHM_DEBUG(DBG_TRANS, "playback state is set to %s", cl->state);
     }
     else {
-        DEBUG("Do not know anything about property '%s'", property->name);
+        OHM_ERROR("[%s] Do not know anything about property '%s'",
+                  __FUNCTION__, property->name);
     }
 
     if (cl->pid != NULL && cl->group != NULL && cl->state != NULL) {
@@ -679,8 +684,8 @@ static int write_property(sm_evdata_t *evdata, void *usrdata)
         setstate = evdata->watch.value;
 
         if (!strcmp(cl->state, setstate)) {
-            DEBUG("do not write 'state' property: client is "
-                  "already in '%s' state", setstate);
+            OHM_DEBUG(DBG_TRANS, "do not write 'state' property: client is "
+                      "already in '%s' state", setstate);
         }
         else {
             if (cl->setstate)
@@ -698,7 +703,8 @@ static int write_property(sm_evdata_t *evdata, void *usrdata)
         break;
         
     default:
-        DEBUG("unsupported event '%s'", evdef[evdata->watch.evid].name);
+        OHM_ERROR("[%s] unsupported event '%s'", __FUNCTION__,
+                  evdef[evdata->watch.evid].name);
         break;
     }
 
@@ -744,7 +750,9 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
             break;
 
         default:
-            DEBUG("[%s] invalid playback request type %d", sm->name,req->type);
+            OHM_ERROR("[%s] invalid playback request type %d",
+                      sm->name,req->type);
+
             /* intentional fall trough */
 
         request_failure:
@@ -752,8 +760,8 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
             evfree = sm_free_evdata;
 
             if (evrply == NULL) {
-                DEBUG("[%s] failed to schedule '%s' event: malloc() failed",
-                      sm->name, evdef[evid_playback_failed].name);
+                OHM_ERROR("[%s] failed to schedule '%s' event: malloc failed",
+                          sm->name, evdef[evid_playback_failed].name);
                 success = FALSE;
             }
             else {
@@ -784,7 +792,8 @@ static int reply_pbreq(sm_evdata_t *evdata, void *usrdata)
         break;
 
     default:
-        DEBUG("[%s] invalid request type %d", sm->name, req->type);
+        OHM_ERROR("[%s] [%s] invalid request type %d",
+                  __FUNCTION__, sm->name, req->type);
         break;
     }
 
@@ -821,7 +830,8 @@ static int abort_pbreq_deq(sm_evdata_t *evdata, void *usrdata)
             dbusif_reply_with_error(req->msg, DBUS_MAEMO_ERROR_DENIED,err);
 
         default:
-            DEBUG("[%s] invalid request type %d", sm->name, req->type);
+            OHM_ERROR("[%s] [%s] invalid request type %d",
+                      __FUNCTION__, sm->name, req->type);
             break;
         }
 
@@ -852,7 +862,7 @@ static int update_state(sm_evdata_t *evdata, void *usrdata)
     client_save_state(cl, client_state, state);
     client_update_factstore_entry(cl, "state", state);
 
-    DEBUG("playback state is set to %s", state);
+    OHM_DEBUG(DBG_TRANS, "playback state is set to %s", state);
 
     return TRUE;
 }
@@ -890,7 +900,8 @@ static void read_property_cb(char *dbusid, char *object,
     sm_evdata_property_t *property = &evdata.property;
 
     if ((cl = client_find_by_dbus(dbusid, object)) == NULL) {
-        DEBUG("Can't find client %s%s any more", dbusid, object);
+        OHM_ERROR("[%s] Can't find client %s%s any more",
+                  __FUNCTION__, dbusid, object);
         return;
     }
 
@@ -909,7 +920,8 @@ static void write_property_cb(char *dbusid, char *object, char *prname,
     sm_evdata_t  evdata;
 
     if ((cl = client_find_by_dbus(dbusid, object)) == NULL) {
-        DEBUG("Can't find client %s%s any more", dbusid, object);
+        OHM_ERROR("[%s] Can't find client %s%s any more",
+                  __FUNCTION__, dbusid, object);
         return;
     }
 
@@ -930,7 +942,7 @@ static void setstate_cb(fsif_entry_t *entry, char *name, fsif_field_t *fld,
     if (fld->type == fldtype_string && fld->value.string)
         setstate = fld->value.string;
     else {
-        DEBUG("invalid field type");
+        OHM_ERROR("[%s] invalid field type", __FUNCTION__);
         return;
     }
 
@@ -938,7 +950,7 @@ static void setstate_cb(fsif_entry_t *entry, char *name, fsif_field_t *fld,
     fsif_get_field_by_entry(entry, fldtype_string, "stream", &stream);
 
     if (pid == NULL || *pid == '\0') {
-        DEBUG("Can't fire event: no pid");
+        OHM_ERROR("[%s] Can't fire event: no pid", __FUNCTION__);
         return;
     }
 
@@ -946,8 +958,8 @@ static void setstate_cb(fsif_entry_t *entry, char *name, fsif_field_t *fld,
         stream = NULL;
 
     if ((cl = client_find_by_stream(pid, stream)) == NULL) {
-        DEBUG("Can't find client for pid %s%s%s",
-              pid, stream?" stream ":"", stream?stream:"");
+        OHM_ERROR("[%s] Can't find client for pid %s%s%s", __FUNCTION__,
+                  pid, stream?" stream ":"", stream?stream:"");
         return;
     }
 

@@ -62,9 +62,11 @@ static void dbusif_init(OhmPlugin *plugin)
 
     if ((sess_conn = dbus_bus_get(DBUS_BUS_SESSION, &err)) == NULL) {
         if (dbus_error_is_set(&err))
-            g_error("Can't get D-Bus connection: %s", err.message);
+            OHM_ERROR("Can't get D-Bus connection: %s", err.message);
         else
-            g_error("Can't get D-Bus connection");
+            OHM_ERROR("Can't get D-Bus connection");
+
+        exit(0);
     }
 
     dbus_connection_setup_with_g_main(sess_conn, NULL);
@@ -75,29 +77,35 @@ static void dbusif_init(OhmPlugin *plugin)
 
     dbus_bus_add_match(sess_conn, adm_rule, &err);
     if (dbus_error_is_set(&err)) {
-        g_error("Can't add match \"%s\": %s", adm_rule, err.message);
+        OHM_ERROR("Can't add match \"%s\": %s", adm_rule, err.message);
         dbus_error_free(&err);
+        exit(0);
     }
     if (!dbus_connection_add_filter(sess_conn, name_changed,NULL, NULL)) {
-        g_error("Can't add filter 'name_changed'");
+        OHM_ERROR("Can't add filter 'name_changed'");
+        exit(0);
     }
 
     dbus_bus_add_match(sess_conn, pb_rule, &err);
     if (dbus_error_is_set(&err)) {
-        g_error("Can't add match \"%s\": %s", pb_rule, err.message);
+        OHM_ERROR("Can't add match \"%s\": %s", pb_rule, err.message);
         dbus_error_free(&err);
+        exit(0);
     }
     if (!dbus_connection_add_filter(sess_conn, hello,NULL, NULL)) {
-        g_error("Can't add filter 'hello'");
+        OHM_ERROR("Can't add filter 'hello'");
+        exit(0);
     }
 
     dbus_bus_add_match(sess_conn, prop_rule, &err);
     if (dbus_error_is_set(&err)) {
-        g_error("Can't add match \"%s\": %s", prop_rule, err.message);
+        OHM_ERROR("Can't add match \"%s\": %s", prop_rule, err.message);
         dbus_error_free(&err);
+        exit(0);
     }
     if (!dbus_connection_add_filter(sess_conn, notify,NULL, NULL)) {
-        g_error("Can't add filter 'notify'");
+        OHM_ERROR("Can't add filter 'notify'");
+        exit(0);
     }
 
     /*
@@ -107,20 +115,23 @@ static void dbusif_init(OhmPlugin *plugin)
                                                    DBUS_PLAYBACK_MANAGER_PATH,
                                                    &req_state_method, NULL);
     if (!success) {
-        g_error("Can't register object path %s", DBUS_PLAYBACK_MANAGER_PATH);
+        OHM_ERROR("Can't register object path %s", DBUS_PLAYBACK_MANAGER_PATH);
+        exit(0);
     }
 
     retval = dbus_bus_request_name(sess_conn, DBUS_PLAYBACK_MANAGER_INTERFACE,
                                    DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
     if (retval != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
         if (dbus_error_is_set(&err)) {
-            g_error("Can't be the primary owner for name %s: %s",
-                    DBUS_PLAYBACK_MANAGER_INTERFACE, err.message);
+            OHM_ERROR("Can't be the primary owner for name %s: %s",
+                      DBUS_PLAYBACK_MANAGER_INTERFACE, err.message);
         }
         else {
-            g_error("Can't be the primary owner for name %s",
-                    DBUS_PLAYBACK_MANAGER_INTERFACE);
+            OHM_ERROR("Can't be the primary owner for name %s",
+                      DBUS_PLAYBACK_MANAGER_INTERFACE);
+            
         }
+        exit(0);
     }
 
     /*
@@ -145,7 +156,7 @@ static void dbusif_reply_to_req_state(DBusMessage *msg, const char *state)
     if (!success)
         dbus_message_unref(msg);
     else {
-        DEBUG("replying to playback request with '%s'", state);
+        OHM_DEBUG(DBG_DBUS, "replying to playback request with '%s'", state);
 
         dbus_connection_send(sess_conn, reply, &serial);
     }
@@ -165,7 +176,8 @@ static void dbusif_reply_with_error(DBusMessage *msg,
     serial = dbus_message_get_serial(msg);
     reply  = dbus_message_new_error(msg, error, description);
 
-    DEBUG("replying to playback request with error '%s'", description);
+    OHM_DEBUG(DBG_DBUS, "replying to playback request with error '%s'",
+              description);
 
     dbus_connection_send(sess_conn, reply, &serial);
 }
@@ -183,7 +195,8 @@ static void dbusif_get_property(char *dbusid, char *object, char *prname,
     int              success;
 
     if ((ud = malloc(sizeof(*ud))) == NULL) {
-        DEBUG("Failed to allocate memory for callback data");
+        OHM_ERROR("[%s] Failed to allocate memory for callback data",
+                  __FUNCTION__);
         return;
     }
 
@@ -196,7 +209,8 @@ static void dbusif_get_property(char *dbusid, char *object, char *prname,
     msg = dbus_message_new_method_call(dbusid, object, propif, "Get");
 
     if (msg == NULL) {
-        DEBUG("Failed to create D-Dbus message to set properties");
+        OHM_ERROR("[%s] Failed to create D-Dbus message to set properties",
+                  __FUNCTION__);
         return;
     }
 
@@ -205,20 +219,21 @@ static void dbusif_get_property(char *dbusid, char *object, char *prname,
                                        DBUS_TYPE_STRING, &prname,
                                        DBUS_TYPE_INVALID);
     if (!success) {
-        DEBUG("Can't setup D-Bus message to get properties");
+        OHM_ERROR("[%s] Can't setup D-Bus message to get properties",
+                  __FUNCTION__);
         goto failed;
     }
     
     success = dbus_connection_send_with_reply(sess_conn, msg, &pend, 1000);
     if (!success) {
-        DEBUG("Failed to query properties");
+        OHM_ERROR("[%s] Failed to query properties", __FUNCTION__);
         goto failed;
     }
 
     success = dbus_pending_call_set_notify(pend, get_property_cb, ud,
                                            free_get_property_cb_data);
     if (!success) {
-        DEBUG("Can't set notification for pending call");
+        OHM_ERROR("[%s] Can't set notification for pending call",__FUNCTION__);
     }
 
 
@@ -239,7 +254,8 @@ static void dbusif_set_property(char *dbusid, char *object, char *prname,
     int              success;
 
     if ((ud = malloc(sizeof(*ud))) == NULL) {
-        DEBUG("Failed to allocate memory for callback data");
+        OHM_ERROR("[%s] Failed to allocate memory for callback data",
+                  __FUNCTION__);
         return;
     }
 
@@ -253,7 +269,8 @@ static void dbusif_set_property(char *dbusid, char *object, char *prname,
     msg = dbus_message_new_method_call(dbusid, object, propif, "Set");
 
     if (msg == NULL) {
-        DEBUG("Failed to create D-Dbus message to set properties");
+        OHM_ERROR("[%s] Failed to create D-Dbus message to set properties",
+                  __FUNCTION__);
         return;
     }
 
@@ -263,20 +280,21 @@ static void dbusif_set_property(char *dbusid, char *object, char *prname,
                                        DBUS_TYPE_STRING, &prvalue,
                                        DBUS_TYPE_INVALID);
     if (!success) {
-        DEBUG("Can't setup D-Bus message to set properties");
+        OHM_ERROR("[%s] Can't setup D-Bus message to set properties",
+                  __FUNCTION__);
         goto failed;
     }
     
     success = dbus_connection_send_with_reply(sess_conn, msg, &pend, 1000);
     if (!success) {
-        DEBUG("Failed to set properties");
+        OHM_ERROR("[%s] Failed to set properties", __FUNCTION__);
         goto failed;
     }
 
     success = dbus_pending_call_set_notify(pend, set_property_cb, ud,
                                            free_set_property_cb_data);
     if (!success) {
-        DEBUG("Can't set notification for pending call");
+        OHM_ERROR("[%s] Can't set notification for pending call",__FUNCTION__);
     }
 
  failed:
@@ -297,8 +315,10 @@ static void dbusif_add_property_notification(char *prname,
         for (notif = notif_reg, dim = 1;   notif->prname;   notif++, dim++)
             ;
 
-        if ((notif_reg = realloc(notif_reg, (dim+1) * sizeof(*notif))) == NULL)
-            g_error("%s(): failed to re-allocate memory", __FUNCTION__);
+        if ((notif_reg = realloc(notif_reg, (dim+1)*sizeof(*notif))) == NULL) {
+            OHM_ERROR("%s(): failed to re-allocate memory", __FUNCTION__);
+            exit(0);
+        }
         else {
             notif = notif_reg + dim - 1;
             
@@ -343,7 +363,7 @@ static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,
 
         if (success && sender != NULL && before != NULL) {
             if (!after || !strcmp(after, "")) {
-                DEBUG("client %s is gone", sender);
+                OHM_DEBUG(DBG_DBUS, "client %s is gone", sender);
                 client_purge(sender);
             }
         }
@@ -372,7 +392,7 @@ static DBusHandlerResult hello(DBusConnection *conn, DBusMessage *msg,
         path   = (char *)dbus_message_get_path(msg);
         sender = (char *)dbus_message_get_sender(msg);
 
-        DEBUG("Hello from %s%s", sender, path);
+        OHM_DEBUG(DBG_DBUS, "Hello from %s%s", sender, path);
 
         if (hello_notif != NULL)
             hello_notif(sender, path);
@@ -417,16 +437,17 @@ static DBusHandlerResult notify(DBusConnection *conn, DBusMessage *msg,
                                             DBUS_TYPE_INVALID);
             if (!success) {
                 if (!dbus_error_is_set(&err))
-                    DEBUG("Malformed Notify from %s%s", dbusid, object);
+                    OHM_ERROR("Malformed Notify from %s%s", dbusid, object);
                 else {
-                    DEBUG("Malformed Notify from %s%s: %s",
-                          dbusid, object, err.message); 
+                    OHM_ERROR("Malformed Notify from %s%s: %s",
+                              dbusid, object, err.message); 
                     dbus_error_free(&err);
                 }
             }
             else {
                 if (!strcmp(iface, DBUS_PLAYBACK_INTERFACE)) {
-                    DEBUG("%s of %s%s is '%s'", prop, dbusid, object, value);
+                    OHM_DEBUG(DBG_DBUS, "%s of %s%s is '%s'",
+                              prop, dbusid, object, value);
 
                     if ((notif = find_property_notifier(prop)) != NULL)
                         notif->callback(dbusid, object, prop, value);
@@ -465,6 +486,8 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
         msgpath = (char *)dbus_message_get_path(msg);
         sender  = (char *)dbus_message_get_sender(msg);
         req     = NULL;
+
+        OHM_DEBUG(DBG_DBUS, "received state change request from %s", sender);
 
         success = dbus_message_get_args(msg, NULL,
                                         DBUS_TYPE_OBJECT_PATH, &objpath,
@@ -512,12 +535,13 @@ static void get_property_cb(DBusPendingCall *pend, void *data)
     int                 success;
 
     if ((reply = dbus_pending_call_steal_reply(pend)) == NULL || cbd == NULL) {
-        DEBUG("Property receiving failed: invalid argument");
+        OHM_ERROR("[%s] Property receiving failed: invalid argument",
+                  __FUNCTION__);
         return;
     }
 
     if ((cl = client_find_by_dbus(cbd->dbusid, cbd->object)) == NULL) {
-        DEBUG("Property receiving failed: playback is gone");
+        OHM_DEBUG(DBG_DBUS, "Property receiving failed: playback is gone");
         return;
     }
 
@@ -525,11 +549,11 @@ static void get_property_cb(DBusPendingCall *pend, void *data)
                                     DBUS_TYPE_STRING, &prvalue,
                                     DBUS_TYPE_INVALID);
     if (!success) {
-        DEBUG("Failed to parse property reply message");
+        OHM_ERROR("[%s] Failed to parse property reply message", __FUNCTION__);
         return;
     }
 
-    DEBUG("Received property %s=%s", cbd->prname, prvalue);
+    OHM_DEBUG(DBG_DBUS, "Received property %s=%s", cbd->prname, prvalue);
 
     if (cbd->usercb != NULL)
         cbd->usercb(cbd->dbusid, cbd->object, cbd->prname, prvalue);
@@ -541,7 +565,7 @@ static void free_get_property_cb_data(void *memory)
 {
     get_property_cb_data_t *cbd = (get_property_cb_data_t *)memory;
 
-    DEBUG("Freeing get property callback data");
+    OHM_DEBUG(DBG_DBUS, "Freeing get property callback data");
 
     if (cbd != NULL) {
         free(cbd->dbusid);
@@ -555,18 +579,19 @@ static void free_get_property_cb_data(void *memory)
 static void set_property_cb(DBusPendingCall *pend, void *data)
 {
     set_property_cb_data_t *cbd = (set_property_cb_data_t *)data;
-    DBusMessage        *reply;
-    client_t           *cl;
-    const char         *error;
-    int                 success;
+    DBusMessage  *reply;
+    client_t     *cl;
+    const char   *error;
+    int           success;
 
     if ((reply = dbus_pending_call_steal_reply(pend)) == NULL || cbd == NULL) {
-        DEBUG("Property setting failed: invalid argument");
+        OHM_ERROR("[%s] Property setting failed: invalid argument",
+                  __FUNCTION__);
         return;
     }
 
     if ((cl = client_find_by_dbus(cbd->dbusid, cbd->object)) == NULL) {
-        DEBUG("Property setting failed: playback is gone");
+        OHM_DEBUG(DBG_DBUS, "Property setting failed: playback is gone");
         return;
     }
 
@@ -574,14 +599,14 @@ static void set_property_cb(DBusPendingCall *pend, void *data)
         error  = "No error";
         success = TRUE;
 
-        DEBUG("Succeeded to set object %s:%s property %s to %s",
-              cbd->dbusid, cbd->object, cbd->prname, cbd->prvalue);
+        OHM_DEBUG(DBG_DBUS, "Succeeded to set object %s:%s property %s to %s",
+                  cbd->dbusid, cbd->object, cbd->prname, cbd->prvalue);
     }
     else {
         success = FALSE;
 
-        DEBUG("Failed to set object %s:%s property %s to %s: %s",
-              cbd->dbusid, cbd->object, cbd->prname, cbd->prvalue, error);
+        OHM_DEBUG(DBG_DBUS, "Failed to set object %s:%s property %s to %s: %s",
+                  cbd->dbusid, cbd->object, cbd->prname, cbd->prvalue, error);
     }
 
     if (cbd->usercb != NULL) {
@@ -596,7 +621,7 @@ static void free_set_property_cb_data(void *memory)
 {
     set_property_cb_data_t *cbd = (set_property_cb_data_t *)memory;
 
-    DEBUG("Freeing set property callback data");
+    OHM_DEBUG(DBG_DBUS, "Freeing set property callback data");
 
     if (cbd != NULL) {
         free(cbd->dbusid);
@@ -611,8 +636,11 @@ static void free_set_property_cb_data(void *memory)
 static void initialize_notification_registry(void)
 {
     if (notif_reg == NULL) {
-        if ((notif_reg = malloc(sizeof(*notif_reg))) == NULL)
-            g_error("Can't allocate memory for notification registry");
+        if ((notif_reg = malloc(sizeof(*notif_reg))) == NULL) {
+            OHM_ERROR("[%s] Can't allocate memory for notification registry",
+                      __FUNCTION__);
+            exit(0);
+        }
         else {
             memset(notif_reg, 0, sizeof(*notif_reg));
         }

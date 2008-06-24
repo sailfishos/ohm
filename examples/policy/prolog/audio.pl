@@ -1,6 +1,6 @@
 :- module(audio,
 	  [set_routes/1, set_volume_limits/1, set_corks/1,
-	   group_playback_request/4, update_playback_entries/4
+	   group_playback_request/4, update_playback_entries/4,
 	   available_accessory/2, privacy_override/1, active_policy_group/1,
 	   current_route/2, privacy/1, connected/1]).
 

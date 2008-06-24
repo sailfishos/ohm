@@ -36,7 +36,7 @@ static int dresif_state_request(client_t *cl, char *state, int transid)
     vars[++i] = NULL;
 
     if ((err = resolve("audio_playback_request", vars)) != 0)
-        DEBUG("resolve() failed: (%d) %s", err, strerror(err));
+        OHM_DEBUG(DBG_DRES, "resolve() failed: (%d) %s", err, strerror(err));
 
     return err ? FALSE : TRUE;
 }
@@ -48,10 +48,11 @@ OHM_EXPORTABLE(void, completion_cb, (int trid, int success))
     sm_evdata_t  evdata;
     sm_evdata_pbreply_t *rply;
 
-    DEBUG("playback.%s(%d, %s)\n", __FUNCTION__, trid, success?"OK":"FAILED");
+    OHM_DEBUG(DBG_DRES, "playback.%s(%d, %s)\n",
+              __FUNCTION__, trid, success ? "OK" : "FAILED");
 
     if ((req = pbreq_get_by_trid(trid)) == NULL) {
-        DEBUG("Cam't find request with transaction ID %d", trid);
+        OHM_DEBUG(DBG_DRES, "Can't find request with transaction ID %d", trid);
         return;
     }
 

@@ -1,11 +1,11 @@
 #ifndef __OHM_PLAYBACK_H__
 #define __OHM_PLAYBACK_H__
 
-#ifndef DEBUG
-#define DEBUG(fmt, args...) do {                                        \
-        printf("[%s] "fmt"\n", __FUNCTION__, ## args);                  \
-    } while (0)
-#endif
+#include <ohm-plugin-log.h>
+#include <ohm-plugin-debug.h>
+
+static void plugin_init(OhmPlugin *);
+static void plugin_destroy(OhmPlugin *);
 
 #endif /* __OHM_PLAYBACK_H__ */
 

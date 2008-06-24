@@ -46,12 +46,12 @@ static int fsif_add_factstore_entry(char *name, fsif_field_t *fldlist)
     fsif_field_t *fld;
 
     if (!name || !fldlist) {
-        DEBUG("%s(): invalid arument", __FUNCTION__);
+        OHM_ERROR("[%s] invalid arument", __FUNCTION__);
         return FALSE;
     }
 
     if ((fact = ohm_fact_new(name)) == NULL) {
-        DEBUG("Can't create new fact");
+        OHM_ERROR("[%s] Can't create new fact", __FUNCTION__);
         return FALSE;
     }
 
@@ -60,9 +60,9 @@ static int fsif_add_factstore_entry(char *name, fsif_field_t *fldlist)
     }
 
     if (ohm_fact_store_insert(fs, fact))
-        DEBUG("factstore entry %s created", name);
+        OHM_DEBUG(DBG_FS, "factstore entry %s created", name);
     else {
-        DEBUG("Can't add %s to factsore", name);
+        OHM_ERROR("[%s] Can't add %s to factsore", __FUNCTION__, name);
         return FALSE;
     }
 
@@ -79,7 +79,8 @@ static int fsif_delete_factstore_entry(char *name, fsif_field_t *selist)
     selstr = print_selector(selist, selb, sizeof(selb));
 
     if ((fact = find_entry(name, selist)) == NULL) {
-        DEBUG("Failed to delete '%s%s' entry: no entry found", name, selstr);
+        OHM_ERROR("[%s] Failed to delete '%s%s' entry: no entry found",
+                  __FUNCTION__, name, selstr);
         success = FALSE;
     }
     else {
@@ -87,7 +88,7 @@ static int fsif_delete_factstore_entry(char *name, fsif_field_t *selist)
 
         g_object_unref(fact);
 
-        DEBUG("Factstore entry %s%s deleted", name, selstr);
+        OHM_DEBUG(DBG_FS, "Factstore entry %s%s deleted", name, selstr);
 
         success = TRUE;
     }
@@ -103,19 +104,24 @@ static int fsif_update_factstore_entry(char *name, fsif_field_t *selist,
     char          selb[256];
     char          valb[256];
     char         *selstr;
+    char         *valstr;
 
     selstr = print_selector(selist, selb, sizeof(selb));
 
     if ((fact = find_entry(name, selist)) == NULL) {
-        DEBUG("Failed to update '%s%s' entry: no entry found", name, selstr);
+        OHM_ERROR("[%s] Failed to update '%s%s' entry: no entry found",
+                  __FUNCTION__, name, selstr);
         return FALSE;
     }
 
     for (fld = fldlist;   fld->type != fldtype_invalid;   fld++) {
         set_field(fact, fld->type, fld->name, (void *)&fld->value);
 
-        DEBUG("Factstore entry update %s%s.%s = %s", name, selstr, fld->name,
-              print_value(fld->type, (void *)&fld->value, valb, sizeof(valb)));
+
+        valstr = print_value(fld->type,(void *)&fld->value, valb,sizeof(valb));
+
+        OHM_DEBUG(DBG_FS, "Factstore entry update %s%s.%s = %s",
+                  name, selstr, fld->name, valstr);
     }
 
     return TRUE;
@@ -168,6 +174,8 @@ static int fsif_add_watch(char *factname, fsif_field_t *selist, char *fldname,
         wfact->entries = wentry;
     }
 
+    OHM_DEBUG(DBG_FS, "watch point %d added for '%s%s%s'", wentry->id,
+              factname, fldname?":":"", fldname?fldname:"");
 
     return wentry->id;
 }
@@ -249,7 +257,7 @@ static void get_field(OhmFact *fact, fsif_fldtype_t type,char *name,void *vptr)
     GValue  *gv;
 
     if (!fact || !name || !(gv = ohm_fact_get(fact, name))) {
-        DEBUG("Cant find field %s", name ? name : "<null>");
+        OHM_ERROR("[%s] Cant find field %s", __FUNCTION__, name?name:"<null>");
         goto return_empty_value;
     }
 
@@ -297,7 +305,7 @@ static void get_field(OhmFact *fact, fsif_fldtype_t type,char *name,void *vptr)
     return;
 
  type_mismatch:
-    DEBUG("Type mismatch when fetching field '%s'", name);
+    OHM_ERROR("[%s] Type mismatch when fetching field '%s'",__FUNCTION__,name);
 
  return_empty_value:
     switch (type) {
@@ -321,7 +329,7 @@ static void set_field(OhmFact *fact, fsif_fldtype_t type,char *name,void *vptr)
     case fldtype_unsignd:   gv = ohm_value_from_unsigned(v->unsignd);   break;
     case fldtype_floating:  gv = ohm_value_from_double(v->floating);    break;
     case fldtype_time:      gv = ohm_value_from_time(v->time);          break;
-    default:                DEBUG("Invalid type for %s", name);         return;
+    default:                OHM_ERROR("Invalid type for %s", name);     return;
     }
 
     ohm_fact_set(fact, name, gv);
@@ -390,7 +398,7 @@ static fsif_field_t *copy_selector(fsif_field_t *selist)
                     break;
                     
                 default:
-                    DEBUG("unsupported type");
+                    OHM_ERROR("[%s] unsupported type", __FUNCTION__);
                     memset(&cp->value, 0, sizeof(cp->value));
                     break;
                 } /* switch */
@@ -499,6 +507,8 @@ static void updated_cb(void *data,OhmFact *fact,GQuark fldquark,gpointer value)
     watch_fact_t  *wfact;
     watch_entry_t *wentry;
     fsif_field_t   fld;
+    char           valb[256];
+    char          *valstr;
     
     name = (char *)ohm_structure_get_name(OHM_STRUCTURE(fact));
 
@@ -539,10 +549,16 @@ static void updated_cb(void *data,OhmFact *fact,GQuark fldquark,gpointer value)
                     break;
                     
                 default:
-                    DEBUG("Unsupported data type for field '%s'", fld.name);
+                    OHM_ERROR("[%s] Unsupported data type for field '%s'",
+                              __FUNCTION__, fld.name);
                     return;
                 }
                 
+                valstr = print_value(fld.type, (void *)&fld.value,
+                                     valb, sizeof(valb)); 
+                OHM_DEBUG(DBG_FS, "watch point: '%s:%s' changed to '%s'",
+                          name, fld.name, valstr);
+
                 wentry->callback(fact, name, &fld, wentry->usrdata);
                 
                 return;

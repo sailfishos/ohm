@@ -17,13 +17,23 @@
 #include "dresif.h"
 #include "fsif.h"
 
+static int DBG_CLIENT, DBG_DBUS, DBG_DRES, DBG_FS, DBG_SM, DBG_TRANS, DBG_QUE;
 
-static void plugin_init(OhmPlugin *);
-static void plugin_destroy(OhmPlugin *);
+OHM_DEBUG_PLUGIN(playback,
+    OHM_DEBUG_FLAG("client", "playback client"    , &DBG_CLIENT),
+    OHM_DEBUG_FLAG("dbusif", "D-Bus interface"    , &DBG_DBUS  ),
+    OHM_DEBUG_FLAG("dres"  , "dres interface"     , &DBG_DRES  ),
+    OHM_DEBUG_FLAG("fact"  , "factstore interface", &DBG_FS    ),
+    OHM_DEBUG_FLAG("sm"    , "state machine"      , &DBG_SM    ),
+    OHM_DEBUG_FLAG("trans" , "state transition"   , &DBG_TRANS ),
+    OHM_DEBUG_FLAG("queue" , "queued requests"    , &DBG_QUE   )
+);
 
 
 static void plugin_init(OhmPlugin *plugin)
 {
+    OHM_DEBUG_INIT(playback);
+
     client_init(plugin);
     pbreq_init(plugin);
     sm_init(plugin);

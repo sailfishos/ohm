@@ -44,9 +44,9 @@ $audio_playback         = { value: }
 $privacy_override       = { value: default }
 $current_profile        = { value: general }
 $privacy_override       = { value: default }
-$playback               = { dbusid:, object:, pid:, stream:, group:, reqstate:, state:, setstate:}
 
 all: audio_route audio_volume_limit audio_cork
+#	fail(foo)
 	signal_changed(audio_policy, &completion_callback, &transaction_id, \
 	               audio_route, volume_limit, audio_cork)
 

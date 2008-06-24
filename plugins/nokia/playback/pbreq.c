@@ -32,6 +32,8 @@ static pbreq_t *pbreq_create(client_t *cl, DBusMessage *msg)
 
             next->prev = req;
             req->prev  = prev;
+
+            OHM_DEBUG(DBG_QUE, "playback request %d created", req->trid);
         }
     }
 
@@ -43,6 +45,9 @@ static void pbreq_destroy(pbreq_t *req)
     pbreq_t *prev, *next;
 
     if (req != NULL) {
+        OHM_DEBUG(DBG_QUE, "playback request %d is going to be destroyed",
+                  req->trid);
+
         prev = req->prev;
         next = req->next;
 

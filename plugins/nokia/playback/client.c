@@ -48,7 +48,8 @@ static client_t *client_create(char *dbusid, char *object,
                 cl->prev   = prev;
                 
                 if (client_add_factstore_entry(dbusid, object, pid, stream))
-                    DEBUG("playback %s%s created", dbusid, object);
+                    OHM_DEBUG(DBG_CLIENT, "playback %s%s created",
+                              dbusid, object);
                 else {
                     client_destroy(cl);
                     cl = NULL;
@@ -73,7 +74,8 @@ static void client_destroy(client_t *cl)
     client_t *prev, *next;
 
     if (cl != NULL) {
-        DEBUG("playback %s%s going to be destroyed", cl->dbusid, cl->object);
+        OHM_DEBUG(DBG_CLIENT, "playback %s%s going to be destroyed",
+                  cl->dbusid, cl->object);
 
         sm_process_event(cl->sm, &evdata);
         sm_destroy(cl->sm);
