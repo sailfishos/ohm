@@ -177,7 +177,7 @@ sm_def_t  sm_def = {
          {evid_playback_failed   , GOTO                  , STATE(setstreq)   },
          {evid_setstate_changed  , GOTO                  , STATE(setstreq)   },
          {evid_setprop_succeeded , GOTO                  , STATE(waitack)    },
-         {evid_setprop_failed    , GOTO                  , STATE(idle)       },
+         {evid_setprop_failed    , DO(check_queue)       , STATE(idle)       },
          {evid_client_gone       , DO(fake_stop_pbreq)   , STATE(invalid)    }}
         },
 
@@ -219,7 +219,7 @@ static void  write_property_cb(char *,char *, char *,char *, int,const char *);
 static void  setstate_cb(fsif_entry_t *, char *, fsif_field_t *, void *);
 static char *strncpylower(char *, const char *, int);
 static char *class_to_group(char *);
-static void  schedule_next_request(client_t *);
+static void  schedule_deferred_request(client_t *);
 
 
 static void sm_init(OhmPlugin *plugin)
@@ -534,17 +534,21 @@ static int fire_scheduled_event(void *data)
 
 static int fire_setstate_changed_event(void *data)
 {
-    client_t    *cl = (client_t *)data;
-    sm_t        *sm = cl->sm;
+    client_t    *cl      = (client_t *)data;
+    sm_t        *sm      = cl->sm;
+    char        *state   = client_get_state(cl, client_state  , NULL,0);
+    char        *rqsetst = client_get_state(cl, client_rqsetst, NULL,0); 
     sm_evdata_t  evdata;
 
     cl->rqsetst.evsrc = 0;
-
-    if (cl->rqsetst.value == NULL)
+    
+    if (*rqsetst == '\0')
         OHM_ERROR("something went twrong: rqsetst.value == NULL");
+    else if (!strcmp(state, rqsetst))
+        OHM_DEBUG(DBG_QUE, "[%s] not firing identical event", sm->name);
     else {
         evdata.watch.evid  = evid_setstate_changed;
-        evdata.watch.value = cl->rqsetst.value; 
+        evdata.watch.value = rqsetst;
 
         OHM_DEBUG(DBG_SM, "[%s] fire event (%s)", sm->name,evdata.watch.value);
 
@@ -688,10 +692,7 @@ static int write_property(sm_evdata_t *evdata, void *usrdata)
                       "already in '%s' state", setstate);
         }
         else {
-            if (cl->setstate)
-                free(cl->setstate);
-            
-            cl->setstate = strdup(setstate);
+            client_save_state(cl, client_setstate, setstate);
 
             /* capitalize the property value */
             strncpy(prvalue, setstate, sizeof(prvalue));
@@ -699,6 +700,8 @@ static int write_property(sm_evdata_t *evdata, void *usrdata)
             prvalue[0] = toupper(prvalue[0]);
             
             client_set_property(cl, "State", prvalue, write_property_cb);
+
+            client_save_state(cl, client_rqsetst, NULL);
         }
         break;
         
@@ -809,7 +812,7 @@ static int reply_pbreq_deq(sm_evdata_t *evdata, void *usrdata)
 
     reply_pbreq(evdata, usrdata);
 
-    schedule_next_request(cl);
+    schedule_deferred_request(cl);
 
     return TRUE;
 }
@@ -838,7 +841,7 @@ static int abort_pbreq_deq(sm_evdata_t *evdata, void *usrdata)
         pbreq_destroy(req);
     }
 
-    schedule_next_request(cl);
+    schedule_deferred_request(cl);
 
     return TRUE;
 }
@@ -847,7 +850,7 @@ static int check_queue(sm_evdata_t *evdata, void *usrdata)
 {
     client_t *cl  = (client_t *)usrdata;
 
-    schedule_next_request(cl);
+    schedule_deferred_request(cl);
 
     return TRUE;
 }
@@ -873,7 +876,7 @@ static int update_state_deq(sm_evdata_t *evdata, void *usrdata)
 
     update_state(evdata, usrdata);
 
-    schedule_next_request(cl);
+    schedule_deferred_request(cl);
 
     return TRUE;
 }
@@ -968,7 +971,12 @@ static void setstate_cb(fsif_entry_t *entry, char *name, fsif_field_t *fld,
 
     cl->rqsetst.value = strdup(setstate);
 
+    OHM_DEBUG(DBG_QUE, "rqsetst is set to '%s'", cl->rqsetst.value);
+
     if (cl->rqsetst.evsrc == 0) {
+        OHM_DEBUG(DBG_SM, "[%s] schedule event '%s'", cl->sm->name,
+                  evdef[evid_setstate_changed].name);
+
         cl->rqsetst.evsrc = g_idle_add(fire_setstate_changed_event, cl);
     }
 }
@@ -1011,12 +1019,21 @@ static char *class_to_group(char *klass)
 }
 
 
-static void schedule_next_request(client_t *cl)
+static void schedule_deferred_request(client_t *cl)
 {
     static sm_evdata_t  evdata = { .evid = evid_playback_request };
 
-    if (pbreq_get_first(cl))
+    if (pbreq_get_first(cl)) {
         sm_schedule_event(cl->sm, &evdata, NULL);
+        return;
+    }
+
+    if (cl->rqsetst.value != NULL && cl->rqsetst.evsrc == 0) {
+        OHM_DEBUG(DBG_SM, "[%s] schedule event '%s'", cl->sm->name,
+                  evdef[evid_setstate_changed].name);
+
+        cl->rqsetst.evsrc = g_idle_add(fire_setstate_changed_event, cl);
+    }
 }
 
 /* 

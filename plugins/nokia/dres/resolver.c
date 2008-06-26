@@ -345,7 +345,7 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
     char             *cb_name;
     char             *trid_str;
     int               trid;
-    char              prefix[MAX_LENGTH];
+    char             *prefix;
     char              arg[MAX_LENGTH];
     char             *factv[MAX_FACTS + 1];
     char              buf[MAX_FACTS * MAX_LENGTH];
@@ -376,6 +376,7 @@ signal_handler(dres_t *dres, char *name, dres_action_t *action, void **ret)
               __FUNCTION__, cb_name, trid_str, trid);
     
     timeout = 5 * 1000;
+    prefix  = dres_get_prefix(dres);
 
     for (p = buf, i = 0;   i < factc;   i++) {
 

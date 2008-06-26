@@ -250,19 +250,20 @@ static void client_save_state(client_t *cl, client_stype_t type, char *value)
 {
     char **store;
 
-    if (cl != NULL && value != NULL) {
+    if (cl != NULL) {
 
         switch (type) {
-        case client_reqstate:   store = &cl->reqstate;     break;
-        case client_state:      store = &cl->state;        break;
-        case client_setstate:   store = &cl->setstate;     break;
-        default:                                           return;
+        case client_reqstate:   store = &cl->reqstate;       break;
+        case client_state:      store = &cl->state;          break;
+        case client_setstate:   store = &cl->setstate;       break;
+        case client_rqsetst:    store = &cl->rqsetst.value;  break;
+        default:                                             return;
         }
 
         if (*store != NULL)
             free((void *)*store);
 
-        *store = strdup(value);
+        *store = value ? strdup(value) : NULL;
     }
 }
 
