@@ -18,6 +18,7 @@ typedef struct {
     notify_property_cb_t  callback;
 } prop_notif_t;
 
+static DBusConnection    *sys_conn;    /* connection for D-Bus system bus */
 static DBusConnection    *sess_conn;   /* connection for D-Bus session bus */
 static prop_notif_t      *notif_reg;   /* property notification registry */
 static hello_cb_t         hello_notif; /* hello notification */
@@ -60,7 +61,8 @@ static void dbusif_init(OhmPlugin *plugin)
      * setup sess_conn
      */
 
-    if ((sess_conn = dbus_bus_get(DBUS_BUS_SESSION, &err)) == NULL) {
+    if ((sys_conn  = dbus_bus_get(DBUS_BUS_SYSTEM , &err)) == NULL ||
+        (sess_conn = dbus_bus_get(DBUS_BUS_SESSION, &err)) == NULL    ) {
         if (dbus_error_is_set(&err))
             OHM_ERROR("Can't get D-Bus connection: %s", err.message);
         else
@@ -336,6 +338,61 @@ static void dbusif_add_property_notification(char *prname,
 static void dbusif_add_hello_notification(hello_cb_t callback)
 {
     hello_notif = callback;
+}
+
+static void dbusif_send_info_to_pep(char *oper, char *group, char *pidstr,
+                                    char *stream)
+{
+    static dbus_uint32_t  txid = 1;
+
+    char                 *path  = DBUS_POLICY_DECISION_PATH;
+    char                 *iface = DBUS_POLICY_DECISION_INTERFACE; 
+    DBusMessage          *msg;
+    dbus_uint32_t         pid;
+    char                 *end;
+    int                   success;
+
+    if (!oper || !group || !pidstr)
+        return;
+
+    pid = strtoul(pidstr, &end, 10);
+
+    if (!pid || *end) {
+        OHM_ERROR("%s(): invalid pid string '%s'", __FUNCTION__, pidstr);
+        return;
+    }
+
+    if (!stream || !stream[0])
+        stream = "<unknown>";
+
+    if ((msg = dbus_message_new_signal(path, iface, "info")) == NULL) {
+        OHM_ERROR("%s(): failed to create message", __FUNCTION__);
+        return;
+    }
+
+    success = dbus_message_append_args(msg,
+                                       DBUS_TYPE_UINT32, &txid,
+                                       DBUS_TYPE_STRING, &oper,
+                                       DBUS_TYPE_STRING, &group,
+                                       DBUS_TYPE_UINT32, &pid,
+                                       DBUS_TYPE_STRING, &stream,
+                                       DBUS_TYPE_INVALID);
+    if (!success) {
+        OHM_ERROR("%s(): failed to build message", __FUNCTION__);
+        return;
+    }
+
+    success = dbus_connection_send(sys_conn, msg, NULL);
+
+    if (!success)
+        OHM_ERROR("%s(): failed to send message", __FUNCTION__);
+    else {
+        OHM_DEBUG(DBG_DBUS, "operation='%s' group='%s' pid='%s'",
+                  oper, group, pidstr);
+        txid++;
+    }
+
+    dbus_message_unref(msg);
 }
 
 static DBusHandlerResult name_changed(DBusConnection *conn, DBusMessage *msg,

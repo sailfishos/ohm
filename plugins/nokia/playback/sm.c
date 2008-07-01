@@ -647,6 +647,8 @@ static int save_property(sm_evdata_t *evdata, void *usrdata)
 
         sm_rename(cl->sm, name);
 
+        dbusif_send_info_to_pep("register", cl->group, cl->pid, cl->stream);
+
         client_get_state(cl, client_state, state, sizeof(state));
 
         if (strcmp(state, "play"))
@@ -886,6 +888,8 @@ static int fake_stop_pbreq(sm_evdata_t *evdata, void *usrdata)
     static char *state = "stop";
 
     client_t *cl = (client_t *)usrdata;
+
+    dbusif_send_info_to_pep("unregister", cl->group, cl->pid, cl->stream);
 
     client_save_state(cl, client_reqstate, state);
     client_update_factstore_entry(cl, "reqstate", state);
