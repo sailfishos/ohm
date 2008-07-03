@@ -414,6 +414,7 @@ plugins/nokia/profile/Makefile
 plugins/nokia/signaling/Makefile
 plugins/nokia/signaling/tests/Makefile
 plugins/nokia/playback/Makefile
+plugins/nokia/accessories/Makefile
 ohmd/Makefile
 po/Makefile.in
 docs/Makefile

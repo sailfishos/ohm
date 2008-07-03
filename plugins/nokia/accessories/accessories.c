@@ -7,133 +7,125 @@
 
 #include <ohm-plugin.h>
 
-/* set/relation names, policy/prolog atoms */
-#define ACCESSORIES "accessories"
+#include "prolog/ohm-fact.h"
 
-#define EARPIECE   "earpiece"
-#define IHF        "ihf"
-#define MICROPHONE "microphone"
-#define HEADSET    "headset"
-#define HEADPHONE  "headphone"
-#define BLUETOOTH  "bluetooth"
-#define HEADMIKE   "headmike"
-#define NODEV      "none"
+static OhmFactStore  *fs;
 
-enum {
-    ID_HEADSET    = 0x00,
-    ID_HEADPHONE  = 0x80,
-    ID_LOOPSET    = 0x01,
-    ID_CARFREE    = 0x02,
-    ID_OFFICEFREE = 0x03,
-    ID_NODEV      = 0xff
-};
-
-OHM_IMPORTABLE(int , policy_actions  , (DBusMessage *, int));
-OHM_IMPORTABLE(int , set_insert      , (char *, char *));
-OHM_IMPORTABLE(int , set_delete      , (char *, char *));
-OHM_IMPORTABLE(void, set_reset       , (char *));
-
-static void    update_device(void);
+static void update_factstore_entry(char *, char *, char *);
+static const char *get_field(OhmFact *, char *);
 
 
-static int   acc_type;
-static char *acc_now, *acc_old;
-
-char *hardwired[] = { EARPIECE, IHF, MICROPHONE, NULL };
-
-enum {
-    CONF_HEADSET_TYPE,
-};
-
-static void
-plugin_init(OhmPlugin *plugin)
+static void plugin_init(OhmPlugin *plugin)
 {
-    char **dev;
-
-    for (dev = hardwired; *dev; dev++)
-        if (set_insert(ACCESSORIES, *dev))
-            g_error("Failed to initialize set of accessories.");
-        else
-            printf("accessory %s added to ACCESSORIES...\n", *dev);
-
-    ohm_plugin_conf_get_key(plugin, "headset.headset_type", &acc_type);
-
-    acc_now = NODEV;
-    update_device();
+    fs = ohm_fact_store_get_fact_store();
 }
 
 
-static void
-plugin_exit(OhmPlugin *plugin)
+static void plugin_exit(OhmPlugin *plugin)
 {
-    return;
 }
 
-
-static void
-update_device(void)
+static DBusHandlerResult info(DBusConnection *c, DBusMessage * msg, void *data)
 {
-    int type = acc_type &  0xff;
-    int out  = acc_type >> 8;
+    static char     *factname = "com.nokia.policy.accessories";
 
-    acc_old = acc_now;
+    DBusMessageIter  msgit;
+    DBusMessageIter  devit;
+    char            *state;
+    char            *device;
 
-    if (type == ID_HEADSET) {
-        if (out == ID_NODEV)
-            acc_now = HEADMIKE;
-        else
-            acc_now = HEADSET;
+    if (dbus_message_is_signal(msg, "com.nokia.policy", "info")) {
+
+        dbus_message_iter_init(msg, &msgit);
+
+        if (dbus_message_iter_get_arg_type(&msgit) != DBUS_TYPE_STRING)
+            goto done;
+
+        dbus_message_iter_get_basic(&msgit, (void *)&state);
+        
+        if (!dbus_message_iter_next(&msgit) ||
+            dbus_message_iter_get_arg_type(&msgit) != DBUS_TYPE_ARRAY)
+            goto done;
+   
+        dbus_message_iter_recurse(&msgit, &devit);
+
+        do {
+            if (dbus_message_iter_get_arg_type(&devit) != DBUS_TYPE_STRING)
+                continue;
+
+            dbus_message_iter_get_basic(&devit, (void *)&device);
+
+            update_factstore_entry(factname, device, state);
+      
+        } while (dbus_message_iter_next(&devit));
+
+    done:
+        return DBUS_HANDLER_RESULT_HANDLED;
     }
-    else {
-        switch (type) {
-        case ID_HEADSET:    acc_now = HEADSET;   break;
-        case ID_LOOPSET:    acc_now = HEADSET;   break;
-        case ID_CARFREE:    acc_now = HEADSET;   break;
-        case ID_OFFICEFREE: acc_now = HEADSET;   break;
-        case ID_HEADPHONE:  acc_now = HEADPHONE; break;
-        case ID_NODEV:      acc_now = NODEV;     break;
-        default:            acc_now = NODEV;     break;
+
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+static void update_factstore_entry(char *factname, char *device, char *state)
+{
+    OhmFact     *fact;
+    GSList      *list;
+    GValue      *gv;
+    const char  *fdev;
+    const char  *fstat;
+
+    printf("%s: %s(%s, %s)\n", __FILE__, __FUNCTION__, device, state);
+
+    for (list  = ohm_fact_store_get_facts_by_name(fs, factname);
+         list != NULL;
+         list  = g_slist_next(list))
+    {
+        fact = (OhmFact *)list->data;
+
+        if ((fdev  = get_field(fact, "device")) != NULL &&
+            (fstat = get_field(fact, "state"))  != NULL    ) {
+
+            if (!strcmp(fdev, device)) {
+                if (!strcmp(fstat, state)) {
+                    printf("%s: '%s' device state is already '%s'",
+                           __FILE__, device, state);
+                }
+                else {
+                    gv = ohm_value_from_string(state);
+                    ohm_fact_set(fact, "state", gv);
+                }
+
+                return;         /* supposed to have just one */
+            }
+        }
+        
+    }
+}
+
+static const char *get_field(OhmFact *fact, char *name)
+{
+    GValue  *gv;
+
+    if ((gv = ohm_fact_get(fact, name)) != NULL) {
+        if (G_VALUE_TYPE(gv) == G_TYPE_STRING) {
+            return g_value_get_string(gv);
         }
     }
 
-    if (strcmp(acc_now, acc_old)) {
-        printf("accessories: old: %s, new: %s\n", acc_old, acc_now);
-        set_delete(ACCESSORIES, acc_old);
-        set_insert(ACCESSORIES, acc_now);
-        policy_actions(NULL, FALSE);
-    }
+    return NULL;
 }
-
-
-static void
-plugin_notify (OhmPlugin *plugin, gint id, gint value)
-{
-    if (id == CONF_HEADSET_TYPE)
-        acc_type = value;
-    
-    update_device();
-}
-
 
 OHM_PLUGIN_DESCRIPTION("accessories",
                        "0.0.0",
-                       "krisztian.litkey@nokia.com",
+                       "janos.f.kovacs@nokia.com",
                        OHM_LICENSE_NON_FREE,
                        plugin_init,
                        plugin_exit,
-                       plugin_notify);
+                       NULL);
 
-OHM_PLUGIN_REQUIRES_METHODS(accessories, 4,
-    OHM_IMPORT("policy.actions"   , policy_actions),
-    OHM_IMPORT("policy.set_insert", set_insert),
-    OHM_IMPORT("policy.set_delete", set_delete),
-    OHM_IMPORT("policy.set_reset" , set_reset));
-
-OHM_PLUGIN_REQUIRES("headset");
-
-OHM_PLUGIN_INTERESTED({ "headset.headset_type", CONF_HEADSET_TYPE });
-
-
+OHM_PLUGIN_DBUS_SIGNALS(
+     {NULL, "com.nokia.policy", "info", "/com/nokia/policy/info", info, NULL}
+);
 
 
 /* 

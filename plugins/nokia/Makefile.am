@@ -1,10 +1,11 @@
-SUBDIRS = 	  \
-	prolog    \
-	dres      \
-	signaling \
-	console   \
-	hal       \
-	playback
+SUBDIRS = 	     \
+	prolog       \
+	dres         \
+	signaling    \
+	console      \
+	hal          \
+	playback     \
+	accessories
 
 #	profile
 
