@@ -213,6 +213,7 @@ static void client_set_property(client_t *cl, char *prname, char *prvalue,
     dbusif_set_property(cl->dbusid, cl->object, prname, prvalue, usercb);
 }
 
+
 static char *client_get_state(client_t *cl, client_stype_t type,
                               char *buf, int len)
 {

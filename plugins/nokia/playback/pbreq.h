@@ -21,6 +21,8 @@ typedef struct pbreq_s {
     union {
         struct {
             char *name;
+            char *pid;
+            char *stream;
         }             state;
     };
 } pbreq_t;
