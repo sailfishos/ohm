@@ -7,14 +7,33 @@ Build-Depends: cdbs, debhelper (>= 4.1.0), flex, libdres
 
 Package: ohm
 Architecture: any
-Depends: ${shlibs:Depends}, swi-prolog (>= 5.6.35)
+Depends: ${shlibs:Depends}, ohm-plugin-core
 Description: Open Hardware Manager with Nokia policy add-ons.
- OHM with Nokia policy add-ons.
+ Open Hardware Manager Nokia add-ons.
  .
- OHM with Nokia policy add-ons.
+ Open Hardware Manager with Nokia add-ons.
+
+Package: ohm-plugin-core
+Architecture: any
+Depends: ${shlibs:Depends}
+Section: utils
+Description: Common OHM libraries.
+ .
+ This package contains libraries needed by both for running OHM and
+ developing OHM plugins.
+
+Package: ohm-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ohm-plugin-core
+Section: libdevel
+Description: Files necessary for OHM plugin development.
+ .
+ This package contains header files, libraries, pkg-config files, etc.
+ necessary for developing OHM plugins.
 
 Package: ohm-plugins
 Architecture: any
+Depends: ${shlibs:Depends}
 Section: utils
 Description: Open Hardware Manager plugins.
  .
@@ -22,21 +41,17 @@ Description: Open Hardware Manager plugins.
 
 Package: ohm-nokia-plugins
 Architecture: any
+Depends: ${shlibs:Depends}, swi-prolog (>= 5.6.35)
 Section: utils
 Description: Nokia plugins for the Open Hardware Manager.
  .
  Nokia plugins for OHM distribution.
 
-Package: ohm-dev
-Architecture: any
-Section: libdevel
-Description: Open Hardware Manager client library.
- .
- A primitive client library to query/manipulate OHM over DBUS.
-
 Package: ohm-utils
 Architecture: any
 Section: utils
-Description: Open Hardware Manager command line utilities.
+Description: Miscallaneous OHM utilities.
  .
- Simple command line utilities for OHM.
+ This package contains miscallaneous OHM utilities that are either not
+ very useful or otherwise not necessary for everyday OHM usage.
+
