@@ -39,14 +39,6 @@ Description: Open Hardware Manager plugins.
  .
  Plugins from the basic OHM distribution.
 
-Package: ohm-nokia-plugins
-Architecture: any
-Depends: ${shlibs:Depends}, swi-prolog (>= 5.6.35)
-Section: utils
-Description: Nokia plugins for the Open Hardware Manager.
- .
- Nokia plugins for OHM distribution.
-
 Package: ohm-utils
 Architecture: any
 Section: utils

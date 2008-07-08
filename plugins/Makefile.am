@@ -1,12 +1,6 @@
 SUBDIRS = 				\
 	glue                            \
-        policy                          \
-	nokia
-
-#
-#	glue				\
-#	policy				\
-#
+        policy
 
 clean-local:
 	rm -f *~
