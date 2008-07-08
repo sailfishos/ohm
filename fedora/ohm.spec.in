@@ -11,18 +11,38 @@ URL: http://127.0.0.1
 Source0: %{name}-%{version}.tar.gz
 BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: pl >= 5.6.32
+Requires: pl >= 5.6.32, ohm-config, ohm-plugin-core
+
+%package config
+Summary: Common configuration files for OHM.
+Group: System Environment/Daemons
+
+%package plugin-core
+Summary: Common OHM libraries.
+Group: System Environment/Daemons
 
 %package devel
 Summary: Files necessary for OHM plugin development.
 Group: Development/Libraries
+Requires: ohm-plugin-core
 
 %package plugins
 Summary: Plugins for the Open Hardware Manager.
 Group: System Environment/Daemons
 
+%package utils
+Summary: Miscallaneous OHM utilities.
+Group: System Environment/Daemons
+
 %description
 Open Hardware Manager
+
+%description config
+This package contains common OHM configuration files.
+
+%description plugin-core
+This package contains libraries needed by both for running OHM and
+developing OHM plugins.
 
 %description devel
 This package contains header files, libraries, pkg-config files, etc.
@@ -30,6 +50,10 @@ necessary for developing OHM plugins.
 
 %description plugins
 Plugins for OHM.
+
+%description utils
+This package contains miscallaneous OHM utilities that are either not
+very useful or not necessary for everyday OHM usage.
 
 %prep
 %setup -q -n ##__TARDIR__##
@@ -48,26 +72,35 @@ make
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 
 %files
+%{_initrddir}/ohmd
+%{_sbindir}/*ohm*
+%{_datadir}/locale
+
+%files config
 %defattr(-,root,root,-)
 %config %{_sysconfdir}/ohm/modules.ini
 %config %{_sysconfdir}/dbus-1/system.d/ohm.conf
-%{_initrddir}/ohmd
-%{_sbindir}/*ohm*
-%{_bindir}/*ohm*
-%{_datadir}/locale
+
+%files plugin-core
+%defattr(-,root,root,-)
+%{_libdir}/libohmplugin.*
+%{_libdir}/libohmfact.*
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/ohm
 %{_libdir}/libohm.*
-%{_libdir}/libohmplugin.*
-%{_libdir}/libohmfact.*
 %{_libdir}/pkgconfig/*
 
 %files plugins
 %defattr(-,root,root,-)
 %config %{_sysconfdir}/ohm/plugins.d/*
 %{_libdir}/ohm
+
+%files utils
+%defattr(-,root,root,-)
+%{_bindir}/*ohm*
+
 
 %changelog
 * Wed Apr 9 2008 Krisztian Litkey <kli@localhost.localdomain> - 
