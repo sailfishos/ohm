@@ -16,7 +16,11 @@ INCLUDES =							\
 ohmpluginincludedir=$(includedir)/ohm
 
 ohmplugininclude_HEADERS =					\
-	ohm-plugin.h
+	ohm-plugin.h                                            \
+	ohm-plugin-debug.h 					\
+	ohm-dbus.h						\
+	ohm-fact.h						\
+	ohm-factstore.h
 
 noinst_PROGRAMS = ohmd-test
 
@@ -29,6 +33,21 @@ ohmd_test_SOURCES = 						\
 	ohm-marshal.c						\
 	ohm-test.c
 ohmd_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
+
+lib_LTLIBRARIES = libohmplugin.la libohmfact.la
+
+libohmplugin_la_SOURCES =                                       \
+	ohm-plugin.h						\
+	ohm-plugin.c
+
+libohmplugin_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE
+
+libohmfact_la_SOURCES =                                         \
+	ohm-fact.h 						\
+	ohm-factstore.h						\
+	ohm-factstore.c
+
+libohmfact_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE@
 
 sbin_PROGRAMS = ohmd
 
@@ -44,7 +63,6 @@ ohmd_SOURCES = 							\
 	ohm-keystore.h						\
 	ohm-module.c						\
 	ohm-module.h						\
-	ohm-plugin.c						\
 	ohm-plugin.h						\
 	ohm-plugin-internal.h					\
 	ohm-manager.c						\
@@ -52,7 +70,8 @@ ohmd_SOURCES = 							\
 	ohm-dbus.c						\
 	ohm-dbus.h						\
 	ohm-main.c
-ohmd_LDADD = $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
+ohmd_LDADD = libohmplugin.la libohmfact.la                      \
+        $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 
 BUILT_SOURCES =							\
 	ohm-marshal.c						\

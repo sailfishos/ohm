@@ -370,7 +370,6 @@ AC_SUBST(SWIPROLOG_LDFLAGS)
 AC_SUBST(SWIPROLOG_CFLAGS)
 AC_SUBST(SWIPROLOG_HOME)
 
-
 PKG_CHECK_MODULES(LIBPROLOG, libprolog >= 0.0)
 AC_SUBST(LIBPROLOG_CFLAGS)
 AC_SUBST(LIBPROLOG_LIBS)
@@ -378,10 +377,6 @@ AC_SUBST(LIBPROLOG_LIBS)
 PKG_CHECK_MODULES(LIBDRES, libdres >= 0.0)
 AC_SUBST(LIBDRES_CFLAGS)
 AC_SUBST(LIBDRES_LIBS)
-
-PKG_CHECK_MODULES(LIBFACT, libfact >= 0.0)
-AC_SUBST(LIBFACT_CFLAGS)
-AC_SUBST(LIBFACT_LIBS)
 
 AC_OUTPUT([
 ohm.pc
@@ -416,6 +411,8 @@ plugins/nokia/signaling/tests/Makefile
 plugins/nokia/playback/Makefile
 plugins/nokia/accessories/Makefile
 ohmd/Makefile
+ohmd/libohmplugin.pc
+ohmd/libohmfact.pc
 po/Makefile.in
 docs/Makefile
 docs/index.xml

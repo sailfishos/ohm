@@ -1,8 +1,8 @@
 plugindir = @OHM_PLUGIN_DIR@
 plugin_LTLIBRARIES = libohm_accessories.la
 libohm_accessories_la_SOURCES = accessories.c
-libohm_accessories_la_LIBADD = @OHM_PLUGIN_LIBS@ @LIBFACT_LIBS@
+libohm_accessories_la_LIBADD = @OHM_PLUGIN_LIBS@ ../../../ohmd/libohmfact.la
 libohm_accessories_la_LDFLAGS = -module -avoid-version
-libohm_accessories_la_CFLAGS = @OHM_PLUGIN_CFLAGS@ @LIBFACT_CFLAGS@
+libohm_accessories_la_CFLAGS = @OHM_PLUGIN_CFLAGS@
 
 

@@ -24,9 +24,10 @@
 #include <libhal.h>
 
 #include <ohm-plugin.h>
+#include <ohm-fact.h>
+
 #include <dres/dres.h>
 #include <dres/variables.h>
-#include <prolog/ohm-fact.h>
 #include <ohm-plugin-debug.h>
 
 typedef struct _hal_plugin {

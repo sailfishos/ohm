@@ -387,7 +387,7 @@ send_ipc_signal(gpointer data)
     dbus_uint32_t   txid;
 
     GSList         *facts = signal->facts, *i, *j;
-    GList *k = NULL;
+    GSList         *k = NULL;
     char           *path = DBUS_PATH_POLICY "/decision";
     char           *interface = DBUS_INTERFACE_POLICY;
 
@@ -496,7 +496,7 @@ send_ipc_signal(gpointer data)
         for (j = ohm_facts; j != NULL; j = g_slist_next(j)) {
 
             OhmFact *of = j->data;
-            GList *fields = NULL;
+            GSList *fields = NULL;
 
             printf("starting to process OhmFact '%p'\n", of);
         
@@ -509,7 +509,7 @@ send_ipc_signal(gpointer data)
             
             fields = ohm_fact_get_fields(of);
 
-            for (k = fields; k != NULL; k = g_list_next(k)) {
+            for (k = fields; k != NULL; k = g_slist_next(k)) {
 
                 GQuark qk = (GQuark)GPOINTER_TO_INT(k->data);
                 const gchar *field_name = g_quark_to_string(qk);

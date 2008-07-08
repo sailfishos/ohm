@@ -6,8 +6,7 @@
 #include <dbus/dbus.h>
 
 #include <ohm-plugin.h>
-
-#include "prolog/ohm-fact.h"
+#include <ohm-fact.h>
 
 static OhmFactStore  *fs;
 

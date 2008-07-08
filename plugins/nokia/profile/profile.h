@@ -24,9 +24,10 @@
 #include <profiled/libprofile.h>
 
 #include <ohm-plugin.h>
+#include <ohm-fact.h>
+
 #include <dres/dres.h>
 #include <dres/variables.h>
-#include <prolog/ohm-fact.h>
 
 #define FACTSTORE_PREFIX "com.nokia.policy"
 #define FACTSTORE_PROFILE             FACTSTORE_PREFIX ".profile"

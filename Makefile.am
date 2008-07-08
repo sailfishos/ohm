@@ -11,7 +11,7 @@ SUBDIRS = 				\
 
 
 pkgconfigdir = ${libdir}/pkgconfig
-pkgconfig_DATA = ohm.pc
+pkgconfig_DATA = ohm.pc ohmd/libohmplugin.pc ohmd/libohmfact.pc
 
 dbusdir = @DBUS_SYS_DIR@
 dist_dbus_DATA = ohm.conf

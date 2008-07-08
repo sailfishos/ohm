@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libohmplugin
+Description: OHM plugin library.
+Version: @VERSION@
+Libs: -L${libdir} -lohmplugin
+Cflags: -I${includedir}

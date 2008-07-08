@@ -1,4 +1,4 @@
-#include "prolog/ohm-fact.h"
+#include <ohm-fact.h>
 
 typedef struct watch_fact_s {
     struct watch_fact_s   *next;

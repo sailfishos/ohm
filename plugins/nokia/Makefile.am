@@ -2,11 +2,10 @@ SUBDIRS = 	     \
 	prolog       \
 	dres         \
 	signaling    \
-	console      \
 	hal          \
 	playback     \
-	accessories
-
+	accessories  \
+	console 
 #	profile
 
 clean-local:

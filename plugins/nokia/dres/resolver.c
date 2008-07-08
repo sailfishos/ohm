@@ -14,10 +14,11 @@
 
 #include <dres/dres.h>
 #include <prolog/prolog.h>
-#include <prolog/ohm-fact.h>           /* XXX */
 
 #include <ohm-plugin.h>
 #include <ohm-plugin-debug.h>
+#include <ohm-fact.h>
+
 
 #include "console.h"
 #include "factstore.h"
