@@ -125,8 +125,8 @@ struct console_s {
 #define GRAB_ID(g)      ((g) >> 16)
 #define GRABBED(id, fd) (((id) << 16) | (fd))
 
-static console_t **consoles;
-static int         nconsole;
+static console_t    **consoles;
+static unsigned int   nconsole;
 
 static gboolean console_accept (GIOChannel *, GIOCondition, gpointer);
 static gboolean console_handler(GIOChannel *, GIOCondition, gpointer);
