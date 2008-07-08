@@ -401,8 +401,6 @@ plugins/policy/display/Makefile
 plugins/policy/suspend/Makefile
 plugins/policy/timeouts/Makefile
 plugins/nokia/Makefile
-plugins/nokia/prolog/Makefile
-plugins/nokia/dres/Makefile
 plugins/nokia/console/Makefile
 plugins/nokia/hal/Makefile
 plugins/nokia/profile/Makefile

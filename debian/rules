@@ -18,13 +18,13 @@ binary-post-install/ohm::
 common-binary-post-install-arch:: list-missing
 
 # do not include docs and changelogs in these packages
-DEB_INSTALL_DOCS_ohm-plugins := --no-act
-DEB_INSTALL_CHANGELOGS_ohm-plugins := --no-act
-DEB_INSTALL_DOCS_ohm-nokia-plugins := --no-act
-DEB_INSTALL_CHANGELOGS_ohm-nokia-plugins := --no-act
-DEB_INSTALL_DOCS_ohm-utils := --no-act
-DEB_INSTALL_CHANGELOGS_ohm-utils := --no-act
 DEB_INSTALL_DOCS_ohm-dev := --no-act
 DEB_INSTALL_CHANGELOGS_ohm-dev := --no-act
+DEB_INSTALL_DOCS_ohm-plugins := --no-act
+DEB_INSTALL_CHANGELOGS_ohm-plugins := --no-act
+DEB_INSTALL_DOCS_ohm-nokia-utils := --no-act
+DEB_INSTALL_CHANGELOGS_ohm-nokia-utils := --no-act
+DEB_INSTALL_DOCS_ohm-utils := --no-act
+DEB_INSTALL_CHANGELOGS_ohm-utils := --no-act
 
 

@@ -4,9 +4,10 @@ plugin_LTLIBRARIES = libohm_signaling.la
 nodist_libohm_signaling_la_SOURCES = signaling_marshal.c signaling_marshal.h
 
 libohm_signaling_la_SOURCES = signaling.c signaling-internal.c
-libohm_signaling_la_LIBADD = @OHM_PLUGIN_LIBS@ ../../../ohmd/libohmfact.la
+libohm_signaling_la_LIBADD = @OHM_PLUGIN_LIBS@ @LIBDRES_LIBS@ \
+                             ../../../ohmd/libohmfact.la
 libohm_signaling_la_LDFLAGS = -module -avoid-version
-libohm_signaling_la_CFLAGS = @OHM_PLUGIN_CFLAGS@
+libohm_signaling_la_CFLAGS = @OHM_PLUGIN_CFLAGS@ @LIBDRES_CFLAGS@
 
 BUILT_SOURCES = signaling_marshal.c signaling_marshal.h
 

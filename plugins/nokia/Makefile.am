@@ -1,6 +1,4 @@
 SUBDIRS = 	     \
-	prolog       \
-	dres         \
 	signaling    \
 	hal          \
 	playback     \
