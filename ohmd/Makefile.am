@@ -40,7 +40,7 @@ libohmplugin_la_SOURCES =                                       \
 	ohm-plugin.h						\
 	ohm-plugin.c
 
-libohmplugin_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE
+libohmplugin_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE@
 
 libohmfact_la_SOURCES =                                         \
 	ohm-fact.h 						\
