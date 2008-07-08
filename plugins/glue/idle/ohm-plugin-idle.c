@@ -21,7 +21,7 @@
 #include <gmodule.h>
 #include <glib.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 #include <libidletime.h>
 #include <stdlib.h>
 

@@ -23,8 +23,8 @@
 
 #include <profiled/libprofile.h>
 
-#include <ohm-plugin.h>
-#include <ohm-fact.h>
+#include <ohm/ohm-plugin.h>
+#include <ohm/ohm-fact.h>
 
 #include <dres/dres.h>
 #include <dres/variables.h>

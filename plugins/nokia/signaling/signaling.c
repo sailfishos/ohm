@@ -7,7 +7,7 @@
  */
 
 #include "signaling.h"
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 /* completion cb type */
 typedef void (*completion_cb_t)(int transid, int success);

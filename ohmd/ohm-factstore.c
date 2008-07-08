@@ -21,7 +21,7 @@
  *
  */
 
-#include <ohm-factstore.h>
+#include <ohm/ohm-factstore.h>
 
 enum  {
 	OHM_STRUCTURE_DUMMY_PROPERTY,

@@ -28,7 +28,8 @@
 
 #include <dbus/dbus.h>
 #include <gmodule.h>
-#include "ohm-dbus.h"
+
+#include <ohm/ohm-dbus.h>
 
 G_BEGIN_DECLS
 

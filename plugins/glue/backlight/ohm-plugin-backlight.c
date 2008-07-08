@@ -25,7 +25,7 @@
 #include <gmodule.h>
 #include <glib.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 #include <dbus/dbus-glib.h>
 
 #define	HAL_DBUS_SERVICE		 	"org.freedesktop.Hal"

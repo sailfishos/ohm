@@ -5,8 +5,8 @@
 #include <glib.h>
 #include <dbus/dbus.h>
 
-#include <ohm-plugin.h>
-#include <ohm-fact.h>
+#include <ohm/ohm-plugin.h>
+#include <ohm/ohm-fact.h>
 
 static OhmFactStore  *fs;
 

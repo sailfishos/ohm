@@ -10,7 +10,7 @@
 #include <policy/relation.h>
 #endif
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 #define DBUS_PATH_POLICY     "/com/nokia/policy"
 #define METHOD_CALL_PROGRESS "call_progress"

@@ -1,4 +1,5 @@
 SUBDIRS = 				\
+	include				\
 	ohmd				\
 	po				\
 	initscript			\

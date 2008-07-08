@@ -1,6 +1,6 @@
 #include <gmodule.h>
 #include <glib.h>
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 #include <ohm-debug.h>
 #include <dbus/dbus-glib.h>
 #include <string.h>

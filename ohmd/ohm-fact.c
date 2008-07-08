@@ -1,5 +1,5 @@
 
-#include <prolog/ohm-fact.h>
+#include <ohm/ohm-fact.h>
 
 
 

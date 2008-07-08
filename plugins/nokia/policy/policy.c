@@ -15,7 +15,7 @@
 #include <policy/set.h>
 #include <policy/relation.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 #define DBUS_INTERFACE_POLICY "com.nokia.policy"
 #define DBUS_PATH_POLICY      "/com/nokia/policy"

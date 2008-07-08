@@ -26,7 +26,7 @@
 
 #include <dres/dres.h>
 #include <dres/variables.h>
-#include <ohm-fact.h>
+#include <ohm/ohm-fact.h>
 
 #define DBUS_INTERFACE_POLICY    "com.nokia.policy"
 #define DBUS_INTERFACE_FDO       "org.freedesktop.DBus"

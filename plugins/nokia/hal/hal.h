@@ -23,12 +23,12 @@
 
 #include <libhal.h>
 
-#include <ohm-plugin.h>
-#include <ohm-fact.h>
+#include <ohm/ohm-plugin.h>
+#include <ohm/ohm-fact.h>
+#include <ohm/ohm-plugin-debug.h>
 
 #include <dres/dres.h>
 #include <dres/variables.h>
-#include <ohm-plugin-debug.h>
 
 typedef struct _hal_plugin {
     LibHalContext *hal_ctx;

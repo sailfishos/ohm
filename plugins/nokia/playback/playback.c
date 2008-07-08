@@ -7,7 +7,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gmodule.h>
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 #include "playback.h"
 #include "client.h"

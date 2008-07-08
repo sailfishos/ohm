@@ -1,5 +1,5 @@
-#ifndef __OHM_DBUS_H
-#define __OHM_DBUS_H
+#ifndef __OHM_DBUS_H__
+#define __OHM_DBUS_H__
 
 #include <glib.h>
 #include <dbus/dbus-glib.h>

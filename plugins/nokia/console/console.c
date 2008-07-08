@@ -12,7 +12,7 @@
 #include <glib.h>
 #include <gmodule.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 #define BUSY_MESSAGE "Only a single console allowed and is already active.\n"
 

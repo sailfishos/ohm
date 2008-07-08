@@ -21,7 +21,7 @@
 #include <gmodule.h>
 #include <glib.h>
 #include <string.h>
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 static void
 hal_condition_cb (OhmPlugin   *plugin,

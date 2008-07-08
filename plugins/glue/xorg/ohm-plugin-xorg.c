@@ -26,7 +26,7 @@
 #include <glib.h>
 #include <stdlib.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 static gboolean
 plugin_poll_startup (gpointer data)

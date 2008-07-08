@@ -25,7 +25,7 @@
 #include <gmodule.h>
 #include <glib.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 #include <X11/Xutil.h>
 #include <X11/Xproto.h>			/* for CARD16 */

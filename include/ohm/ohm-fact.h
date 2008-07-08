@@ -3,7 +3,7 @@
 
 #include <sys/time.h>
 
-#include <ohm-factstore.h>
+#include <ohm/ohm-factstore.h>
 
 #define ohm_fact_store_get_fact_store ohm_get_fact_store
 

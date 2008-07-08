@@ -34,7 +34,7 @@
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-dbus-manager.h"
-#include "ohm-dbus.h"
+#include <ohm/ohm-dbus.h>
 
 static GMainLoop *loop;
 

@@ -13,7 +13,7 @@
 
 #include "ohm-common.h"
 #include "ohm-debug.h"
-#include "ohm-dbus.h"
+#include <ohm/ohm-dbus.h>
 
 #define DBUS_SIGNAL_MATCH "type='signal'"
 static DBusHandlerResult ohm_dbus_dispatch_method(DBusConnection *c,

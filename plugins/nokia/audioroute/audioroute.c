@@ -5,7 +5,7 @@
 #include <glib.h>
 #include <dbus/dbus.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 /* set/relation names, policy/prolog atoms */
 #define ACTIVE_CHANNELS    "active_channels"

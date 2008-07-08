@@ -28,13 +28,3 @@ echo "Running $AUTOMAKE..."
 $AUTOMAKE -a -c || exit 1
 $AUTOMAKE -a ohmd/Makefile || exit 1
 
-
-#conf_flags=""
-#
-#if test x$NOCONFIGURE = x; then
-#  echo Running $srcdir/configure $conf_flags "$@" ...
-#  $srcdir/configure $conf_flags "$@" \
-#  && echo Now type \`make\' to compile. || exit 1
-#else
-#  echo Skipping configure process.
-#fi

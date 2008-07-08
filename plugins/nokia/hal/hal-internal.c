@@ -6,7 +6,7 @@
  * Copyright (C) 2008, Nokia. All rights reserved.
  */
 
-#include <ohm-plugin-debug.h>
+#include <ohm/ohm-plugin-debug.h>
 
 static int DBG_HAL, DBG_FACTS;
 

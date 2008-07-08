@@ -22,8 +22,8 @@
 #define __OHM_PLUGIN_INTERNAL_H
 
 #include <glib-object.h>
-#include "ohm-plugin.h"
-#include "ohm-dbus.h"
+#include <ohm/ohm-plugin.h>
+#include <ohm/ohm-dbus.h>
 
 
 G_BEGIN_DECLS

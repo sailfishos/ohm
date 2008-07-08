@@ -15,9 +15,9 @@
 #include <dres/dres.h>
 #include <prolog/prolog.h>
 
-#include <ohm-plugin.h>
-#include <ohm-plugin-debug.h>
-#include <ohm-fact.h>
+#include <ohm/ohm-plugin.h>
+#include <ohm/ohm-plugin-debug.h>
+#include <ohm/ohm-fact.h>
 
 
 #include "console.h"

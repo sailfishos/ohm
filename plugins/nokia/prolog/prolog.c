@@ -12,7 +12,7 @@
 
 #include <prolog/prolog.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 
 static prolog_predicate_t *predicates;

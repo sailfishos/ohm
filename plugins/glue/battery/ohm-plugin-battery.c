@@ -22,7 +22,7 @@
 #include <glib.h>
 #include <string.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 static void
 hal_property_changed_cb (OhmPlugin   *plugin,

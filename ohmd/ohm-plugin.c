@@ -46,7 +46,7 @@
 #include "ohm-plugin-internal.h"
 #include "ohm-conf.h"
 #include "ohm-marshal.h"
-#include "ohm-dbus.h"
+#include <ohm/ohm-dbus.h>
 
 #define OHM_PLUGIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_PLUGIN, OhmPluginPrivate))
 

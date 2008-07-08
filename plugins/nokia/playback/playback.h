@@ -1,8 +1,8 @@
 #ifndef __OHM_PLAYBACK_H__
 #define __OHM_PLAYBACK_H__
 
-#include <ohm-plugin-log.h>
-#include <ohm-plugin-debug.h>
+#include <ohm/ohm-plugin-log.h>
+#include <ohm/ohm-plugin-debug.h>
 
 static void plugin_init(OhmPlugin *);
 static void plugin_destroy(OhmPlugin *);

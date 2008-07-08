@@ -116,7 +116,7 @@ AC_SUBST(OHM_CONF_DIR, "\$(sysconfdir)/ohm")
 
 AC_SUBST(OHM_PLUGIN_CONF_DIR, "\$(OHM_CONF_DIR)/plugins.d")
 AC_SUBST(OHM_PLUGIN_DIR, "\$(libdir)/ohm")
-AC_SUBST(OHM_PLUGIN_CFLAGS, "-I\$(top_srcdir)/ohmd $GLIB_CFLAGS $DBUS_CFLAGS $GMODULE_CFLAGS")
+AC_SUBST(OHM_PLUGIN_CFLAGS, "-I\$(top_srcdir)/ohmd -I\$(top_srcdir)/include $GLIB_CFLAGS $DBUS_CFLAGS $GMODULE_CFLAGS")
 AC_SUBST(OHM_PLUGIN_LIBS, "$GLIB_LIBS $DBUS_LIBS $GMODULE_LIBS $LIBTRACE_LIBS")
 
 dnl Assume single-user-device for now
@@ -410,6 +410,7 @@ plugins/nokia/signaling/Makefile
 plugins/nokia/signaling/tests/Makefile
 plugins/nokia/playback/Makefile
 plugins/nokia/accessories/Makefile
+include/Makefile
 ohmd/Makefile
 ohmd/libohmplugin.pc
 ohmd/libohmfact.pc

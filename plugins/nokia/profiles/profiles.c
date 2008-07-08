@@ -5,7 +5,7 @@
 #include <glib.h>
 #include <dbus/dbus.h>
 
-#include <ohm-plugin.h>
+#include <ohm/ohm-plugin.h>
 
 /* set/relation names, policy/prolog atoms */
 #define CURRENT_PROFILE "current_profile"
