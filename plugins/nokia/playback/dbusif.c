@@ -526,6 +526,7 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
     char               *objpath;
     char               *sender;
     char               *state;
+    char               *pid;
     client_t           *cl;
     pbreq_t            *req;
     const char         *errmsg;
@@ -549,6 +550,7 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
         success = dbus_message_get_args(msg, NULL,
                                         DBUS_TYPE_OBJECT_PATH, &objpath,
                                         DBUS_TYPE_STRING, &state,
+                                        DBUS_TYPE_STRING, &pid,
                                         DBUS_TYPE_INVALID);
         if (!success) {
             errmsg = "failed to parse playback request for state change";
@@ -566,7 +568,8 @@ static DBusHandlerResult req_state(DBusConnection *conn, DBusMessage *msg,
         }
 
         req->type = pbreq_state;
-        req->state.name = strdup(state);
+        req->state.name = state ? strdup(state) : NULL;
+        req->state.pid  = strdup(pid);
         
         sm_process_event(cl->sm, &evdata);
         

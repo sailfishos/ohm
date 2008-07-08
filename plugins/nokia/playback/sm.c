@@ -726,6 +726,10 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
     sm_evfree_t  evfree;
     char         origst[64];
     char         state[64];
+    char        *pid;
+    char        *stream;
+    int          update_pid;
+    int          update_str;
     int          success;
 
     if ((req = pbreq_get_first(cl)) == NULL)
@@ -738,6 +742,31 @@ static int process_pbreq(sm_evdata_t *evdata, void *usrdata)
         case pbreq_state:
             strncpylower(state, req->state.name, sizeof(state));
             client_get_state(cl, client_reqstate, origst,sizeof(origst));
+
+            pid    = req->state.pid;
+            stream = req->state.stream;
+
+            update_pid = pid    && (!cl->pid    || strcmp(cl->pid, pid));
+            update_str = stream && (!cl->stream || strcmp(cl->stream, stream));
+
+            if (pid && (update_pid || update_str)) {
+                if (cl->pid) {
+                    dbusif_send_info_to_pep("unregister", cl->group, cl->pid,
+                                            cl->stream?cl->stream:"<unknown>");
+                }
+
+                if (cl->pid)    free(cl->pid);
+                if (cl->stream) free(cl->stream);
+
+                cl->pid    = pid    ? strdup(pid)    : NULL;
+                cl->stream = stream ? strdup(stream) : NULL;
+
+                client_update_factstore_entry(cl, "pid", pid);
+                client_update_factstore_entry(cl, "state", state ? state:"");
+
+                dbusif_send_info_to_pep("register", cl->group, pid,
+                                        stream ? stream : "<unknown>");
+            }
 
             client_save_state(cl, client_reqstate, state);
             client_update_factstore_entry(cl, "reqstate", state);

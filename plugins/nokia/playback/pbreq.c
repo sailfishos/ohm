@@ -62,6 +62,10 @@ static void pbreq_destroy(pbreq_t *req)
         case pbreq_state:
             if (req->state.name)
                 free(req->state.name);
+            if (req->state.pid)
+                free(req->state.pid);
+            if (req->state.stream)
+                free(req->state.stream);
             break;
 
         default:
