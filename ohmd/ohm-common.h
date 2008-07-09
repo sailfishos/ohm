@@ -26,8 +26,8 @@
 G_BEGIN_DECLS
 
 /* common descriptions of this program */
-#define OHM_NAME 			_("Open Hardware Manager")
-#define OHM_DESCRIPTION 		_("Hardware Management Daemon")
+#define OHM_NAME 			"Open Hardware Manager"
+#define OHM_DESCRIPTION 		"Hardware Management Daemon"
 
 #define	OHM_DBUS_SERVICE		"org.freedesktop.ohm"
 #define	OHM_DBUS_INTERFACE_KEYSTORE	"org.freedesktop.ohm.Keystore"

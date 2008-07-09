@@ -26,7 +26,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <glib.h>
+#if 0
 #include <glib/gi18n.h>
+#endif
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
@@ -120,22 +122,26 @@ main (int argc, char *argv[])
 
 	const GOptionEntry entries[] = {
 		{ "no-daemon", '\0', 0, G_OPTION_ARG_NONE, &no_daemon,
-		  N_("Do not daemonize"), NULL },
+		  "Do not daemonize", NULL },
 		{ "verbose", '\0', 0, G_OPTION_ARG_NONE, &verbose,
-		  N_("Show extra debugging information"), NULL },
+		  "Show extra debugging information", NULL },
 		{ "timed-exit", '\0', 0, G_OPTION_ARG_NONE, &timed_exit,
-		  N_("Exit after a small delay (for debugging)"), NULL },
+		  "Exit after a small delay (for debugging)", NULL },
 		{ "g-fatal-warnings", 0, 0, G_OPTION_ARG_NONE, &g_fatal_warnings,
-		  N_("Make all warnings fatal"), NULL },
+		  "Make all warnings fatal", NULL },
 		{ "g-fatal-critical", 0, 0, G_OPTION_ARG_NONE, &g_fatal_critical,
-		  N_("Make all critical warnings fatal"), NULL },
+		  "Make all critical warnings fatal", NULL },
 		{ NULL}
 	};
 
 	context = g_option_context_new (OHM_NAME);
+#if 0
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 	textdomain (GETTEXT_PACKAGE);
 	g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
+#else
+	g_option_context_add_main_entries (context, entries, NULL);
+#endif
 	g_option_context_parse (context, &argc, &argv, &error);
 	g_option_context_free (context);
 

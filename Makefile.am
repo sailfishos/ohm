@@ -1,13 +1,13 @@
 SUBDIRS = 				\
 	include				\
 	ohmd				\
-	po				\
 	initscript			\
 	libohm				\
 	libidletime			\
 	tools				\
 	etc				\
 	plugins
+#	po				
 #	docs
 
 
@@ -19,11 +19,11 @@ dist_dbus_DATA = ohm.conf
 
 EXTRA_DIST =				\
 	$(dbusconf_DATA)		\
-	intltool-update.in		\
-	intltool-merge.in		\
-	intltool-extract.in		\
 	ohm.pc.in			\
 	ohm.conf.in
+#   intltool-update.in		
+#	intltool-merge.in		
+#	intltool-extract.in		
 
 DISTCLEANFILES = 			\
 	intltool-extract		\

@@ -56,7 +56,7 @@ main (int argc, char *argv[])
 	};
 
 	context = g_option_context_new ("lsohm");
-	g_option_context_add_main_entries (context, options, GETTEXT_PACKAGE);
+	g_option_context_add_main_entries (context, options, NULL);
 	g_option_context_parse (context, &argc, &argv, NULL);
 
 	/* if neither specified, do both */
