@@ -1,24 +1,24 @@
-debian/tmp/usr/lib/ohm/libohm_buttons.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/buttons.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_battery.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/battery.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_display.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/display.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_acadapter.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/acadapter.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_timeremaining.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/timeremaining.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_xorg.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/xorg.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_xrandr.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/xrandr.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_suspend.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/suspend.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_timeouts.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/timeouts.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_powerstatus.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/powerstatus.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_dpms.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/dpms.ini /etc/ohm/plugins.d
-debian/tmp/usr/lib/ohm/libohm_backlight.so /usr/lib/ohm
-debian/tmp/etc/ohm/plugins.d/backlight.ini /etc/ohm/plugins.d
+usr/lib/ohm/libohm_buttons.so
+etc/ohm/plugins.d/buttons.ini
+usr/lib/ohm/libohm_battery.so
+etc/ohm/plugins.d/battery.ini
+usr/lib/ohm/libohm_display.so
+etc/ohm/plugins.d/display.ini
+usr/lib/ohm/libohm_acadapter.so
+etc/ohm/plugins.d/acadapter.ini
+usr/lib/ohm/libohm_timeremaining.so
+etc/ohm/plugins.d/timeremaining.ini
+usr/lib/ohm/libohm_xorg.so
+etc/ohm/plugins.d/xorg.ini
+usr/lib/ohm/libohm_xrandr.so
+etc/ohm/plugins.d/xrandr.ini
+usr/lib/ohm/libohm_suspend.so
+etc/ohm/plugins.d/suspend.ini
+usr/lib/ohm/libohm_timeouts.so
+etc/ohm/plugins.d/timeouts.ini
+usr/lib/ohm/libohm_powerstatus.so
+etc/ohm/plugins.d/powerstatus.ini
+usr/lib/ohm/libohm_dpms.so
+etc/ohm/plugins.d/dpms.ini
+usr/lib/ohm/libohm_backlight.so
+etc/ohm/plugins.d/backlight.ini

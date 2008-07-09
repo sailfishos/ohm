@@ -1,5 +1,5 @@
-debian/tmp/usr/include/ohm/* /usr/include/ohm
-debian/tmp/usr/lib/libohm.* /usr/lib
-debian/tmp/usr/lib/pkgconfig/ohm.pc /usr/lib/pkgconfig
-debian/tmp/usr/lib/pkgconfig/libohm*.pc /usr/lib/pkgconfig
+usr/include/ohm/*
+usr/lib/libohm.*
+usr/lib/pkgconfig/ohm.pc
+usr/lib/pkgconfig/libohm*.pc
 

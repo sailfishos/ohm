@@ -1,4 +1,4 @@
-debian/tmp/usr/sbin/* /usr/sbin
-debian/tmp/etc/init.d/ohmd /etc/init.d
-debian/tmp/etc/ohm/modules.ini /etc/ohm
-debian/tmp/etc/dbus-1/system.d/ohm.conf /etc/dbus-1/system.d
+usr/sbin/*
+etc/init.d/ohmd
+etc/ohm/modules.ini
+etc/dbus-1/system.d/ohm.conf
