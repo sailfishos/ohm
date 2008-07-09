@@ -48,7 +48,7 @@ developing OHM plugins.
 This package contains header files, libraries, pkg-config files, etc.
 necessary for developing OHM plugins.
 
-%description legacy-plugins
+%description plugins-legacy
 Lagacy plugins for OHM.
 
 %description utils
@@ -95,7 +95,7 @@ make
 %{_libdir}/libohm.*
 %{_libdir}/pkgconfig/*
 
-%files legacy-plugins
+%files plugins-legacy
 %defattr(-,root,root,-)
 %config %{_sysconfdir}/ohm/plugins.d/*
 %{_libdir}/ohm
