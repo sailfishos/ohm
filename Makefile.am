@@ -46,4 +46,4 @@ MAINTAINERCLEANFILES =	\
 	po/$(GETTEXT_PACKAGE).pot	\
 	po/*.bak
 
-DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc --with-xauth-dir=/home/user
+DISTCHECK_CONFIGURE_FLAGS=--disable-gtk-doc --with-xauth-dir=/home/user

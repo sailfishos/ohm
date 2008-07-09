@@ -31,7 +31,7 @@ AC_PATH_PROG(GLIB_GENMARSHAL, glib-genmarshal)
 
 AM_PROG_CC_C_O
 
-GTK_DOC_CHECK([1.8])
+# GTK_DOC_CHECK([1.8])
 
 ALL_LINGUAS="en_GB"
 AC_SUBST(ALL_LINGUAS)
@@ -103,7 +103,7 @@ AC_SUBST(HAL_CFLAGS)
 AC_SUBST(HAL_LIBS)
 
 if pkg-config --atleast-version=0.5.10 hal; then
-	AC_DEFINE(HAL_SET_BRIGHTNESS_UNSIGNED, 1, [org.freedesktop.Hal.Device.LaptopPanel.SetBrightness returns UINT32])
+    AC_DEFINE(HAL_SET_BRIGHTNESS_UNSIGNED, 1, [org.freedesktop.Hal.Device.LaptopPanel.SetBrightness returns UINT32])
 fi
 
 PKG_CHECK_MODULES(GDK, gdk-2.0 >= 2.8.0 gdk-x11-2.0 >= 2.8.0)
@@ -405,11 +405,6 @@ ohmd/Makefile
 ohmd/libohmplugin.pc
 ohmd/libohmfact.pc
 po/Makefile.in
-docs/Makefile
-docs/index.xml
-docs/reference/Makefile
-docs/reference/ohm-plugin/Makefile
-docs/reference/libohm/Makefile
 libohm/Makefile
 libidletime/Makefile
 tools/Makefile
