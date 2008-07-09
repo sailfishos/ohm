@@ -21,8 +21,8 @@ $AUTOCONF || exit 1
 echo "Running $LIBTOOLIZE --automake..."
 $LIBTOOLIZE --automake -c || exit 1
 
-echo "Running gtkdocize..."
-gtkdocize --copy || exit 1
+# echo "Running gtkdocize..."
+# gtkdocize --copy || exit 1
 
 echo "Running $AUTOMAKE..."
 $AUTOMAKE -a -c || exit 1
