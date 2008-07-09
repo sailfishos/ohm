@@ -26,8 +26,8 @@ Summary: Files necessary for OHM plugin development.
 Group: Development/Libraries
 Requires: ohm-plugin-core
 
-%package plugins
-Summary: Plugins for the Open Hardware Manager.
+%package plugins-legacy
+Summary: Legacy plugins for the Open Hardware Manager.
 Group: System Environment/Daemons
 
 %package utils
@@ -48,8 +48,8 @@ developing OHM plugins.
 This package contains header files, libraries, pkg-config files, etc.
 necessary for developing OHM plugins.
 
-%description plugins
-Plugins for OHM.
+%description legacy-plugins
+Lagacy plugins for OHM.
 
 %description utils
 This package contains miscallaneous OHM utilities that are either not
@@ -79,6 +79,8 @@ make
 
 %files config
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/ohm
+%dir %{_sysconfdir}/ohm/plugins.d
 %config %{_sysconfdir}/ohm/modules.ini
 %config %{_sysconfdir}/dbus-1/system.d/ohm.conf
 
@@ -93,7 +95,7 @@ make
 %{_libdir}/libohm.*
 %{_libdir}/pkgconfig/*
 
-%files plugins
+%files legacy-plugins
 %defattr(-,root,root,-)
 %config %{_sysconfdir}/ohm/plugins.d/*
 %{_libdir}/ohm

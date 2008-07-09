@@ -31,13 +31,13 @@ Description: Files necessary for OHM plugin development.
  This package contains header files, libraries, pkg-config files, etc.
  necessary for developing OHM plugins.
 
-Package: ohm-plugins
+Package: ohm-plugins-legacy
 Architecture: any
 Depends: ${shlibs:Depends}
 Section: utils
-Description: Open Hardware Manager plugins.
+Description: Legacy Open Hardware Manager plugins.
  .
- Plugins from the basic OHM distribution.
+ Legacy plugins from the basic OHM distribution.
 
 Package: ohm-utils
 Architecture: any
