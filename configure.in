@@ -410,8 +410,8 @@ tools/Makefile
 initscript/Makefile
 initscript/RedHat/Makefile
 initscript/Gentoo/Makefile
-initscript/Debian/Makefile
 initscript/Slackware/Makefile
+debian/ohm.init
 ])
 
 

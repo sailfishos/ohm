@@ -5,9 +5,6 @@ endif
 if TARGET_GENTOO
 SUBDIRS += Gentoo
 endif
-if TARGET_DEBIAN
-SUBDIRS += Debian
-endif
 if TARGET_SLACKWARE
 SUBDIRS += Slackware
 endif

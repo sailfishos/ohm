@@ -7,7 +7,7 @@ Build-Depends: cdbs, debhelper (>= 4.1.0), flex, libhal-dev, libgtk2.0-dev, libt
 
 Package: ohm
 Architecture: any
-Depends: ${shlibs:Depends}, ohm-plugin-core0
+Depends: ohm-plugin-core0, ${shlibs:Depends}
 Description: Open Hardware Manager with Nokia policy add-ons.
  Open Hardware Manager Nokia add-ons.
  .
@@ -41,6 +41,7 @@ Description: Legacy Open Hardware Manager plugins.
 
 Package: ohm-utils
 Architecture: any
+Depends: ${shlibs:Depends}
 Section: utils
 Description: Miscallaneous OHM utilities.
  .

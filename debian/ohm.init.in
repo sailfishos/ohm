@@ -13,10 +13,15 @@
 
 set -e
 
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+# PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+sbindir=@sbindir@
+
 DESC="Open Hardware Manager"
 NAME="ohm"
-DAEMON=/usr/sbin/ohmd
+DAEMON=@sbindir@/ohmd
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 USER=root
