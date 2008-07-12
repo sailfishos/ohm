@@ -75,7 +75,7 @@ make
 %defattr(-,root,root,-)
 %{_initrddir}/ohmd
 %{_sbindir}/*ohm*
-%{_datadir}/locale
+#%{_datadir}/locale
 
 %files config
 %defattr(-,root,root,-)
