@@ -12,6 +12,7 @@ Source0: %{name}-%{version}.tar.gz
 BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: pl >= 5.6.32, ohm-config, ohm-plugin-core
+BuildRequires: trace-devel
 
 %package config
 Summary: Common configuration files for OHM.
@@ -24,7 +25,7 @@ Group: System Environment/Daemons
 %package devel
 Summary: Files necessary for OHM plugin development.
 Group: Development/Libraries
-Requires: ohm-plugin-core
+Requires: ohm-plugin-core, trace-devel
 
 %package plugins-legacy
 Summary: Legacy plugins for the Open Hardware Manager.
