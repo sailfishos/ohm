@@ -373,6 +373,38 @@ static void test_fact_pattern_match_free (void) {
 }
 
 
+static void test_fact_store_pattern_delete (void) {
+#define FACT_NAME "com.nokia.ahoy"
+
+	OhmFactStore     *fs;
+	OhmFactStoreView *v1, *v2;
+	OhmPattern       *p1, *p2;
+	OhmFact          *f;
+
+	fs = ohm_fact_store_new();
+	v1 = ohm_fact_store_new_view(fs, NULL);
+	v2 = ohm_fact_store_new_view(fs, NULL);
+	
+	p1 = ohm_pattern_new(FACT_NAME);
+	p2 = ohm_pattern_new(FACT_NAME);
+	
+	ohm_fact_store_view_add(v1, OHM_STRUCTURE(p1));
+	ohm_fact_store_view_add(v2, OHM_STRUCTURE(p2));
+
+	g_object_unref(p1);
+	g_object_unref(p2);
+
+	f = ohm_fact_new(FACT_NAME);
+	ohm_fact_store_insert(fs, f);
+
+	ohm_fact_store_view_remove(v1, OHM_STRUCTURE(p1));
+	g_object_unref(v1);
+	
+	f = ohm_fact_new(FACT_NAME);
+	ohm_fact_store_insert(fs, f);
+}
+
+
 static void test_fact_store_new (void) {
 	void* pfs;
 	pfs = NULL;
@@ -807,6 +839,11 @@ static void _test_fact_pattern_match_free_gcallback (void) {
 }
 
 
+static void _test_fact_store_pattern_delete_gcallback (void) {
+	test_fact_store_pattern_delete ();
+}
+
+
 static void _test_fact_store_new_gcallback (void) {
 	test_fact_store_new ();
 }
@@ -913,6 +950,7 @@ void _main (char** args, int args_length1) {
 	g_test_add_func ("/fact/pattern/match_instance", _test_fact_pattern_match_gcallback);
 	g_test_add_func ("/fact/pattern/match_fields", _test_fact_pattern_match_fields_gcallback);
 	g_test_add_func ("/fact/pattern/match_free", _test_fact_pattern_match_free_gcallback);
+	g_test_add_func ("/fact/store/pattern/delete", _test_fact_store_pattern_delete_gcallback);
 	g_test_add_func ("/fact/store/new", _test_fact_store_new_gcallback);
 	g_test_add_func ("/fact/store/insert", _test_fact_store_insert_gcallback);
 	g_test_add_func ("/fact/store/to_string", _test_fact_store_to_string_gcallback);
