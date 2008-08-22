@@ -18,8 +18,6 @@ ohmpluginincludedir=$(includedir)/ohm
 
 ohmplugininclude_HEADERS =
 
-noinst_PROGRAMS = ohmd-test
-
 ohmd_test_SOURCES = 						\
 	ohm-debug.c						\
 	ohm-debug.h						\
@@ -43,6 +41,11 @@ libohmfact_la_SOURCES =                                         \
 	ohm-factstore.c
 
 libohmfact_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE@
+
+test_fact_SOURCES   = test-fact.c
+test_fact_LDADD     = libohmfact.la $(GLIB_LIBS)
+
+noinst_PROGRAMS = ohmd-test test-fact
 
 sbin_PROGRAMS = ohmd
 
