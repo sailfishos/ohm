@@ -1707,6 +1707,27 @@ static void ohm_fact_store_set_view_interest (OhmFactStore* self, OhmFactStoreVi
 }
 
 
+static void ohm_fact_store_pattern_del (OhmFactStore* self, OhmFactStoreView* v, OhmStructure *interest) {
+	GSList *patterns;
+	GQuark  id;
+	OhmPattern *p;
+
+	g_return_if_fail (OHM_IS_FACT_STORE (self));
+	g_return_if_fail (OHM_FACT_STORE_IS_VIEW (v));
+	g_return_if_fail (OHM_IS_PATTERN(interest));
+
+	id = ohm_structure_get_qname (interest);
+	patterns = g_datalist_id_remove_no_notify (&self->priv->interest, id);
+	p = OHM_PATTERN(interest);
+	
+	if (g_slist_index(patterns, p) < 0)
+		return;
+	
+	if ((patterns = g_slist_remove(patterns, p)) != NULL)
+		g_datalist_id_set_data_full (&self->priv->interest, id, patterns, ((GDestroyNotify) _ohm_fact_store_delete_func));
+}
+
+
 void ohm_fact_store_change_set_add_match (OhmFactStoreChangeSet* self, OhmPatternMatch* match) {
 	g_return_if_fail (OHM_FACT_STORE_IS_CHANGE_SET (self));
 	g_return_if_fail (OHM_PATTERN_IS_MATCH (match));
@@ -2161,13 +2182,15 @@ void ohm_fact_store_view_remove (OhmFactStoreView* self, OhmStructure* interest)
 
 	if (OHM_IS_FACT (interest)) {
 		g_message ("not implemented");
+		return;
 	}
 
 	if (OHM_IS_PATTERN (interest)) {
+	  	g_object_unref (interest);
 		self->patterns = g_slist_remove_all (self->patterns, interest);
 	}
 
-	ohm_fact_store_set_view_interest (ohm_fact_store_simple_view_get_fact_store (OHM_FACT_STORE_SIMPLE_VIEW (self)), self);
+	ohm_fact_store_pattern_del(ohm_fact_store_simple_view_get_fact_store (OHM_FACT_STORE_SIMPLE_VIEW (self)), self, interest);
 }
 
 
