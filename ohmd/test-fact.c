@@ -1,10 +1,13 @@
 
-#include <tests/test-fact.h>
-#include <ohm-fact.h>
+#include "test-fact.h"
+#include <ohm/ohm-fact.h>
 #include <stdlib.h>
 #include <string.h>
 
-
+/* stubs for leading-bleeding glob test 'framework' */
+#define g_test_init(argc, argv, foo)
+#define g_test_add_func(path, test) test()
+#define g_test_run()
 
 
 static void test_fact_structure_new (void);
@@ -353,6 +356,9 @@ static void test_fact_pattern_match_fields (void) {
 	(match2 == NULL ? NULL : (match2 = (g_object_unref (match2), NULL)));
 	(nomatch == NULL ? NULL : (nomatch = (g_object_unref (nomatch), NULL)));
 	(m == NULL ? NULL : (m = (g_object_unref (m), NULL)));
+
+	return;
+	(void)test_fact_pattern_match_instance;
 }
 
 
