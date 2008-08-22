@@ -337,47 +337,6 @@ fi
 
 AC_SUBST(OHM_X11_LIBS)
 
-# SWI-prolog support
-#AC_ARG_WITH(prolog, [  --with-prolog=<SWI prolog binary>   where the SWI prolog main binary is installed])
-#if test -z "$with_prolog" ; then
-#  if which pl >& /dev/null; then
-#    PLBIN="`which pl`"
-#  else
-#    if which swipl >& /dev/null; then
-#      PLBIN="`which swipl`"
-#    else
-#        AC_MSG_ERROR([SWI prolog binary not found])
-#    fi
-#  fi
-#else
-#  PLBIN="$with_prolog"
-#fi
-
-
-#PLDUMP="$PLBIN -dump-runtime-variables"
-#PLDIR=$(eval `$PLDUMP`; echo $PLBASE)
-#PLARCH=$(eval `$PLDUMP`; echo $$LARCH)
-#PLLIBS=$(eval `$PLDUMP`; echo $PLLIBS $PLDIR/lib/$PLARCH/libpl.a)
-
-#PLCFLAGS=$(eval `$PLDUMP`; echo $PLCFLAGS -I$PLDIR/include)
-#PLLDFLAGS=$(eval `$PLDUMP`; echo $PLLDFLAGS)
-
-#SWIPROLOG_HOME="$PLDIR"
-#SWIPROLOG_CFLAGS="$PLCFLAGS"
-#SWIPROLOG_LDFLAGS="$PLLDFLAGS $PLLIBS"
-
-#AC_SUBST(SWIPROLOG_LDFLAGS)
-#AC_SUBST(SWIPROLOG_CFLAGS)
-#AC_SUBST(SWIPROLOG_HOME)
-
-#PKG_CHECK_MODULES(LIBPROLOG, libprolog >= 0.0)
-#AC_SUBST(LIBPROLOG_CFLAGS)
-#AC_SUBST(LIBPROLOG_LIBS)
-
-#PKG_CHECK_MODULES(LIBDRES, libdres >= 0.0)
-#AC_SUBST(LIBDRES_CFLAGS)
-#AC_SUBST(LIBDRES_LIBS)
-
 AC_OUTPUT([
 ohm.pc
 ohm.conf
@@ -432,5 +391,4 @@ echo "
         DPMS support:              ${have_dpms}
         Docbook support:           ${enable_docbook_docs}
         Gtk-doc support:           ${enable_gtk_doc}
-	SWI-Prolog:                ${PLBIN}
 "
