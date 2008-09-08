@@ -2,6 +2,3 @@ usr/include/ohm/*
 usr/lib/libohm.*
 usr/lib/pkgconfig/ohm.pc
 usr/lib/pkgconfig/libohm*.pc
-usr/lib/libohmplugin.so
-usr/lib/libohmfact.so
-
