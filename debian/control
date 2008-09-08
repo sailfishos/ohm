@@ -24,7 +24,7 @@ Description: Common OHM libraries.
 
 Package: ohm-dev
 Architecture: any
-Depends: ohm-plugin-core0
+Depends: ohm-plugin-core0, ${shlibs:Depends}
 Section: libdevel
 Description: Files necessary for OHM plugin development.
  .

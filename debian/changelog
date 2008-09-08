@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo1) unstable; urgency=low
+
+  * D-Bus fixes
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Mon, 08 Sep 2008 17:12:26 +0300
+
 ohm (0.1.2) unstable; urgency=low
 
   * initial release.

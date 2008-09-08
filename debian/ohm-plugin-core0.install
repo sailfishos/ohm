@@ -1,2 +1,2 @@
-usr/lib/libohmplugin.so.*
-usr/lib/libohmfact.so.*
+usr/lib/libohmplugin.so*
+usr/lib/libohmfact.so*

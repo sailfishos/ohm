@@ -21,17 +21,13 @@ static DBusHandlerResult ohm_dbus_dispatch_method(DBusConnection *c,
 static void ohm_dbus_purge_methods(void);
 static void ohm_dbus_purge_signals(void);
 
-
 typedef struct {
     GHashTable *methods;
 } ohm_dbus_object_t;
 
-
-
 static DBusConnection *conn;
 static GHashTable     *dbus_objects;
 static GSList *dbus_signal_handlers;
-
 
 
 /**
@@ -305,6 +301,93 @@ ohm_dbus_dispatch_signal(DBusConnection * c, DBusMessage * msg, void *data)
     return retval;
 }
 
+static gchar * ohm_generate_match(ohm_dbus_signal_t *signal_handler)
+{
+    gchar *new_match_string = NULL, *match_string = g_strdup("type='signal'");
+
+    if (match_string == NULL)
+        return NULL;
+
+    if (signal_handler->interface) {
+        gchar *interface = g_strdup_printf("interface='%s'", signal_handler->interface);
+        new_match_string = g_strjoin(",", match_string, interface, NULL);
+        g_free(match_string);
+        g_free(interface);
+        match_string = new_match_string;
+    }
+
+    if (signal_handler->signal) {
+        gchar *member = g_strdup_printf("member='%s'", signal_handler->signal);
+        new_match_string = g_strjoin(",", match_string, member, NULL);
+        g_free(match_string);
+        g_free(member);
+        match_string = new_match_string;
+    }
+    
+    if (signal_handler->path) {
+        gchar *path = g_strdup_printf("path='%s'", signal_handler->path);
+        new_match_string = g_strjoin(",", match_string, path, NULL);
+        g_free(match_string);
+        g_free(path);
+        match_string = new_match_string;
+    }
+
+    return match_string;
+
+
+}
+
+static gboolean unset_match_string(ohm_dbus_signal_t *signal_handler) {
+
+    gchar *match_string = ohm_generate_match(signal_handler);
+    gboolean retval = TRUE;
+    DBusError error;
+
+    if (!match_string)
+        return FALSE;
+
+    dbus_error_init(&error);
+    dbus_bus_remove_match(conn, match_string, &error);
+
+    if (dbus_error_is_set(&error)) {
+        ohm_debug("Error removing D-Bus match '%s': '%s'", match_string, error.message);
+        retval = FALSE;
+    }
+    else {
+        ohm_debug("Unset match '%s'", match_string);
+    }
+
+    dbus_error_free(&error);
+    g_free(match_string);
+
+    return retval;
+}
+
+static gboolean set_match_string(ohm_dbus_signal_t *signal_handler) {
+
+    gchar *match_string = ohm_generate_match(signal_handler);
+    gboolean retval = TRUE;
+    DBusError error;
+
+    if (!match_string)
+        return FALSE;
+
+    dbus_error_init(&error);
+    dbus_bus_add_match(conn, match_string, &error);
+
+    if (dbus_error_is_set(&error)) {
+        ohm_debug("Error setting D-Bus match '%s': '%s'", match_string, error.message);
+        retval = FALSE;
+    }
+    else {
+        ohm_debug("Set match '%s'", match_string);
+    }
+
+    dbus_error_free(&error);
+    g_free(match_string);
+
+    return retval;
+}
 
 
 /**
@@ -321,19 +404,8 @@ ohm_dbus_add_signal(const char *sender, const char *interface, const char *sig,
     ohm_debug("Adding DBUS signal handler %p for %s...", handler, interface);
     
     if (g_slist_length(dbus_signal_handlers) == 0) {
-
-        /* FIXME: this drains battery, since ohm is paged to memory and the
-         * handler executed every time a signal is received. Refactor later. */
-        
-        DBusError error;
-        
-        dbus_error_init(&error);
-        dbus_bus_add_match(conn, DBUS_SIGNAL_MATCH, &error);
-        dbus_error_free(&error);
-        
         ohm_debug("Registering the signal handler.");
         dbus_connection_add_filter(conn, ohm_dbus_dispatch_signal, conn, NULL);
-    
     }
 
     signal_handler = g_new0(ohm_dbus_signal_t, 1);
@@ -350,7 +422,7 @@ ohm_dbus_add_signal(const char *sender, const char *interface, const char *sig,
 
     dbus_signal_handlers = g_slist_prepend(dbus_signal_handlers, signal_handler);
 
-    return TRUE;
+    return set_match_string(signal_handler);
 }
 
 
@@ -376,6 +448,8 @@ ohm_dbus_del_signal(const char *sender, const char *interface, const char *sig,
                         dbus_signal_handlers, signal_handler);
 
                 /* free the struct */
+
+                unset_match_string(signal_handler);
                 g_free(signal_handler);
                 signal_handler = NULL;
 
@@ -386,16 +460,11 @@ ohm_dbus_del_signal(const char *sender, const char *interface, const char *sig,
     } while (found);
 
     if (g_slist_length(dbus_signal_handlers) == 0) {
-        DBusError error;
-
         dbus_connection_remove_filter(conn, ohm_dbus_dispatch_signal, conn);
-        
-        dbus_error_init(&error);
-        dbus_bus_remove_match(conn, DBUS_SIGNAL_MATCH, &error);
-        dbus_error_free(&error);
-
         ohm_debug("No more DBUS signals.");
     }
+    
+    return;     
 }
 
 
@@ -406,23 +475,19 @@ static void
 ohm_dbus_purge_signals(void)
 {
     GSList *i = NULL;
-    DBusError error;
-    
+
     if (!dbus_signal_handlers)
         return;
 
     for (i = dbus_signal_handlers; i != NULL; i = g_slist_next(i)) {
         ohm_dbus_signal_t *signal_handler = i->data;
+        unset_match_string(signal_handler);
         g_free(signal_handler);
         signal_handler = NULL;
     }
     g_slist_free(dbus_signal_handlers);
 
     dbus_connection_remove_filter(conn, ohm_dbus_dispatch_signal, conn);
-
-    dbus_error_init(&error);
-    dbus_bus_remove_match(conn, DBUS_SIGNAL_MATCH, &error);
-    dbus_error_free(&error);
 
     return;
 }
