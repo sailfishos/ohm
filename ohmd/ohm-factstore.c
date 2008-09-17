@@ -1031,6 +1031,11 @@ void ohm_fact_set (OhmFact* self, const char* field_name, GValue* value) {
 	g_return_if_fail (OHM_IS_FACT (self));
 	g_return_if_fail (field_name != NULL);
 
+	/* fields starting with a double underscore are immutable */
+	if (field_name[0] == '_' && field_name[1] == '_' &&
+	    ohm_fact_get(self, field_name) != NULL)
+	  return;
+
 	/*fixme ?#, fixme array of changes*/
 	ohm_structure_set (OHM_STRUCTURE (self), field_name, value);
 }
