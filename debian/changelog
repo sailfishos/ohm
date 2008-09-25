@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo2) unstable; urgency=low
+
+  * FactStore is now compatible with the latest plugins
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Thu, 25 Sep 2008 11:47:55 +0300
+
 ohm (0.1.2-0maemo1) unstable; urgency=low
 
   * D-Bus fixes
