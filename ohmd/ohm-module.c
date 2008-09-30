@@ -621,7 +621,8 @@ ohm_module_resolve_methods(OhmModule *module)
 
       if (g_hash_table_lookup(symtable, key) != NULL)
 	g_error("Method %s multiply defined.", key);
-      
+
+      method->plugin = plugin;
       g_hash_table_insert(symtable, key, method);
       ohm_debug("%s: method %s exported as %p", name, method->name,method->ptr);
     }
@@ -654,6 +655,7 @@ ohm_module_resolve_methods(OhmModule *module)
       }
       
       *(void **)method->ptr = m->ptr;
+      method->plugin        = OHM_PLUGIN(g_object_ref(m->plugin));
       ohm_debug("%s: method %s resolved to %p...", name, key, m->ptr);
     }
   }

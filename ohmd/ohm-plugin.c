@@ -517,6 +517,44 @@ ohm_plugin_dbus_del_signal(const char *sender, const char *interface,
 }
 
 
+
+/**
+ * ohm_plugin_dispose:
+ **/
+static void
+ohm_plugin_dispose (GObject *object)
+{
+	OhmPlugin *plugin;
+	ohm_method_t *m;
+	g_return_if_fail (object != NULL);
+	g_return_if_fail (OHM_IS_PLUGIN (object));
+
+	plugin = OHM_PLUGIN (object);
+
+	g_debug("disposing plugin %s", plugin->priv->name);
+
+	if (plugin->desc != NULL) {
+	  	/* call the plugins destructor if any */
+		if (plugin->desc->destroy != NULL) {
+			plugin->desc->destroy (plugin);
+			((OhmPluginDesc *)plugin->desc)->destroy = NULL;
+		}
+		/* unref plugins we imported methods from */
+		if (plugin->desc->imports != NULL) {
+			for (m = plugin->desc->imports; m->ptr; m++) {
+				if (m->plugin != NULL) { 
+					g_object_unref(m->plugin);
+					m->plugin = NULL;
+				}
+			}
+			((OhmPluginDesc *)plugin->desc)->imports = NULL;
+		}
+	}
+	G_OBJECT_CLASS (ohm_plugin_parent_class)->dispose (object);
+}
+
+
+
 /**
  * ohm_plugin_finalize:
  **/
@@ -531,10 +569,9 @@ ohm_plugin_finalize (GObject *object)
 
 	g_object_unref (plugin->priv->conf);
 
+	g_debug ("finalizing plugin %s", plugin->priv->name);
+
 	if (plugin->desc != NULL) {
-		if (plugin->desc->destroy != NULL) {
-			plugin->desc->destroy (plugin);
-		}
 		/* free hal stuff, if used */
 		if (plugin->priv->hal_ctx != NULL) {
 			ohm_plugin_free_hal_table (plugin);
@@ -563,6 +600,7 @@ ohm_plugin_class_init (OhmPluginClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
+	object_class->dispose  = ohm_plugin_dispose;
 	object_class->finalize = ohm_plugin_finalize;
 	g_type_class_add_private (klass, sizeof (OhmPluginPrivate));
 }

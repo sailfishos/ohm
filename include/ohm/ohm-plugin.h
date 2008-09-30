@@ -55,6 +55,7 @@ typedef struct {
   const char *name;                             /* method name */
   const char *signature;                        /* method signature */
   void       *ptr;                              /* method pointer */
+  OhmPlugin  *plugin;                           /* providing plugin */
 } ohm_method_t;
 
 #define OHM_PLUGIN_METHODS_END { NULL, NULL, NULL }
@@ -121,7 +122,7 @@ struct _OhmPluginDesc {
   static return_type name arguments
 
 #define OHM_EXPORT(name, public_name)		\
-    { public_name, name##_SIGNATURE, name }
+  { public_name, name##_SIGNATURE, name, NULL }
 
 #define OHM_EXPORT_VAR "_plugin_exports"
 #define OHM_PLUGIN_PROVIDES_METHODS(plugin, n, ...)			\
@@ -144,7 +145,7 @@ struct _OhmPluginDesc {
     static return_type (*name) arguments
 
 #define OHM_IMPORT(public_name, name)			\
-    { public_name, name##_SIGNATURE, (void *)&name }
+  { public_name, name##_SIGNATURE, (void *)&name, NULL }
     
 #define OHM_IMPORT_VAR "_plugin_imports"
 #define OHM_PLUGIN_REQUIRES_METHODS(plugin, n, ...)			\
