@@ -29,43 +29,40 @@ USER=root
 # Gracefully exit if the package has been removed.
 test -x $DAEMON || exit 0
 
-#
-#	Function that starts the daemon/service.
-#
-d_start() {
-	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		--user $USER --exec $DAEMON -- $DAEMON_OPTS
-}
-
-#
-#	Function that stops the daemon/service.
-#
-d_stop() {
-	start-stop-daemon --stop --quiet --pidfile $PIDFILE \
-		 --oknodo --user $USER --exec $DAEMON
-}
-
-
 case "$1" in
   start)
-	echo -n "Starting $DESC: $NAME"
-	d_start
-	echo "."
+	# Start daemons
+	echo -n "Starting $DESC: "
+	if [ -x /usr/sbin/dsmetool ]; then
+	    dsmetool -n -1 -f "$DAEMON --no-daemon" 
+	else
+	    start-stop-daemon --start --quiet --user $USER \
+		--exec "$DAEMON"
+	fi
+	echo "$NAME"
 	;;
   stop)
-	echo -n "Stopping $DESC: $NAME"
-	d_stop
-	echo "."
+	echo -n "Stopping $DESC: "
+	if [ -x /usr/sbin/dsmetool ]; then
+	    dsmetool -k "$DAEMON --no-daemon"
+	else
+	    start-stop-daemon --stop --quiet --oknodo --user $USER \
+		--exec "$DAEMON"
+	fi
+	echo "$NAME"
 	;;
-  restart|force-reload)
-	echo -n "Restarting $DESC: $NAME"
-	d_stop
-	sleep 1
-	d_start
-	echo "."
+  reload|restart|force-reload)
+	#
+	#	If the "reload" option is implemented, move the "force-reload"
+	#	option to the "reload" entry above. If not, "force-reload" is
+	#	just the same as "restart".
+	#
+	"$0" stop
+	"$0" start
 	;;
   *)
-	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
 	exit 1
 	;;
 esac
