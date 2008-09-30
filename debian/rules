@@ -4,14 +4,15 @@ SHELL+= -e
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+include /usr/share/cdbs/1/rules/utils.mk
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/autotools.mk
+
 DEB_TAR_SRCDIR = ${DEB_SOURCE_PACKAGE}-${DEB_UPSTREAM_VERSION}
 
 DEB_CONFIGURE_USER_FLAGS = --disable-static --without-xauth --without-dpms --disable-nls
 DEB_DH_INSTALL_SOURCEDIR = debian/tmp
-
-include /usr/share/cdbs/1/rules/utils.mk
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/autotools.mk
+DEB_UPDATE_RCD_PARAMS = "start 29 2 3 4 5 . stop 18 0 1 6 ."
 
 # Omit *.la files but warn about other missing things.
 binary-post-install/ohm::
