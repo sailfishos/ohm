@@ -1,3 +1,10 @@
+ohm (0.1.2-0maemo3) unstable; urgency=low
+
+  * Plugin destruction/unloading ordering fixes.
+  * Changed SysV startup to later
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Thu, 02 Oct 2008 13:31:23 +0300
+
 ohm (0.1.2-0maemo2) unstable; urgency=low
 
   * FactStore is now compatible with the latest plugins
