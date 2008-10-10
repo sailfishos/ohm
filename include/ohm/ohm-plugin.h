@@ -58,7 +58,7 @@ typedef struct {
   OhmPlugin  *plugin;                           /* providing plugin */
 } ohm_method_t;
 
-#define OHM_PLUGIN_METHODS_END { NULL, NULL, NULL }
+#define OHM_PLUGIN_METHODS_END { NULL, NULL, NULL, NULL }
 
 
 /**
