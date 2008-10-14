@@ -29,6 +29,14 @@ USER=root
 # Gracefully exit if the package has been removed.
 test -x $DAEMON || exit 0
 
+if [ -e /etc/osso-af-init/af-defines.sh ]
+then
+  source /etc/osso-af-init/af-defines.sh
+else
+  echo "/etc/osso-af-init/af-defines.sh not found!"
+  exit 1
+fi
+
 case "$1" in
   start)
 	# Start daemons
