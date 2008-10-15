@@ -1,0 +1,15 @@
+author "Ismo Puustinen"
+description "This init script starts the OHM daemon"
+
+start on started maemo-launcher
+stop on stopped dbus
+
+console output
+
+script 
+        echo "Starting ohmd"
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/session_bus_socket
+        exec /usr/sbin/ohmd --no-daemon
+end script
+
+respawn

@@ -370,7 +370,6 @@ initscript/Makefile
 initscript/RedHat/Makefile
 initscript/Gentoo/Makefile
 initscript/Slackware/Makefile
-debian/ohm.init
 ])
 
 

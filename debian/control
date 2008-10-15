@@ -8,6 +8,7 @@ Build-Depends: cdbs, debhelper (>= 4.1.0), flex, libhal-dev, libgtk2.0-dev, libt
 Package: ohm
 Architecture: any
 Depends: ohm-plugin-core0, ${shlibs:Depends}
+Recommends: osso-af-startup
 Description: Open Hardware Manager with Nokia policy add-ons.
  Open Hardware Manager Nokia add-ons.
  .
