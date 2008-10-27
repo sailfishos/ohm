@@ -11,8 +11,8 @@ URL: http://127.0.0.1
 Source0: %{name}-%{version}.tar.gz
 BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: pl >= 5.6.32, ohm-config, ohm-plugin-core
-BuildRequires: trace-devel
+Requires: pl >= 5.6.32, ohm-plugin-core
+BuildRequires: libtrace-devel
 
 %package config
 Summary: Common configuration files for OHM.
@@ -25,7 +25,7 @@ Group: System Environment/Daemons
 %package devel
 Summary: Files necessary for OHM plugin development.
 Group: Development/Libraries
-Requires: ohm-plugin-core, trace-devel
+Requires: ohm-plugin-core, libtrace-devel
 
 %package plugins-legacy
 Summary: Legacy plugins for the Open Hardware Manager.
