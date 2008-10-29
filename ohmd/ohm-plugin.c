@@ -55,6 +55,7 @@ struct _OhmPluginPrivate
 	OhmConf			*conf;
 	GModule			*handle;
 	gchar			*name;
+        GHashTable              *params;
 	/* not assigned unless a plugin uses hal */
 	LibHalContext		*hal_ctx;
 	GPtrArray		*hal_udis;
@@ -187,6 +188,143 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 	}
 	return ret;
 }
+
+gboolean
+ohm_plugin_load_params (OhmPlugin *plugin, GError **error)
+{
+  static GQuark  domain = 0;
+
+  const char *slash = G_DIR_SEPARATOR_S;
+  const char *name  = ohm_plugin_get_name(plugin);
+  const char *top   = getenv("OHM_CONF_DIR");
+
+  char  path[PATH_MAX];
+  char  line[1024], saved[1024], *param, *value, *eq, *p;
+  FILE *fp;
+  
+  /*
+   * Notes:
+   *    This code essentially reads and parses the same ini file than
+   *    ohm_conf_load_defaults but processing only lines of the form
+   *    param=value (which are skipped by the former).
+   *
+   *    It is unfortunate to parse the file twice but with the current
+   *    way modules, plugins and the configuration are structured there
+   *    is no clean and non-intrusive way of doing it otherwise. I opted
+   *    for changing the least possible amount of existing conf-handling
+   *    code changes.
+   *
+   *    We could have simply copy-pasted the bulk of ohm_conf_load_defaults
+   *    and changed the line processing loop but...
+   *
+   *    Perhaps it would be a better idea to not re/misuse the original
+   *    .ini files but have per plugin .conf files. Then we'd not be limited
+   *    by the syntactical limitations of the OHM .ini files and eg. we
+   *    could simply use GKeyFiles to have more versatile configuration
+   *    parameters.
+   */
+
+  if (!domain)
+    domain = g_quark_from_static_string("ohm_plugin_load_params");
+
+  if (top == NULL)
+    snprintf(path, sizeof(path), "%s%s%s%s%s%s%s%s",
+	     SYSCONFDIR, slash, "ohm", slash, "plugins.d", slash, name, ".ini");
+  else
+    snprintf(path, sizeof(path), "%s%s%s%s%s%s",
+	     top, slash, "plugins.d", slash, name, ".ini");
+
+  ohm_debug ("Loading %s parameters from %s", name, path);
+  
+  if ((fp = fopen(path, "r")) == NULL)
+    return TRUE;
+
+  /* we do not check (again) the things ohm_conf_load_defaults bails out on */
+
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    if (line[0] == '#' || (eq = strchr(line, '=')) == NULL)
+      continue;
+
+    if (line[0])
+      for (p = line + strlen(line) - 1; *p == '\r' || *p == '\n'; p--)
+	*p = '\0';
+    
+    strcpy(saved, line);
+
+    *eq = '\0';
+    for (param = line; *param == ' '; param++)
+      ;
+    for (value = eq + 1; *value == ' '; value++)
+      ;
+    for (p = eq - 1; *p == ' ' && p > param; p--)
+      *p = '\0';
+    if (*value)
+      for (p = value + strlen(value) - 1; *p == ' ' && p > value; p--)
+	*p = '\0';
+    
+    if (!*param) {
+      g_set_error(error, domain, EINVAL, "invalid parameter for plugin %s: %s",
+		  name, saved);
+      fclose(fp);
+      return FALSE;
+    }
+
+    if (!ohm_plugin_add_param(plugin, param, value)) {
+      g_set_error(error, domain, EINVAL,
+		  "failed to add parameter %s for plugin %s", param, name);
+      fclose(fp);
+      return FALSE;
+    }
+  }
+
+  fclose(fp);
+  return TRUE;
+}
+
+
+gboolean
+ohm_plugin_add_param(OhmPlugin *plugin, const gchar *param, const gchar *value)
+{
+  GHashTable *params;
+  char       *p, *v;
+
+  if ((params = plugin->priv->params) == NULL) {
+    params = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+    plugin->priv->params = params;
+  }
+
+  if (params == NULL) {
+    g_warning("Failed to create parameter table for plugin %s.",
+	      ohm_plugin_get_name(plugin));
+    return FALSE;
+  }
+  
+  p = g_strdup(param);
+  v = value ? g_strdup(value) : NULL;
+  
+  if (p == NULL || (value != NULL && v == NULL)) {
+    g_warning("Failed to add parameter %s = %s for plugin %s.",
+	      param, value ? value : "NULL", ohm_plugin_get_name(plugin));
+    g_free(p);
+    g_free(v);
+    return FALSE;
+  }
+
+  ohm_debug("added %s.%s = %s", ohm_plugin_get_name(plugin), p, v);
+
+  g_hash_table_insert(params, p, v);
+  return TRUE;
+}
+
+const gchar *
+ohm_plugin_get_param(OhmPlugin *plugin, const gchar *param)
+{
+  if (plugin->priv->params == NULL)
+    return NULL;
+  else
+    return g_hash_table_lookup(plugin->priv->params, param);
+}
+
 
 gboolean
 ohm_plugin_notify (OhmPlugin   *plugin,
@@ -568,6 +706,9 @@ ohm_plugin_finalize (GObject *object)
 	plugin = OHM_PLUGIN (object);
 
 	g_object_unref (plugin->priv->conf);
+	
+	if (plugin->priv->params)
+	  g_hash_table_destroy(plugin->priv->params);
 
 	g_debug ("finalizing plugin %s", plugin->priv->name);
 
@@ -615,6 +756,7 @@ ohm_plugin_init (OhmPlugin *plugin)
 
 	plugin->priv->hal_udis = g_ptr_array_new ();
 	plugin->priv->conf = ohm_conf_new ();
+	plugin->priv->params = NULL;
 }
 
 /**

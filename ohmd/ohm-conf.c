@@ -459,6 +459,10 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	lines = g_strsplit (contents, "\n", -1);
 	i = 0;
 	while (lines[i] != NULL) {
+	        if (strchr (lines[i], '=') != NULL) {/* parameter, not a key */
+		        i++;
+			continue;
+		}
 		ret = ohm_conf_process_line (conf, lines[i], plugin_name, error);
 		if (ret == FALSE) {
 			g_error ("Loading keys from conf failed: %s", (*error)->message);

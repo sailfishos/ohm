@@ -895,6 +895,14 @@ ohm_module_init (OhmModule *module)
 			ohm_debug ("not defaults for %s: %s", name, error->message);
 			g_error_free (error);
 		}
+
+		/* load plugin parameters */
+		error = NULL;
+		ret = ohm_plugin_load_params (plugin, &error);
+		if (ret == FALSE) {
+		        g_error ("failed to load plugin parameters for %s: %s",
+				 name, error->message);
+		}
 	}
 
 	ohm_conf_set_initializing (module->priv->conf, TRUE);

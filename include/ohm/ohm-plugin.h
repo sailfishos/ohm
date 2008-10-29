@@ -194,6 +194,15 @@ gboolean	 ohm_plugin_conf_get_key		(OhmPlugin      *plugin,
 gboolean	 ohm_plugin_conf_set_key		(OhmPlugin      *plugin,
 							 const gchar	*key,
 							 gint		 value);
+gboolean         ohm_plugin_load_params                 (OhmPlugin *plugin,
+							 GError **error);
+
+gboolean         ohm_plugin_add_param                   (OhmPlugin *plugin,
+							 const gchar *param,
+							 const gchar *value);
+const gchar      *ohm_plugin_get_param                  (OhmPlugin *plugin,
+							 const gchar *param);
+
 /* used by plugin for hal */
 gboolean	 ohm_plugin_hal_init			(OhmPlugin	*plugin);
 gboolean	 ohm_plugin_hal_use_property_modified	(OhmPlugin	*plugin,
