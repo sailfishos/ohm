@@ -1,7 +1,7 @@
 author "Ismo Puustinen"
 description "This init script starts the OHM daemon"
 
-start on started maemo-launcher
+start on started osso-systemui
 stop on stopped dbus
 
 console output
