@@ -34,6 +34,9 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
+#include <dirent.h>
+#include <sys/stat.h>
+
 #include <glib/gi18n.h>
 #include <gmodule.h>
 
@@ -278,6 +281,101 @@ ohm_module_add_all_plugins (OhmModule *module)
 	}
 }
 
+
+
+static gchar **
+discover_plugins(OhmModule *module, gsize *nplugin)
+{
+#define PLUGIN_PREFIX "libohm_"
+#define PLUGIN_SUFFIX "so"
+#define IS_PLUGIN_NAME(name, suff)					\
+  (!strncmp(name, PLUGIN_PREFIX, sizeof(PLUGIN_PREFIX) - 1) &&		\
+   !strcmp(suff, PLUGIN_SUFFIX))
+
+#define IS_BANNED(module, name) \
+  (g_slist_find_custom(module->priv->mod_prevent, name, (GCompareFunc)strcmp))
+
+  const char *sep  = G_DIR_SEPARATOR_S;
+  const char *base = getenv("OHM_PLUGIN_DIR");
+
+  char            path[PATH_MAX], plugindir[PATH_MAX];
+  char           *name, *suff;
+  DIR            *dir;
+  struct dirent  *entry;
+  struct stat     st;
+
+  gchar         **plugins;
+  gsize           n;
+
+  
+  ohm_debug("discovering plugins...");
+  
+  plugins = NULL;
+  n       = 0;
+
+  if (base == NULL) {
+    snprintf(plugindir, sizeof(plugindir), "%s%s%s", LIBDIR, sep, "ohm");
+    base = plugindir;
+  }
+
+  if ((dir = opendir(base)) == NULL)
+    return FALSE;
+
+  while ((entry = readdir(dir)) != NULL) {
+    name = entry->d_name;
+    if ((suff = strrchr(name, '.')) == NULL) {
+      ohm_debug("skipping non-plugin %s...", name);
+      continue;
+    }
+    *suff++ = '\0';
+
+    if (!IS_PLUGIN_NAME(name, suff)) {
+      ohm_debug("skipping non-plugin %s...", name);
+      continue;
+    }
+    
+    snprintf(path, sizeof(path), "%s%s%s.%s", base, sep, name, PLUGIN_SUFFIX);
+    if (stat(path, &st) || !S_ISREG(st.st_mode)) {
+      ohm_debug("skipping non-plugin %s...", name);
+      continue;
+    }
+    
+    name += sizeof(PLUGIN_PREFIX) - 1;
+
+    if (IS_BANNED(module, name)) {
+      ohm_debug("skipping banned plugin %s...", name);
+      continue;
+    }
+
+    ohm_debug("discovered %s", name);
+
+    if ((plugins = realloc(plugins, (n + 1) * sizeof(plugins[0]))) == NULL ||
+	(plugins[n] = strdup(name)) == NULL)
+      goto fail;
+    
+    n++;
+  }
+  
+
+  if ((plugins = realloc(plugins, (n + 1) * sizeof(plugins[0]))) == NULL)
+      goto fail;
+  plugins[n] = NULL;
+
+  *nplugin = n;
+  return plugins;
+  
+  fail:
+    if (plugins != NULL) {
+      for (n = 0; plugins[n] != NULL; n++)
+	free(plugins[n]);
+      free(plugins);
+    }
+
+    *nplugin = 0;
+    return NULL;
+}
+
+
 /**
  * ohm_module_read_defaults:
  **/
@@ -353,8 +451,12 @@ ohm_module_read_defaults (OhmModule *module)
 		ohm_debug ("ModulesRequired read error: %s", error->message);
 		g_error_free (error);
 	}
+	if (length == 1 && !strcmp(module->priv->modules_required[0], "*")) {
+	  g_strfreev(module->priv->modules_required);
+	  module->priv->modules_required = discover_plugins(module, &length);
+	}
 	for (i=0; i<length; i++) {
-		ohm_debug ("ModulesRequired: %s", module->priv->modules_required[i]);
+	        ohm_debug ("ModulesRequired: %s", module->priv->modules_required[i]);
 		module->priv->mod_require = g_slist_prepend (module->priv->mod_require, (gpointer) module->priv->modules_required[i]);
 	}
 
