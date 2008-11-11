@@ -359,20 +359,23 @@ discover_plugins(OhmModule *module, gsize *nplugin)
 
   if ((plugins = realloc(plugins, (n + 1) * sizeof(plugins[0]))) == NULL)
       goto fail;
-  plugins[n] = NULL;
 
-  *nplugin = n;
+  closedir(dir);
+  
+  plugins[n] = NULL;
+  *nplugin   = n;
   return plugins;
   
-  fail:
-    if (plugins != NULL) {
-      for (n = 0; plugins[n] != NULL; n++)
-	free(plugins[n]);
-      free(plugins);
-    }
+ fail:
+  closedir(dir);
+  if (plugins != NULL) {
+    for (n = 0; plugins[n] != NULL; n++)
+      free(plugins[n]);
+    free(plugins);
+  }
 
-    *nplugin = 0;
-    return NULL;
+  *nplugin = 0;
+  return NULL;
 }
 
 
