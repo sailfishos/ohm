@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo5) unstable; urgency=low
+
+  * 
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Thu, 13 Nov 2008 13:53:02 +0200
+
 ohm (0.1.2-0maemo4) unstable; urgency=low
 
   * Edited the startup script to enable session bus attach at boot
