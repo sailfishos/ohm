@@ -1,6 +1,9 @@
 #!/usr/bin/make -f
 SHELL+= -e
 
+GIT_VERSION := $(shell [ -x ./git-version.sh ] && \
+                           ./git-version.sh || echo "unknown")
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
@@ -24,6 +27,9 @@ post-patches:: debian/stamp-autogen
 debian/stamp-autogen:
 	cd $(DEB_BUILDDIR) && ./autogen.sh
 	touch $@
+
+debian/control::
+	@sed -e 's/__GIT_ID__/$(GIT_VERSION)/g' debian/control.in > $@
 
 clean::
 	-rm -rf debian/stamp-autogen
