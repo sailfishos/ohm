@@ -9,6 +9,7 @@ Package: ohm
 Architecture: any
 Depends: ohm-plugin-core0, ${shlibs:Depends}
 Recommends: osso-af-startup
+XB-GIT-ID: ${Git-Id}
 Description: Open Hardware Manager with Nokia policy add-ons.
  Open Hardware Manager Nokia add-ons.
  .
@@ -18,6 +19,7 @@ Package: ohm-plugin-core0
 Architecture: any
 Depends: ${shlibs:Depends}
 Section: utils
+XB-GIT-ID: ${Git-Id}
 Description: Common OHM libraries.
  .
  This package contains libraries needed by both for running OHM and
@@ -27,6 +29,7 @@ Package: ohm-dev
 Architecture: any
 Depends: ohm-plugin-core0, ${shlibs:Depends}
 Section: libdevel
+XB-GIT-ID: ${Git-Id}
 Description: Files necessary for OHM plugin development.
  .
  This package contains header files, libraries, pkg-config files, etc.
@@ -36,6 +39,7 @@ Package: ohm-plugins-legacy
 Architecture: any
 Depends: ${shlibs:Depends}
 Section: utils
+XB-GIT-ID: ${Git-Id}
 Description: Legacy Open Hardware Manager plugins.
  .
  Legacy plugins from the basic OHM distribution.
@@ -44,6 +48,7 @@ Package: ohm-utils
 Architecture: any
 Depends: ${shlibs:Depends}
 Section: utils
+XB-GIT-ID: ${Git-Id}
 Description: Miscallaneous OHM utilities.
  .
  This package contains miscallaneous OHM utilities that are either not
