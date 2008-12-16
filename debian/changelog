@@ -1,6 +1,12 @@
+ohm (0.1.2-0maemo7) unstable; urgency=low
+
+  * Changed the upstart boot script.
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Tue, 16 Dec 2008 10:58:43 +0200
+
 ohm (0.1.2-0maemo6) unstable; urgency=low
 
-  * 
+  * Cleanups
 
  -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Fri, 28 Nov 2008 12:28:25 +0200
 
