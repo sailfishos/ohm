@@ -18,6 +18,10 @@ DEB_CONFIGURE_USER_FLAGS = --disable-static --without-xauth --without-dpms --dis
 DEB_DH_INSTALL_SOURCEDIR = debian/tmp
 DEB_UPDATE_RCD_PARAMS = "start 59 2 3 4 5 . stop 18 0 1 6 ."
 
+ifeq ($(strip $(shell echo $$ENABLE_GPROF)),yes)
+DEB_CONFIGURE_USER_FLAGS += --enable-gprof
+endif
+
 # Omit *.la files but warn about other missing things.
 binary-post-install/ohm::
 	rm -f debian/tmp/usr/lib/*.la
