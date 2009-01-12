@@ -183,7 +183,7 @@ main (int argc, char **argv)
 	GtkWidget	*widget = NULL;
 	GladeXML	*glade_xml = NULL;
 
-	context = g_option_context_new (_("GNOME Power Preferences"));
+	context = g_option_context_new ("GNOME Power Preferences");
 	gtk_init (&argc, &argv);
 
 	/* load the glade file, and setup the callbacks */
