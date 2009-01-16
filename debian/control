@@ -54,3 +54,12 @@ Description: Miscallaneous OHM utilities.
  This package contains miscallaneous OHM utilities that are either not
  very useful or otherwise not necessary for everyday OHM usage.
 
+Package: ohm-dbg
+Priority: extra
+Section: utils
+Architecture: any
+Depends: ohm (= ${binary:Version})
+XB-GIT-ID: ${Git-Id}
+Description: Debug symbols for OHM.
+ Debug symbols for OHM.
+
