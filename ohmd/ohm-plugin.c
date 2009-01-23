@@ -38,6 +38,11 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
+#define __OHM_KEEP_PLUGINS_LOADED__
+#ifdef __OHM_KEEP_PLUGINS_LOADED__
+#include <dlfcn.h>
+#endif
+
 #include <glib/gi18n.h>
 #include <gmodule.h>
 #include <libhal.h>
@@ -67,6 +72,24 @@ struct _OhmPluginPrivate
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
 
 
+static void *
+plugin_keep_open(const char *path)
+{
+#ifdef __OHM_KEEP_PLUGINS_LOADED__
+  char *keep_open = getenv("OHM_KEEP_PLUGINS_LOADED");
+
+  if (keep_open != NULL && !strcasecmp(keep_open, "yes")) {
+    ohm_debug("Trying to prevent unloading of plugin %s...\n", path);
+    return dlopen(path, RTLD_LAZY | RTLD_NODELETE);
+  }
+  else
+    return NULL;
+#else
+  return NULL;
+#endif
+}
+
+
 gboolean
 ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 {
@@ -92,6 +115,7 @@ ohm_plugin_load (OhmPlugin *plugin, const gchar *name)
 		g_free (path);
 		return FALSE;
 	}
+	plugin_keep_open(path);     /*  keep plugins loaded if necessary */
 	g_free (path);
 
 	
