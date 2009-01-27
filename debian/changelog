@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo8) unstable; urgency=low
+
+  * Removed old nokia plugins (Fixes: NB#98151).
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Tue, 27 Jan 2009 10:39:58 +0200
+
 ohm (0.1.2-0maemo7) unstable; urgency=low
 
   * Changed the upstart boot script.
