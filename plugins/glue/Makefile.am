@@ -7,7 +7,6 @@ SUBDIRS = 				\
 	powerstatus			\
 	xrandr				\
 	xorg				\
-	headset				\
 	backlight
 
 if HAVE_DPMS_EXTENSION
