@@ -5,7 +5,7 @@ Summary: Open Hardware Manager
 Name: ohm
 Version: ##__VERSION__##
 Release: 1
-License: Proprietary
+License: LGPL
 Group: System Environment/Daemons
 URL: http://127.0.0.1
 Source0: %{name}-%{version}.tar.gz
