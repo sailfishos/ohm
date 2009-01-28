@@ -207,8 +207,18 @@ main (int argc, char *argv[])
 
 	dbus_g_connection_unref (connection);
 	/*free memory used by dbus*/
-
+	
+	/*
+	 * Notes: dbus_shutdown seems to result in _exit if there are pending
+	 *   references to DBUS objects. We don't want that to happen  as our
+	 *   memory tracing disgnostic is typically hooked up with atexit(3)
+	 *   and the atexit hooks are not executed for _exit.
+	 *
+	 *        
+	 */
+#if 0
 	dbus_shutdown();
+#endif
 
 	return 0;
 }

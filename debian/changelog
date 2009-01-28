@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo9) unstable; urgency=low
+
+  * Fix factstore memory leak upon transaction commit.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Wed, 28 Jan 2009 17:18:22 +0200
+
 ohm (0.1.2-0maemo8) unstable; urgency=low
 
   * Removed old nokia plugins (Fixes: NB#98151).
