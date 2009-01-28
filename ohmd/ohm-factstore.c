@@ -1559,6 +1559,7 @@ void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean discard) {
 				}
 				case OHM_FACT_STORE_EVENT_UPDATED: {
 				  ohm_structure_qset (OHM_STRUCTURE (cow->fact), cow->field, cow->value);
+				  cow->value = NULL;
 				  break;
 				}
 				case OHM_FACT_STORE_EVENT_LOOKUP: {
@@ -2078,6 +2079,11 @@ void ohm_fact_store_transaction_cow_free (OhmFactStoreTransactionCOW* self) {
 	if (self->fact != NULL) {
 	  g_object_unref (self->fact);
 	  self->fact = NULL;
+	}
+	
+	if (self->value != NULL) {
+	  g_value_unset(self->value);
+	  g_free(self->value);
 	}
 
 	g_slice_free (OhmFactStoreTransactionCOW, self);
