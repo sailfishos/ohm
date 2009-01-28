@@ -22,6 +22,7 @@
 #  include <config.h>
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
@@ -206,18 +207,32 @@ main (int argc, char *argv[])
 	ohm_dbus_exit();
 
 	dbus_g_connection_unref (connection);
-	/*free memory used by dbus*/
+
+	/* free memory used by dbus  */
 	
 	/*
-	 * Notes: dbus_shutdown seems to result in _exit if there are pending
-	 *   references to DBUS objects. We don't want that to happen  as our
-	 *   memory tracing disgnostic is typically hooked up with atexit(3)
-	 *   and the atexit hooks are not executed for _exit.
+	 * Notes:
+	 *     Although this might seem counter-intuitive at first, we only
+	 *     attempt to free memory allocated by DBUS if we're not looking
+	 *     for memory leaks. The reason is that dbus_shutdown seems to
+	 *     result in exit(3) with status 1 if there are pending references
+	 *     to DBUS objects. We don't want that to happen since our own
+	 *     memory tracing disgnostics is typically registered with
+	 *     atexit(3) and as such does not executed in this case.
 	 *
-	 *        
+	 *     We check for the same environment variable that we use to
+	 *     prevent shared object from being unloaded in case of memory
+	 *     allocation debugging.
 	 */
-#if 0
-	dbus_shutdown();
+
+#define __OHM_KEEP_PLUGINS_LOADED__
+#ifdef __OHM_KEEP_PLUGINS_LOADED__
+	{
+	  char *keep_open = getenv("OHM_KEEP_PLUGINS_LOADED");
+
+	  if (keep_open == NULL && strcasecmp(keep_open, "yes"))
+	    dbus_shutdown();
+	}
 #endif
 
 	return 0;
