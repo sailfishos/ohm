@@ -1098,6 +1098,11 @@ GSList *ohm_fact_get_fields(OhmFact *self) {
 void ohm_fact_set_fact_store (OhmFact* self, OhmFactStore* value) {
 	g_return_if_fail (OHM_IS_FACT (self));
 
+
+    if (value == NULL && self->priv->_fact_store != NULL)
+        g_object_remove_weak_pointer (G_OBJECT (self->priv->_fact_store),
+                                      (void *)&self->priv->_fact_store);
+
 	self->priv->_fact_store = value;
 
 	if (self->priv->_fact_store != NULL) {
