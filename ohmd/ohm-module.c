@@ -953,7 +953,7 @@ ohm_module_init (OhmModule *module)
 
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
 
-	module->priv->interested = g_hash_table_new (g_str_hash, g_str_equal);
+	module->priv->interested = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
 
 	module->priv->conf = ohm_conf_new ();
 	g_signal_connect (module->priv->conf, "key-changed",

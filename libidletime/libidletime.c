@@ -313,8 +313,8 @@ idletime_alarm_free (LibIdletime *idletime, LibIdletimeAlarm *alarm)
 		return FALSE;
 	}
 	XSyncDestroyAlarm (idletime->priv->dpy, alarm->xalarm);
-	g_free (alarm);
 	g_ptr_array_remove (idletime->priv->array, alarm);
+	g_free (alarm);
 	return TRUE;
 }
 
