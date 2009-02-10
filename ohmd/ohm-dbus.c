@@ -38,7 +38,7 @@ ohm_dbus_init(DBusGConnection *gconn)
 {
     conn = dbus_g_connection_get_connection(gconn);
 
-    if ((dbus_objects = g_hash_table_new(g_str_hash, g_str_equal)) == NULL) {
+    if ((dbus_objects = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL)) == NULL) {
         g_warning("Failed to create DBUS object hash table.");
         return FALSE;
     }
@@ -89,8 +89,9 @@ ohm_dbus_add_method(const char *path, const char *name,
     if ((object = g_hash_table_lookup(dbus_objects, path)) == NULL) {
         if ((object = g_new0(ohm_dbus_object_t, 1)) == NULL)
             return FALSE;
-        if ((object->methods = g_hash_table_new(g_str_hash,
-                                                g_str_equal)) == NULL) {
+        if ((object->methods = g_hash_table_new_full(g_str_hash,
+                                                g_str_equal,
+                                                NULL, NULL)) == NULL) {
             g_free(object);
             return FALSE;
         }

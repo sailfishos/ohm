@@ -1,3 +1,10 @@
+ohm (0.1.2-0maemo10) unstable; urgency=low
+
+  * Fix factstore memory referencing issue.
+  * Fix some errors reported by static analysis.
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Tue, 03 Feb 2009 16:27:16 +0200
+
 ohm (0.1.2-0maemo9) unstable; urgency=low
 
   * Fix factstore memory leak upon transaction commit (Fixes: NB#98082).
