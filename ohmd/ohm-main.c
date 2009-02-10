@@ -230,7 +230,7 @@ main (int argc, char *argv[])
 	{
 	  char *keep_open = getenv("OHM_KEEP_PLUGINS_LOADED");
 
-	  if (keep_open == NULL && strcasecmp(keep_open, "yes"))
+	  if (keep_open == NULL || strcasecmp(keep_open, "yes"))
 	    dbus_shutdown();
 	}
 #endif
