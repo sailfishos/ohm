@@ -36,16 +36,18 @@ static GSList *dbus_signal_handlers;
 int
 ohm_dbus_init(DBusGConnection *gconn)
 {
-    conn = dbus_g_connection_get_connection(gconn);
-
-    if ((dbus_objects = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL)) == NULL) {
-        g_warning("Failed to create DBUS object hash table.");
-        return FALSE;
-    }
-
     /* empty list */
     dbus_signal_handlers = NULL;
 
+    if ((conn = dbus_g_connection_get_connection(gconn)) != NULL) {
+        if ((dbus_objects = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                                  NULL, NULL)) == NULL) {
+            g_warning("Failed to create DBUS object hash table.");
+            return FALSE;
+        }
+    }
+    
+    dbus_connection_ref(conn);
     return TRUE;
 }
 
@@ -58,6 +60,8 @@ ohm_dbus_exit(void)
 {
     ohm_dbus_purge_methods();
     ohm_dbus_purge_signals();
+    if (conn)
+        dbus_connection_unref(conn);
 
     conn = NULL;
 

@@ -768,6 +768,9 @@ ohm_module_resolve_methods(OhmModule *module)
   if (failed)
     g_error("Fatal method resolving errors encountered.");
   
+  /* remove the initial reference to autodestroy symtable once it is empty */
+  g_hash_table_unref(symtable);
+
   return TRUE;
 }
 
