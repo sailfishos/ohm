@@ -209,31 +209,7 @@ main (int argc, char *argv[])
 	dbus_g_connection_unref (connection);
 
 	/* free memory used by dbus  */
+	dbus_shutdown();
 	
-	/*
-	 * Notes:
-	 *     Although this might seem counter-intuitive at first, we only
-	 *     attempt to free memory allocated by DBUS if we're not looking
-	 *     for memory leaks. The reason is that dbus_shutdown seems to
-	 *     result in exit(3) with status 1 if there are pending references
-	 *     to DBUS objects. We don't want that to happen since our own
-	 *     memory tracing disgnostics is typically registered with
-	 *     atexit(3) and as such does not executed in this case.
-	 *
-	 *     We check for the same environment variable that we use to
-	 *     prevent shared object from being unloaded in case of memory
-	 *     allocation debugging.
-	 */
-
-#define __OHM_KEEP_PLUGINS_LOADED__
-#ifdef __OHM_KEEP_PLUGINS_LOADED__
-	{
-	  char *keep_open = getenv("OHM_KEEP_PLUGINS_LOADED");
-
-	  if (keep_open == NULL || strcasecmp(keep_open, "yes"))
-	    dbus_shutdown();
-	}
-#endif
-
 	return 0;
 }
