@@ -3,7 +3,7 @@ Section: utils
 Priority: optional
 Maintainer: Krisztian Litkey <krisztian.litkey@nokia.com>
 Standards-Version: 3.7.2
-Build-Depends: cdbs, debhelper (>= 4.1.0), flex, libhal-dev, libgtk2.0-dev, libtrace-dev, libdbus-1-dev, libdbus-glib-1-dev
+Build-Depends: cdbs, debhelper (>= 4.1.0), flex, libhal-dev, libgtk2.0-dev, libtrace-dev (>= 0.0.5), libdbus-1-dev, libdbus-glib-1-dev
 
 Package: ohm
 Architecture: any
