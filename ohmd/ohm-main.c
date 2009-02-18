@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <glib.h>
-#if 0
+#ifdef USE_GI18N
 #include <glib/gi18n.h>
 #endif
 #include <dbus/dbus-glib.h>
@@ -136,7 +136,7 @@ main (int argc, char *argv[])
 	};
 
 	context = g_option_context_new (OHM_NAME);
-#if 0
+#ifdef USE_GI18N
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 	textdomain (GETTEXT_PACKAGE);
 	g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
