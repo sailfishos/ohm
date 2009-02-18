@@ -768,9 +768,6 @@ ohm_module_resolve_methods(OhmModule *module)
   if (failed)
     g_error("Fatal method resolving errors encountered.");
   
-  /* remove the initial reference to autodestroy symtable once it is empty */
-  g_hash_table_unref(symtable);
-
   return TRUE;
 }
 
@@ -872,9 +869,7 @@ static gboolean
 ohm_module_dbus_cleanup(OhmModule *module)
 {
   ohm_dbus_method_t *m;
-#if 1
   ohm_dbus_signal_t *s;
-#endif
 
   GSList       *l;
   OhmPlugin    *plugin;
@@ -888,11 +883,9 @@ ohm_module_dbus_cleanup(OhmModule *module)
       if (!ohm_dbus_del_method(m->path, m->name, m->handler, m->data))
 	g_warning("Failed to unregister DBUS method %s:%s.%s.",
 		  name, m->path, m->name);
-#if 1
     for (s = plugin->dbus_signals; s && s->signal; s++)
       ohm_dbus_del_signal(s->sender, s->interface, s->signal, s->path,
 			  s->handler, s->data);
-#endif
   }
   
   return TRUE;
@@ -923,6 +916,9 @@ ohm_module_finalize (GObject *object)
 		g_object_unref (plugin);
 	}
 	g_slist_free (module->priv->plugins);
+
+	g_hash_table_destroy(symtable);
+	symtable = NULL;
 
 	g_return_if_fail (module->priv != NULL);
 	G_OBJECT_CLASS (ohm_module_parent_class)->finalize (object);
