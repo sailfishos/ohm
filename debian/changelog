@@ -1,3 +1,12 @@
+ohm (0.1.2-0maemo11) unstable; urgency=low
+
+  * Changed to use the rewritten trace library.
+  * Destroy plugin symbol table during cleanup.
+  * Removed dbus_shutdown-prevention hack, not needed for libmemtrace any more.
+  * Fixed some errors reported by static analysis.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Wed, 18 Feb 2009 15:08:31 +0200
+
 ohm (0.1.2-0maemo10) unstable; urgency=low
 
   * Fix factstore memory referencing issue.
