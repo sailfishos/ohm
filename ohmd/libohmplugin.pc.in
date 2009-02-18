@@ -6,6 +6,6 @@ includedir=@includedir@
 Name: libohmplugin
 Description: OHM plugin library.
 Version: @VERSION@
-Requires: libtrace
+Requires: libsimple-trace
 Libs: -L${libdir} -lohmplugin
 Cflags: -I${includedir}
