@@ -632,53 +632,6 @@ ohm_plugin_dbus_get_connection(void)
 }
 
 
-/**
- * ohm_plugin_dbus_add_method:
- **/
-int
-ohm_plugin_dbus_add_method(const char *path, const char *name,
-			   DBusObjectPathMessageFunction handler, void *data)
-{
-    ohm_debug("\n\nAdded method '%s', '%s'\n\n", path, name);
-  return ohm_dbus_add_method(path, name, handler, data);
-}
-
-
-/**
- * ohm_plugin_dbus_del_method:
- **/
-int
-ohm_plugin_dbus_del_method(const char *path, const char *member,
-			   DBusObjectPathMessageFunction handler, void *data)
-{
-  return ohm_dbus_del_method(path, member, handler, data);
-}
-
-
-/**
- * ohm_plugin_dbus_add_signal:
- **/
-int
-ohm_plugin_dbus_add_signal(const char *sender, const char *interface,
-			   const char *sig, const char *path,
-			   DBusObjectPathMessageFunction handler, void *data)
-{
-  return ohm_dbus_add_signal(sender, interface, sig, path, handler, data);
-}
-
-
-/**
- * ohm_plugin_dbus_del_signal:
- **/
-void
-ohm_plugin_dbus_del_signal(const char *sender, const char *interface,
-			   const char *sig, const char *path,
-			   DBusObjectPathMessageFunction handler, void *data)
-{
-  return ohm_dbus_del_signal(sender, interface, sig, path, handler, data);
-}
-
-
 
 /**
  * ohm_plugin_dispose:

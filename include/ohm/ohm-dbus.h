@@ -33,10 +33,8 @@ void ohm_dbus_exit(void);
 
 DBusConnection *ohm_dbus_get_connection(void);
 
-int ohm_dbus_add_method(const char *path, const char *member,
-			DBusObjectPathMessageFunction handler, void *data);
-int ohm_dbus_del_method(const char *path, const char *member,
-			DBusObjectPathMessageFunction handler, void *data);
+int ohm_dbus_add_method(ohm_dbus_method_t *method);
+int ohm_dbus_del_method(ohm_dbus_method_t *method);
 
 int  ohm_dbus_add_signal(const char *sender, const char *iface, const char *sig,
 			 const char *path,

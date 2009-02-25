@@ -227,22 +227,6 @@ guint		 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 
 DBusConnection *ohm_plugin_dbus_get_connection(void);
 
-int ohm_plugin_dbus_add_method(const char *path, const char *member,
-			       DBusObjectPathMessageFunction handler,
-			       void *data);
-
-int ohm_plugin_dbus_del_method(const char *path, const char *member,
-			       DBusObjectPathMessageFunction handler,
-			       void *data);
-
-int ohm_plugin_dbus_add_signal(const char *sender, const char *interface,
-			       const char *sig, const char *path,
-			       DBusObjectPathMessageFunction handler,
-			       void *data);
-void ohm_plugin_dbus_del_signal(const char *sender, const char *interface,
-				const char *sig, const char *path,
-				DBusObjectPathMessageFunction handler,
-				void *data);
 
 /* used by plugin for dynamically resolve exported plugin methods */
 gboolean ohm_module_find_method(char *name, char **sigptr, void **methptr);

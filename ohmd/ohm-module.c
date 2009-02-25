@@ -849,7 +849,7 @@ ohm_module_dbus_setup(OhmModule *module)
     name   = ohm_plugin_get_name(plugin);
     
     for (m = plugin->dbus_methods; m && m->name; m++)
-      if (!ohm_dbus_add_method(m->path, m->name, m->handler, m->data))
+      if (!ohm_dbus_add_method(m))
 	g_error("Failed to register DBUS method %s for plugin %s.",
 		m->name, name);
 
@@ -880,7 +880,7 @@ ohm_module_dbus_cleanup(OhmModule *module)
     name   = ohm_plugin_get_name(plugin);
     
     for (m = plugin->dbus_methods; m && m->name; m++)
-      if (!ohm_dbus_del_method(m->path, m->name, m->handler, m->data))
+      if (!ohm_dbus_del_method(m))
 	g_warning("Failed to unregister DBUS method %s:%s.%s.",
 		  name, m->path, m->name);
     for (s = plugin->dbus_signals; s && s->signal; s++)

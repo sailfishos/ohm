@@ -79,23 +79,35 @@ ohm_dbus_get_connection(void)
 }
 
 
+static const char *
+method_key(char *buf, size_t size, const char *interface, const char *method)
+{
+    if (interface == NULL)
+        return method;
+
+    snprintf(buf, size, "%s.%s", interface, method);
+    buf[size-1] = '\0';
+
+    return buf;
+}
+
+
 /**
  * ohm_dbus_add_method:
  **/
 int
-ohm_dbus_add_method(const char *path, const char *name,
-                    DBusObjectPathMessageFunction handler, void *data)
+ohm_dbus_add_method(ohm_dbus_method_t *method)
 {
     DBusObjectPathVTable  vtable;
     ohm_dbus_object_t    *object;
-    ohm_dbus_method_t    *method;
+    char                  full[1024];
+    const char           *key;
 
-    if ((object = g_hash_table_lookup(dbus_objects, path)) == NULL) {
+    if ((object = g_hash_table_lookup(dbus_objects, method->path)) == NULL) {
         if ((object = g_new0(ohm_dbus_object_t, 1)) == NULL)
             return FALSE;
-        if ((object->methods = g_hash_table_new_full(g_str_hash,
-                                                g_str_equal,
-                                                NULL, NULL)) == NULL) {
+        if ((object->methods = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                                     g_free, NULL)) == NULL) {
             g_free(object);
             return FALSE;
         }
@@ -103,27 +115,26 @@ ohm_dbus_add_method(const char *path, const char *name,
         vtable.message_function    = ohm_dbus_dispatch_method;
         vtable.unregister_function = NULL;
         
-        if (!dbus_connection_register_object_path(conn,
-                                                  path, &vtable, object)) {
+        if (!dbus_connection_register_object_path(conn, method->path,
+                                                  &vtable, object)) {
             g_hash_table_destroy(object->methods);
             g_free(object);
             return FALSE;
         }
 
-        g_hash_table_insert(dbus_objects, (gpointer)path, object);
+        g_hash_table_insert(dbus_objects, (gpointer)method->path, object);
     }
     
-    if (g_hash_table_lookup(object->methods, name) != NULL ||
-        (method = g_new0(ohm_dbus_method_t, 1)) == NULL)
+    key = method_key(full, sizeof(full), method->interface, method->name);
+
+    if (g_hash_table_lookup(object->methods, key) != NULL ||
+        (key = g_strdup(key)) == NULL)
         return FALSE;
     
-    method->name    = name;
-    method->handler = handler;
-    method->data    = data;
+    g_hash_table_insert(object->methods, (gpointer)key, method);
 
-    g_hash_table_insert(object->methods, (gpointer)name, method);
-
-    ohm_debug("registered DBUS handler %p for %s.%s...", handler, path, name);
+    ohm_debug("registered DBUS handler %p for %s.%s...",
+              method->handler, method->path, key);
 
     return TRUE;
 }
@@ -133,34 +144,36 @@ ohm_dbus_add_method(const char *path, const char *name,
  * ohm_dbus_del_method:
  **/
 int
-ohm_dbus_del_method(const char *path, const char *name,
-                    DBusObjectPathMessageFunction handler, void *data)
+ohm_dbus_del_method(ohm_dbus_method_t *method)
 {
     ohm_dbus_object_t *object;
-    ohm_dbus_method_t *method;
+    ohm_dbus_method_t *m;
+    char               buf[1024];
+    const char        *key;
 
     if (dbus_objects == NULL)
         return TRUE;
 
-    if ((object = g_hash_table_lookup(dbus_objects, path)) == NULL ||
-        (method = g_hash_table_lookup(object->methods, name)) == NULL)
+    key = method_key(buf, sizeof(buf), method->interface, method->name);
+
+    if ((object = g_hash_table_lookup(dbus_objects, method->path)) == NULL ||
+        (m = g_hash_table_lookup(object->methods, key)) == NULL)
         return FALSE;
     
-    if (method->handler != handler /* || method->data != data */) {
+    if (method->handler != m->handler /* || method->data != data */) {
         g_warning("%s.%s has installed handler %p instead of %p.",
-                  path, name, method->handler, handler);
+                  m->path, m->name, m->handler, method->handler);
         return FALSE;
     }
 
-    g_hash_table_remove(object->methods, name);
-    g_free(method);
-
-    ohm_debug("unregistered DBUS handler %s.%s...", path, name);
+    g_hash_table_remove(object->methods, key);
+    
+    ohm_debug("unregistered DBUS handler %s.%s...", m->path, key);
 
     if (g_hash_table_size(object->methods) == 0) {
-        ohm_debug("Object %s has no more methods, destroying it.", path);
+        ohm_debug("Object %s has no more methods, destroying it.", m->path);
         g_hash_table_destroy(object->methods);
-        g_hash_table_remove(dbus_objects, path);
+        g_hash_table_remove(dbus_objects, m->path);
         g_free(object);
     }
 
@@ -169,7 +182,7 @@ ohm_dbus_del_method(const char *path, const char *name,
         g_hash_table_destroy(dbus_objects);
         dbus_objects = NULL;
     }
-        
+    
 
     return TRUE;
 }
@@ -184,9 +197,9 @@ ohm_dbus_dispatch_method(DBusConnection *c, DBusMessage *msg, void *data)
 {
     ohm_dbus_object_t *object = (ohm_dbus_object_t *)data;
     ohm_dbus_method_t *method;
+    char               buf[1024];
+    const char *key;
     const char *member    = dbus_message_get_member(msg);
-
-#if 1
     const char *interface = dbus_message_get_interface(msg);
     const char *signature = dbus_message_get_signature(msg);
     const char *path      = dbus_message_get_path(msg);
@@ -194,7 +207,11 @@ ohm_dbus_dispatch_method(DBusConnection *c, DBusMessage *msg, void *data)
 
     ohm_debug("%s: got message %s.%s (%s), path=%s from %s", __FUNCTION__,
               interface, member, signature, path ?: "NULL", sender);
-#endif
+
+    key = method_key(buf, sizeof(buf), interface, member);
+    
+    if ((method = g_hash_table_lookup(object->methods, key)) != NULL)
+        return method->handler(c, msg, method->data);
     
     if ((method = g_hash_table_lookup(object->methods, member)) != NULL)
         return method->handler(c, msg, method->data);
