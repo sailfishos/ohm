@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo12) unstable; urgency=low
+
+  * A bit saner DBUS method registration and dispatching.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Thu, 26 Feb 2009 11:39:33 +0200
+
 ohm (0.1.2-0maemo11) unstable; urgency=low
 
   * Changed to use the rewritten trace library.
