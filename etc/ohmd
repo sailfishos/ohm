@@ -9,7 +9,5 @@ console output
 script 
         echo "Starting ohmd"
         /usr/sbin/waitdbus system
-        export DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/session_bus_socket
-        /usr/sbin/waitdbus session
         exec /usr/sbin/ohmd --no-daemon
 end script
