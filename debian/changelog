@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo14) unstable; urgency=low
+
+  * Upstart script change to respawn ohmd.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Fri, 27 Mar 2009 16:10:45 +0200
+
 ohm (0.1.2-0maemo13) unstable; urgency=low
 
   * Do not wait for the session bus at startup.
