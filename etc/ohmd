@@ -12,3 +12,6 @@ script
         export TZ=twilightzone
         exec /usr/sbin/ohmd --no-daemon
 end script
+
+respawn
+
