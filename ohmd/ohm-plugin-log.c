@@ -19,6 +19,17 @@ ohm_log_enabled(OhmLogLevel level)
     return level_mask & OHM_LOG_LEVEL_MASK(level);
 }
 
+
+/**
+ * ohm_log_enable:
+ **/
+void
+ohm_log_enable(OhmLogLevel level)
+{
+    level_mask |= OHM_LOG_LEVEL_MASK(level);
+}
+
+
 /**
  * ohm_log:
  **/
