@@ -24,10 +24,10 @@
     trace_printf((flag), format , ## args);				\
   } while (0)
 
-#define OHM_DEBUG_ON(f)     trace_on(NULL, f)
-#define OHM_DEBUG_OFF(f)    trace_off(NULL, f)
-#define OHM_DEBUG_ENABLE()  trace_enable(NULL)
-#define OHM_DEBUG_DISABLE() trace_disable(NULL)
-
+#define OHM_DEBUG_ON(f)      trace_on(NULL, f)
+#define OHM_DEBUG_OFF(f)     trace_off(NULL, f)
+#define OHM_DEBUG_ENABLE()   trace_enable(NULL)
+#define OHM_DEBUG_DISABLE()  trace_disable(NULL)
+#define OHM_DEBUG_ENABLED(f) trace_flag_tst(f)
 
 #endif /* __OHM_PLUGIN_DEBUG_H__ */

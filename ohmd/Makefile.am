@@ -31,7 +31,7 @@ ohmd_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 lib_LTLIBRARIES = libohmplugin.la libohmfact.la
 
 libohmplugin_la_SOURCES =                                       \
-	ohm-plugin.c
+	ohm-plugin.c ohm-plugin-log.c
 
 libohmplugin_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE@
 

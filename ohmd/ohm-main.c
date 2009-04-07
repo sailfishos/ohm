@@ -37,9 +37,11 @@
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-dbus-manager.h"
-#include <ohm/ohm-dbus.h>
+#include "ohm/ohm-dbus.h"
+#include "ohm/ohm-plugin-log.h"
 
 static GMainLoop *loop;
+static int        verbosity;
 
 /**
  * ohm_object_register:
@@ -105,6 +107,69 @@ void sighandler(int signum)
 	}
 }
 
+
+gboolean parse_verbosity(const gchar *option_name, const gchar *value,
+			 gpointer data, GError **error)
+{
+#define CHECK_ARG(s) (!strncmp(arg, (s), length))
+
+	const char *arg, *next;
+	int         length;
+
+	/*
+	 * handle -v -v -v type of setting
+	 */
+
+	if (value == NULL) {
+		verbosity <<= 1;
+		verbosity  |= 1;
+		return TRUE;
+	}
+
+
+	/*
+	 * handle --verbose=info,error type of settings
+	 */
+  
+	for (arg = value; arg && *arg; arg = next) {
+		next = strchr(arg, ',');
+
+		if (next != NULL) {
+			length = (int)(next - arg);
+			next++;
+		}
+		else
+			length = strlen(arg);
+    
+		if (CHECK_ARG("debug"))
+		  	verbosity |= OHM_LOG_LEVEL_MASK(OHM_LOG_DEBUG);
+		else if (CHECK_ARG("info"))
+			verbosity |= OHM_LOG_LEVEL_MASK(OHM_LOG_INFO);
+		else if (CHECK_ARG("warning"))
+			verbosity |= OHM_LOG_LEVEL_MASK(OHM_LOG_WARNING);
+		else if (CHECK_ARG("error"))
+			verbosity |= OHM_LOG_LEVEL_MASK(OHM_LOG_ERROR);
+		else if (CHECK_ARG("all") || CHECK_ARG("full"))
+			verbosity = OHM_LOG_ALL;
+		else {
+			*error = g_error_new(G_OPTION_ERROR,
+					     G_OPTION_ERROR_FAILED,
+					     "invalid verbosity \"%*.*s\"",
+					     length, length, arg);
+			return FALSE;
+		}
+	}
+  
+	return TRUE;
+}
+
+
+int ohm_verbosity(void)
+{
+	return verbosity;
+}
+
+
 /**
  * main:
  **/
@@ -112,7 +177,6 @@ int
 main (int argc, char *argv[])
 {
 	DBusGConnection *connection;
-	gboolean verbose = FALSE;
 	gboolean no_daemon = FALSE;
 	gboolean timed_exit = FALSE;
 	gboolean g_fatal_warnings = FALSE;
@@ -124,8 +188,10 @@ main (int argc, char *argv[])
 	const GOptionEntry entries[] = {
 		{ "no-daemon", '\0', 0, G_OPTION_ARG_NONE, &no_daemon,
 		  "Do not daemonize", NULL },
-		{ "verbose", '\0', 0, G_OPTION_ARG_NONE, &verbose,
-		  "Show extra debugging information", NULL },
+		{ "verbose", 'v', G_OPTION_FLAG_OPTIONAL_ARG,
+		  G_OPTION_ARG_CALLBACK, parse_verbosity,
+		  "Control level of debugging/logged information"
+		  " (debug,info,warning,error)", NULL },
 		{ "timed-exit", '\0', 0, G_OPTION_ARG_NONE, &timed_exit,
 		  "Exit after a small delay (for debugging)", NULL },
 		{ "g-fatal-warnings", 0, 0, G_OPTION_ARG_NONE, &g_fatal_warnings,
@@ -167,7 +233,8 @@ main (int argc, char *argv[])
 			g_error ("Could not daemonize.");
 		}
 	}
-	ohm_debug_init (verbose);
+	ohm_debug_init (verbosity & OHM_LOG_LEVEL_MASK(OHM_LOG_DEBUG));
+	ohm_log_init (verbosity);
 
 	/* check dbus connections, exit if not valid */
 	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
