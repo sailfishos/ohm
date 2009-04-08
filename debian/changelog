@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo15) unstable; urgency=low
+
+  * Added configurable logging for plugins.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Wed, 08 Apr 2009 20:01:04 +0300
+
 ohm (0.1.2-0maemo14) unstable; urgency=low
 
   * Upstart script change to respawn ohmd.
