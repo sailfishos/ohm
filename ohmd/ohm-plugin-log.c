@@ -23,10 +23,25 @@ ohm_log_enabled(OhmLogLevel level)
 /**
  * ohm_log_enable:
  **/
-void
+int
 ohm_log_enable(OhmLogLevel level)
 {
+    int old_state = level_mask & OHM_LOG_LEVEL_MASK(level);
+
     level_mask |= OHM_LOG_LEVEL_MASK(level);
+    return old_state;
+}
+
+/**
+ * ohm_log_disable:
+ **/
+int
+ohm_log_disable(OhmLogLevel level)
+{
+    int old_state = level_mask & OHM_LOG_LEVEL_MASK(level);
+    
+    level_mask &= ~OHM_LOG_LEVEL_MASK(level);
+    return old_state;
 }
 
 
