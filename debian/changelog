@@ -1,3 +1,10 @@
+ohm (0.1.2-0maemo16) unstable; urgency=low
+
+  * Collect legacy plugins by globbing instead of explicitly listing them.
+  * Added ohm_log_disable.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Thu, 09 Apr 2009 18:51:29 +0300
+
 ohm (0.1.2-0maemo15) unstable; urgency=low
 
   * Added configurable logging for plugins.
