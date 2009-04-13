@@ -28,6 +28,7 @@ typedef enum {
 
 void ohm_log_init   (int level_mask);
 void ohm_log        (OhmLogLevel level, const gchar *format, ...);
+void ohm_logv       (OhmLogLevel level, const gchar *format, va_list ap);
 int  ohm_log_enable (OhmLogLevel level);
 int  ohm_log_disable(OhmLogLevel level);
 int  ohm_log_enabled(OhmLogLevel level);

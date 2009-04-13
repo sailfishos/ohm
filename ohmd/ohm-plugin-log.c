@@ -74,6 +74,31 @@ ohm_log(OhmLogLevel level, const gchar *format, ...)
     va_end(ap);
 }
 
+
+/**
+ * ohm_logv:
+ **/
+void
+ohm_logv(OhmLogLevel level, const gchar *format, va_list ap)
+{
+    FILE       *out;
+    const char *prefix;
+    
+    if (!(level_mask & OHM_LOG_LEVEL_MASK(level)))
+        return;
+    
+    switch (level) {
+    case OHM_LOG_ERROR:   prefix = "E: "; out = stderr; break;
+    case OHM_LOG_WARNING: prefix = "W: "; out = stderr; break;
+    case OHM_LOG_INFO:    prefix = "I: "; out = stdout; break;
+    default:                                           return;
+    }
+
+    fputs(prefix, out);
+    vfprintf(out, format, ap);
+}
+
+
 /**
  * ohm_log_init:
  * @mask: mask of message levels we should be printing

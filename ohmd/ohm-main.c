@@ -151,6 +151,8 @@ gboolean parse_verbosity(const gchar *option_name, const gchar *value,
 			verbosity |= OHM_LOG_LEVEL_MASK(OHM_LOG_ERROR);
 		else if (CHECK_ARG("all") || CHECK_ARG("full"))
 			verbosity = OHM_LOG_ALL;
+		else if (CHECK_ARG("none"))
+			verbosity = OHM_LOG_NONE;
 		else {
 			*error = g_error_new(G_OPTION_ERROR,
 					     G_OPTION_ERROR_FAILED,
