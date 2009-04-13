@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo17) unstable; urgency=low
+
+  * Added ohm_logv to help bridge between potential plugin loggers and OHMs logging infra.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Mon, 13 Apr 2009 13:01:02 +0300
+
 ohm (0.1.2-0maemo16) unstable; urgency=low
 
   * Collect legacy plugins by globbing instead of explicitly listing them.
