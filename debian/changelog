@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo18) unstable; urgency=low
+
+  * Fixes: NB#111062
+
+ -- Ismo Puustinen <ismo.h.puustinen@nokia.com>  Wed, 15 Apr 2009 13:43:10 +0300
+
 ohm (0.1.2-0maemo17) unstable; urgency=low
 
   * Added ohm_logv to help bridge between potential plugin loggers and OHMs logging infra.
