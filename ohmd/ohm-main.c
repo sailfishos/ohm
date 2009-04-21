@@ -203,6 +203,8 @@ main (int argc, char *argv[])
 		{ NULL}
 	};
 
+	setenv("TZ", "foo", 0);  /* my lips are sealed about this... */
+
 	context = g_option_context_new (OHM_NAME);
 #ifdef USE_GI18N
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");

@@ -1,3 +1,10 @@
+ohm (0.1.2-0maemo18) unstable; urgency=low
+
+  * Desperate workaround for exit-path crash (Fixes: NB#111031).
+  * Fixes: NB#111062.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Tue, 21 Apr 2009 15:08:37 +0300
+
 ohm (0.1.2-0maemo17) unstable; urgency=low
 
   * Added ohm_logv to help bridge between potential plugin loggers and OHMs logging infra.
