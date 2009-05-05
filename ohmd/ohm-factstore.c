@@ -1332,7 +1332,7 @@ gboolean ohm_fact_store_insert (OhmFactStore* self, OhmFact* fact) {
 
 	        
 		if (!_ohm_fact_store_transaction_rolledback(self) &&
-		    _ohm_fact_store_transaction_active(self))
+		    !_ohm_fact_store_transaction_active(self))
 			_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL);
 
 		return TRUE;
@@ -1395,7 +1395,7 @@ void ohm_fact_store_remove (OhmFactStore* self, OhmFact* fact) {
 		}
 
 		if (!_ohm_fact_store_transaction_rolledback(self) &&
-		    _ohm_fact_store_transaction_active(self))
+		    !_ohm_fact_store_transaction_active(self))
 			_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
 	}
 }
@@ -1427,7 +1427,7 @@ void ohm_fact_store_update (OhmFactStore* self, OhmFact* fact, GQuark field, GVa
 	g_return_if_fail (OHM_IS_FACT (fact));
 
 	if (!_ohm_fact_store_transaction_rolledback(self) &&
-	    _ohm_fact_store_transaction_active(self))
+	    !_ohm_fact_store_transaction_active(self))
 		_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_UPDATED, field, value);
 }
 
