@@ -86,7 +86,7 @@ struct _OhmFactStorePrivate {
 enum  {
 	OHM_FACT_STORE_DUMMY_PROPERTY
 };
-static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, OhmFactStoreEvent event);
+static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, OhmFactStoreEvent event, GQuark field, GValue *value);
 static gboolean ohm_fact_store_insert_internal (OhmFactStore* self, OhmFact* fact);
 static gboolean ohm_fact_store_remove_internal (OhmFactStore* self, OhmFact* fact);
 static void _g_slist_free_g_object_unref (GSList* self);
@@ -123,6 +123,8 @@ enum  {
 static void _g_slist_free_ohm_pair_free (GSList* self);
 static void _g_slist_free_ohm_fact_store_transaction_cow_free (GSList* self);
 static OhmFactStoreTransaction* ohm_fact_store_transaction_new (OhmFactStore* fact_store, GObject* listener);
+static gboolean _ohm_fact_store_transaction_active(OhmFactStore *self);
+static gboolean _ohm_fact_store_transaction_rolledback(OhmFactStore *self);
 static gpointer ohm_fact_store_transaction_parent_class = NULL;
 static void ohm_fact_store_transaction_dispose (GObject * obj);
 enum  {
@@ -1209,22 +1211,24 @@ GType ohm_fact_get_type (void) {
 }
 
 
-static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, OhmFactStoreEvent event) {
+static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, OhmFactStoreEvent event, GQuark field, GValue *value) {
 	GSList* patterns;
-	OhmFactStoreTransaction* t;
 	GSList* p_collection;
 	GSList* p_it;
+	OhmFactStoreTransaction* t;
 
 	g_return_if_fail (OHM_IS_FACT_STORE (self));
 	g_return_if_fail (OHM_IS_FACT (fact));
 
-	patterns = g_datalist_id_get_data (&self->priv->interest, ohm_structure_get_qname (OHM_STRUCTURE (fact)));
-
-	t = g_queue_peek_head (self->transaction);
-	if (t == NULL && g_queue_get_length (self->transaction) != 0) {
-		/* we are unrolling the transaction */
+#if 0 /* check moved to the caller */
+	if (_ohm_fact_store_transaction_rolledback(self) ||
+	    _ohm_fact_store_transaction_active(self))
 		return;
-	}
+#endif
+	
+	t = (OhmFactStoreTransaction*) g_queue_peek_head (self->transaction);
+
+	patterns = g_datalist_id_get_data (&self->priv->interest, ohm_structure_get_qname (OHM_STRUCTURE (fact)));
 
 	p_collection = patterns;
 	for (p_it = p_collection; p_it != NULL; p_it = p_it->next) {
@@ -1246,6 +1250,20 @@ static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, Ohm
 	    
 	    (m == NULL ? NULL : (m = (g_object_unref (m), NULL)));
 	  }
+	}
+
+	switch (event) {
+	case OHM_FACT_STORE_EVENT_ADDED:
+		g_signal_emit_by_name (G_OBJECT (self), "inserted", fact);
+		break;
+	case OHM_FACT_STORE_EVENT_REMOVED:
+		g_signal_emit_by_name (G_OBJECT (self), "removed", fact);
+		break;
+	case OHM_FACT_STORE_EVENT_UPDATED:
+		g_signal_emit_by_name (G_OBJECT (self), "updated", fact, field, value);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -1312,8 +1330,10 @@ gboolean ohm_fact_store_insert (OhmFactStore* self, OhmFact* fact) {
 			t->modifications = g_slist_prepend (t->modifications, ohm_fact_store_transaction_cow_new (fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL));
 		}
 
-		_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_ADDED);
-		g_signal_emit_by_name (G_OBJECT (self), "inserted", fact);
+	        
+		if (!_ohm_fact_store_transaction_rolledback(self) &&
+		    _ohm_fact_store_transaction_active(self))
+			_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL);
 
 		return TRUE;
 	}
@@ -1374,9 +1394,9 @@ void ohm_fact_store_remove (OhmFactStore* self, OhmFact* fact) {
 							    ohm_fact_store_transaction_cow_new (fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL));
 		}
 
-		_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_REMOVED);
-
-		g_signal_emit_by_name (G_OBJECT (self), "removed", fact);
+		if (!_ohm_fact_store_transaction_rolledback(self) &&
+		    _ohm_fact_store_transaction_active(self))
+			_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
 	}
 }
 
@@ -1406,9 +1426,9 @@ void ohm_fact_store_update (OhmFactStore* self, OhmFact* fact, GQuark field, GVa
 	g_return_if_fail (OHM_IS_FACT_STORE (self));
 	g_return_if_fail (OHM_IS_FACT (fact));
 
-	_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_UPDATED);
-
-	g_signal_emit_by_name (G_OBJECT (self), "updated", fact, field, value);
+	if (!_ohm_fact_store_transaction_rolledback(self) &&
+	    _ohm_fact_store_transaction_active(self))
+		_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_UPDATED, field, value);
 }
 
 
@@ -1514,11 +1534,11 @@ void ohm_fact_store_transaction_push (OhmFactStore* self) {
 /**
  * ohm_fact_store_transaction_pop:
  * @self: a #OhmFactStore
- * @discard: wether to roll-back the transaction (%FALSE if not)
+ * @rollback: wether to roll-back the transaction (%FALSE if not)
  *
  * Finish the top transaction and restore to the previous transaction state.
  **/
-void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean discard) {
+void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean rollback) {
 	OhmFactStoreTransaction* trans;
 	OhmFactStoreTransaction* _tmp3;
 
@@ -1528,23 +1548,30 @@ void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean discard) {
 	g_queue_push_head (self->transaction, NULL);
 
 	/* just to lock any transaction system*/
-	if (discard && trans != NULL) {
-			GSList* p_collection;
-			GSList* p_it;
-			GSList* cow_collection;
-			GSList* cow_it;
-
+	if (trans != NULL) {
+		GSList* p_collection;
+		GSList* p_it;
+		GSList* cow_collection;
+		GSList* cow_it;
+		
+		if (rollback) {
 			p_collection = trans->matches;
 			for (p_it = p_collection; p_it != NULL; p_it = p_it->next) {
 				OhmPair* p;
 				OhmPatternMatch* m;
 				OhmFactStoreView* v;
+				gboolean          warned = FALSE;
 
 				p = ((OhmPair*) p_it->data);
 				
 				m = (OhmPatternMatch*) p->first;
 				v = (OhmFactStoreView*) p->second;
 				ohm_fact_store_change_set_remove_match (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set, m);
+
+				if (!warned) {
+					g_warning("Hmm... transaction rollback with non-empty matches!");
+					warned = TRUE;
+				}
 			}
 			
 			cow_collection = trans->modifications;
@@ -1575,12 +1602,48 @@ void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean discard) {
 				  break;
 				}
 			}
+		}
+		else {
+			cow_collection = trans->modifications;
+			for (cow_it = cow_collection; cow_it != NULL; cow_it = cow_it->next) {
+				OhmFactStoreTransactionCOW* cow;
+
+				cow = (OhmFactStoreTransactionCOW*) cow_it->data;
+
+				switch (cow->event) {
+				case OHM_FACT_STORE_EVENT_ADDED:
+					_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL);
+					break;
+				case OHM_FACT_STORE_EVENT_REMOVED:
+					_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
+					break;
+				case OHM_FACT_STORE_EVENT_UPDATED:
+					/* XXX TODO Ideally we should store the fact field and value for
+					   emitting the full-blown "updated" factstore gobject signal */
+					_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_UPDATED, 0, NULL);
+					break;
+				default:
+					break;
+				}
+			}
+		}
 	}
 	
 	_tmp3 = NULL;
 	_tmp3 = ((OhmFactStoreTransaction*) g_queue_pop_head (self->transaction));
 	(_tmp3 == NULL ? NULL : (_tmp3 = (g_object_unref (_tmp3), NULL)));
 	(trans == NULL ? NULL : (trans = (g_object_unref (trans), NULL)));
+}
+
+
+static gboolean _ohm_fact_store_transaction_active(OhmFactStore *self) {
+	return (g_queue_peek_head (self->transaction) != NULL);
+}
+
+
+static gboolean _ohm_fact_store_transaction_rolledback(OhmFactStore *self) {
+	return (g_queue_peek_head (self->transaction) == NULL &&
+		g_queue_get_length (self->transaction) != 0);
 }
 
 
@@ -2633,4 +2696,12 @@ static void g_cclosure_user_marshal_VOID__OBJECT_UINT_POINTER (GClosure * closur
 }
 
 
+
+
+/* 
+ * Local Variables:
+ * c-basic-offset: 8
+ * End:
+ * vim:set shiftwidth=8:
+ */
 
