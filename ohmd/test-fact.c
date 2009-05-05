@@ -712,11 +712,10 @@ static void test_fact_store_transaction_push_and_cancel (void) {
 		ohm_fact_set (fact, "field", ohm_value_from_int (42));
 		ohm_fact_store_insert (fs, fact);
 		g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 1);
-		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 0);
 		(fact == NULL ? NULL : (fact = (g_object_unref (fact), NULL)));
 	}
 	ohm_fact_store_transaction_pop (fs, TRUE);
-	/* pop should remove from the view change_set*/
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 0);
 	/* and from the fact store*/
 	g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 0);
@@ -724,11 +723,12 @@ static void test_fact_store_transaction_push_and_cancel (void) {
 	fact = ohm_fact_new ("org.test.match");
 	ohm_fact_set (fact, "field", ohm_value_from_int (42));
 	ohm_fact_store_insert (fs, fact);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
 	ohm_fact_store_transaction_push (fs);
 	{
 		ohm_fact_store_remove (fs, fact);
 		g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 0);
-		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 2);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
 	}
 	ohm_fact_store_transaction_pop (fs, TRUE);
 	/* pop should remove from the view change_set*/
@@ -744,11 +744,78 @@ static void test_fact_store_transaction_push_and_cancel (void) {
 		ohm_fact_set (fact, "field", ohm_value_from_int (43));
 		val = ((GValue*) ohm_fact_get (fact, "field"));
 		g_assert (g_value_get_int (val) == 43);
-		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 2);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
 	}
 	ohm_fact_store_transaction_pop (fs, TRUE);
 	/* pop should remove from the view change_set*/
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
+	val = ((GValue*) ohm_fact_get (fact, "field"));
+	g_assert (g_value_get_int (val) == 42);
+	(fs == NULL ? NULL : (fs = (g_object_unref (fs), NULL)));
+	(v == NULL ? NULL : (v = (g_object_unref (v), NULL)));
+	(v2 == NULL ? NULL : (v2 = (g_object_unref (v2), NULL)));
+	(fact == NULL ? NULL : (fact = (g_object_unref (fact), NULL)));
+}
+
+
+static void test_fact_store_transaction_push_and_commit (void) {
+	OhmFactStore* fs;
+	OhmFactStoreView* v;
+	OhmFactStoreView* v2;
+	OhmPattern* _tmp0;
+	OhmPattern* _tmp1;
+	OhmFact* fact;
+	GValue* val;
+	fs = ohm_fact_store_new ();
+	v = ohm_fact_store_new_view (fs, NULL);
+	v2 = ohm_fact_store_new_view (fs, NULL);
+	_tmp0 = NULL;
+	ohm_fact_store_view_add (v, OHM_STRUCTURE ((_tmp0 = ohm_pattern_new ("org.test.match"))));
+	(_tmp0 == NULL ? NULL : (_tmp0 = (g_object_unref (_tmp0), NULL)));
+	_tmp1 = NULL;
+	ohm_fact_store_view_add (v2, OHM_STRUCTURE ((_tmp1 = ohm_pattern_new ("org.freedesktop.hello"))));
+	(_tmp1 == NULL ? NULL : (_tmp1 = (g_object_unref (_tmp1), NULL)));
+	/* insertion*/
+	ohm_fact_store_transaction_push (fs);
+	{
+		fact = ohm_fact_new ("org.test.match");
+		ohm_fact_set (fact, "field", ohm_value_from_int (42));
+		ohm_fact_store_insert (fs, fact);
+		g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 1);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 0);
+	}
+	ohm_fact_store_transaction_pop (fs, FALSE);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
+	/* and from the fact store*/
+	g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 1);
+	ohm_fact_set (fact, "field", ohm_value_from_int (43));
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 2);
+	ohm_fact_store_transaction_push (fs);
+	{
+		ohm_fact_store_remove (fs, fact);
+		g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 0);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 2);
+	}
+	ohm_fact_store_transaction_pop (fs, FALSE);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 3);
+	g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 0);
+	/* update*/
+	fact = ohm_fact_new ("org.test.match");
+	ohm_fact_set (fact, "field", ohm_value_from_int (41));
+	ohm_fact_store_insert (fs, fact);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 4);
+	ohm_fact_store_transaction_push (fs);
+	{
+		GValue* val;
+		val = ((GValue*) ohm_fact_get (fact, "field"));
+		g_assert (g_value_get_int (val) == 41);
+		ohm_fact_set (fact, "field", ohm_value_from_int (42));
+		val = ((GValue*) ohm_fact_get (fact, "field"));
+		g_assert (g_value_get_int (val) == 42);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 4);
+	}
+	ohm_fact_store_transaction_pop (fs, FALSE);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 5);
 	val = ((GValue*) ohm_fact_get (fact, "field"));
 	g_assert (g_value_get_int (val) == 42);
 	(fs == NULL ? NULL : (fs = (g_object_unref (fs), NULL)));
@@ -963,6 +1030,7 @@ void _main (char** args, int args_length1) {
 	g_test_add_func ("/fact/store/transaction/push_and_watch", _test_fact_store_transaction_push_and_watch_gcallback);
 	g_test_add_func ("/fact/store/transaction/push_and_cancel", _test_fact_store_transaction_push_and_cancel_gcallback);
 	g_test_add_func ("/fact/store/transaction/free", _test_fact_store_transaction_free_gcallback);
+	g_test_add_func ("/fact/store/transaction/push_and_commit", test_fact_store_transaction_push_and_commit);
 	/* Test.add_func ("/fact/rule/new", test_fact_rule_new);
 	 Test.add_func ("/fact/rule/free", test_fact_rule_free);*/
 	g_test_run ();
