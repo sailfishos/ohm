@@ -80,6 +80,7 @@ static void ohm_fact_dispose (GObject * obj);
 struct _OhmFactStorePrivate {
 	GSList* known_facts_qname;
 	GData* interest;
+	GData* transp_interest;
 };
 
 #define OHM_FACT_STORE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_FACT_STORE, OhmFactStorePrivate))
@@ -106,13 +107,15 @@ static void ohm_fact_store_change_set_dispose (GObject * obj);
 struct _OhmFactStoreSimpleViewPrivate {
 	GObject* _listener;
 	OhmFactStore* _fact_store;
+	gboolean _transparent;
 };
 
 #define OHM_FACT_STORE_SIMPLE_VIEW_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_FACT_STORE_TYPE_SIMPLE_VIEW, OhmFactStoreSimpleViewPrivate))
 enum  {
 	OHM_FACT_STORE_SIMPLE_VIEW_DUMMY_PROPERTY,
 	OHM_FACT_STORE_SIMPLE_VIEW_LISTENER,
-	OHM_FACT_STORE_SIMPLE_VIEW_FACT_STORE
+	OHM_FACT_STORE_SIMPLE_VIEW_FACT_STORE,
+	OHM_FACT_STORE_SIMPLE_VIEW_TRANSPARENT,
 };
 static GObject * ohm_fact_store_simple_view_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties);
 static gpointer ohm_fact_store_simple_view_parent_class = NULL;
@@ -130,7 +133,8 @@ static void ohm_fact_store_transaction_dispose (GObject * obj);
 enum  {
 	OHM_FACT_STORE_VIEW_DUMMY_PROPERTY
 };
-static OhmFactStoreView* ohm_fact_store_view_new (OhmFactStore* fact_store, GObject* listener);
+static OhmFactStoreView* ohm_fact_store_view_new (OhmFactStore* fact_store, GObject* listener, gboolean transparent);
+static gboolean ohm_fact_store_view_is_transparent(OhmFactStoreView *self);
 static gpointer ohm_fact_store_view_parent_class = NULL;
 static void ohm_fact_store_view_dispose (GObject * obj);
 static gpointer ohm_fact_store_parent_class = NULL;
@@ -1220,12 +1224,6 @@ static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, Ohm
 	g_return_if_fail (OHM_IS_FACT_STORE (self));
 	g_return_if_fail (OHM_IS_FACT (fact));
 
-#if 0 /* check moved to the caller */
-	if (_ohm_fact_store_transaction_rolledback(self) ||
-	    _ohm_fact_store_transaction_active(self))
-		return;
-#endif
-	
 	t = (OhmFactStoreTransaction*) g_queue_peek_head (self->transaction);
 
 	patterns = g_datalist_id_get_data (&self->priv->interest, ohm_structure_get_qname (OHM_STRUCTURE (fact)));
@@ -1264,6 +1262,33 @@ static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, Ohm
 		break;
 	default:
 		break;
+	}
+}
+
+
+static void _ohm_fact_store_update_transparent_views (OhmFactStore* self, OhmFact* fact, OhmFactStoreEvent event, GQuark field, GValue *value) {
+	GSList* patterns;
+	GSList* p_collection;
+	GSList* p_it;
+
+	g_return_if_fail (OHM_IS_FACT_STORE (self));
+	g_return_if_fail (OHM_IS_FACT (fact));
+
+	patterns = g_datalist_id_get_data (&self->priv->transp_interest, ohm_structure_get_qname (OHM_STRUCTURE (fact)));
+
+	p_collection = patterns;
+	for (p_it = p_collection; p_it != NULL; p_it = p_it->next) {
+	  OhmPatternMatch* m;
+	  OhmPattern* p;
+
+	  p = (OhmPattern*) p_it->data;
+	  m = ohm_pattern_match (p, fact, event);
+
+	  if (m != NULL) {
+	    ohm_fact_store_change_set_add_match (OHM_FACT_STORE_SIMPLE_VIEW (ohm_pattern_get_view (p))->change_set, m);
+
+	    (m == NULL ? NULL : (m = (g_object_unref (m), NULL)));
+	  }
 	}
 }
 
@@ -1330,6 +1355,7 @@ gboolean ohm_fact_store_insert (OhmFactStore* self, OhmFact* fact) {
 			t->modifications = g_slist_prepend (t->modifications, ohm_fact_store_transaction_cow_new (fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL));
 		}
 
+		_ohm_fact_store_update_transparent_views (self, fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL);
 	        
 		if (!_ohm_fact_store_transaction_rolledback(self) &&
 		    !_ohm_fact_store_transaction_active(self))
@@ -1394,6 +1420,8 @@ void ohm_fact_store_remove (OhmFactStore* self, OhmFact* fact) {
 							    ohm_fact_store_transaction_cow_new (fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL));
 		}
 
+		_ohm_fact_store_update_transparent_views (self, fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
+
 		if (!_ohm_fact_store_transaction_rolledback(self) &&
 		    !_ohm_fact_store_transaction_active(self))
 			_ohm_fact_store_update_views (self, fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
@@ -1425,6 +1453,8 @@ void ohm_fact_store_remove (OhmFactStore* self, OhmFact* fact) {
 void ohm_fact_store_update (OhmFactStore* self, OhmFact* fact, GQuark field, GValue* value) {
 	g_return_if_fail (OHM_IS_FACT_STORE (self));
 	g_return_if_fail (OHM_IS_FACT (fact));
+
+	_ohm_fact_store_update_transparent_views (self, fact, OHM_FACT_STORE_EVENT_UPDATED, field, value);
 
 	if (!_ohm_fact_store_transaction_rolledback(self) &&
 	    !_ohm_fact_store_transaction_active(self))
@@ -1725,7 +1755,26 @@ OhmFactStoreView* ohm_fact_store_new_view (OhmFactStore* self, GObject* listener
 	g_return_val_if_fail (OHM_IS_FACT_STORE (self), NULL);
 	g_return_val_if_fail (listener == NULL || G_IS_OBJECT (listener), NULL);
 
-	return ohm_fact_store_view_new (self, listener);
+	return ohm_fact_store_view_new (self, listener, FALSE);
+}
+
+
+/**
+ * ohm_fact_store_new_transparent_view:
+ * @self: a #OhmFactStore
+ * @listener: the caller or the owner of the #OhmView (for debugging purpose)
+ *
+ * Create a new transparent view for the fact-store @self. See #OhmFactStoreView description.
+ * Transparent views are always updated immediately whenever a fact is changed regardless of
+ * any transactions.
+ *
+ * Returns: a new #OhmFactStoreView
+ **/
+OhmFactStoreView* ohm_fact_store_new_transparent_view (OhmFactStore* self, GObject* listener) {
+	g_return_val_if_fail (OHM_IS_FACT_STORE (self), NULL);
+	g_return_val_if_fail (listener == NULL || G_IS_OBJECT (listener), NULL);
+
+	return ohm_fact_store_view_new (self, listener, TRUE);
 }
 
 
@@ -1749,16 +1798,22 @@ static void ohm_fact_store_set_view_interest (OhmFactStore* self, OhmFactStoreVi
 	GSList* p_it;
 	GSList* patterns;
 	GSList* patts;
-
+	GData **interestptr;
+	
 	g_return_if_fail (OHM_IS_FACT_STORE (self));
 	g_return_if_fail (OHM_FACT_STORE_IS_VIEW (v));
+
+	if (ohm_fact_store_view_is_transparent(v))
+	  interestptr = &self->priv->transp_interest;
+	else
+	  interestptr = &self->priv->interest;
 
 	p_collection = v->patterns;
 	for (p_it = p_collection; p_it != NULL; p_it = p_it->next) {
 	  OhmPattern* p;
 
 	  p = (OhmPattern*) p_it->data;
-	  patterns = g_datalist_id_remove_no_notify (&self->priv->interest, ohm_structure_get_qname (OHM_STRUCTURE (p)));
+	  patterns = g_datalist_id_remove_no_notify (interestptr, ohm_structure_get_qname (OHM_STRUCTURE (p)));
 	  patts = patterns;
 
 	  /* FIXME...*/
@@ -1775,7 +1830,7 @@ static void ohm_fact_store_set_view_interest (OhmFactStore* self, OhmFactStoreVi
 	  }
 
 	  if (patterns != NULL) {
-	    g_datalist_id_set_data_full (&self->priv->interest, ohm_structure_get_qname (OHM_STRUCTURE (p)), patterns, ((GDestroyNotify) _ohm_fact_store_delete_func));
+	    g_datalist_id_set_data_full (interestptr, ohm_structure_get_qname (OHM_STRUCTURE (p)), patterns, ((GDestroyNotify) _ohm_fact_store_delete_func));
 	  }
 	}
 }
@@ -1785,20 +1840,26 @@ static void ohm_fact_store_pattern_del (OhmFactStore* self, OhmFactStoreView* v,
 	GSList *patterns;
 	GQuark  id;
 	OhmPattern *p;
+	GData **interestptr;
 
 	g_return_if_fail (OHM_IS_FACT_STORE (self));
 	g_return_if_fail (OHM_FACT_STORE_IS_VIEW (v));
 	g_return_if_fail (OHM_IS_PATTERN(interest));
 
+	if (ohm_fact_store_view_is_transparent(v))
+	  interestptr = &self->priv->transp_interest;
+	else
+	  interestptr = &self->priv->interest;
+
 	id = ohm_structure_get_qname (interest);
-	patterns = g_datalist_id_remove_no_notify (&self->priv->interest, id);
+	patterns = g_datalist_id_remove_no_notify (interestptr, id);
 	p = OHM_PATTERN(interest);
 	
 	if (g_slist_index(patterns, p) < 0)
 		return;
 	
 	if ((patterns = g_slist_remove(patterns, p)) != NULL)
-		g_datalist_id_set_data_full (&self->priv->interest, id, patterns, ((GDestroyNotify) _ohm_fact_store_delete_func));
+		g_datalist_id_set_data_full (interestptr, id, patterns, ((GDestroyNotify) _ohm_fact_store_delete_func));
 }
 
 
@@ -1976,6 +2037,19 @@ void ohm_fact_store_simple_view_set_fact_store (OhmFactStoreSimpleView* self, Oh
 }
 
 
+gboolean ohm_fact_store_simple_view_get_transparent (OhmFactStoreSimpleView* self) {
+	g_return_val_if_fail (OHM_FACT_STORE_IS_SIMPLE_VIEW (self), FALSE);
+
+	return self->priv->_transparent;
+}
+
+void ohm_fact_store_simple_view_set_transparent (OhmFactStoreSimpleView* self, gboolean transparent) {
+	g_return_if_fail (OHM_FACT_STORE_IS_SIMPLE_VIEW (self));
+
+	self->priv->_transparent = transparent;
+}
+
+
 static GObject * ohm_fact_store_simple_view_constructor (GType type, guint n_construct_properties, GObjectConstructParam * construct_properties) {
 	GObject * obj;
 	OhmFactStoreSimpleViewClass * klass;
@@ -2005,6 +2079,9 @@ static void ohm_fact_store_simple_view_get_property (GObject * object, guint pro
 	case OHM_FACT_STORE_SIMPLE_VIEW_FACT_STORE:
 	  g_value_set_object (value, ohm_fact_store_simple_view_get_fact_store (self));
 	  break;
+	case OHM_FACT_STORE_SIMPLE_VIEW_TRANSPARENT:
+	  g_value_set_boolean (value, ohm_fact_store_simple_view_get_transparent (self));
+	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
 	  break;
@@ -2023,6 +2100,9 @@ static void ohm_fact_store_simple_view_set_property (GObject * object, guint pro
 	  break;
 	case OHM_FACT_STORE_SIMPLE_VIEW_FACT_STORE:
 	  ohm_fact_store_simple_view_set_fact_store (self, g_value_get_object (value));
+	  break;
+	case OHM_FACT_STORE_SIMPLE_VIEW_TRANSPARENT:
+	  ohm_fact_store_simple_view_set_transparent (self, g_value_get_boolean (value));
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -2048,6 +2128,11 @@ static void ohm_fact_store_simple_view_class_init (OhmFactStoreSimpleViewClass *
 	g_object_class_install_property (G_OBJECT_CLASS (klass), OHM_FACT_STORE_SIMPLE_VIEW_FACT_STORE,
 					 g_param_spec_object ("fact-store", "fact-store", "fact-store", OHM_TYPE_FACT_STORE,
 							      G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
+
+	g_object_class_install_property (G_OBJECT_CLASS (klass), OHM_FACT_STORE_SIMPLE_VIEW_TRANSPARENT,
+					 g_param_spec_boolean ("transparent", "transparent", "transparent", FALSE,
+							      G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
+
 
 	g_signal_new ("updated", OHM_FACT_STORE_TYPE_SIMPLE_VIEW, G_SIGNAL_RUN_LAST, 0, NULL, NULL, g_cclosure_marshal_VOID__OBJECT, G_TYPE_NONE, 1, OHM_FACT_STORE_TYPE_CHANGE_SET);
 }
@@ -2211,14 +2296,22 @@ GType ohm_fact_store_transaction_get_type (void) {
 }
 
 
-static OhmFactStoreView* ohm_fact_store_view_new (OhmFactStore* fact_store, GObject* listener) {
+static OhmFactStoreView* ohm_fact_store_view_new (OhmFactStore* fact_store, GObject* listener, gboolean transparent) {
 	g_return_val_if_fail (OHM_IS_FACT_STORE (fact_store), NULL);
 	g_return_val_if_fail (listener == NULL || G_IS_OBJECT (listener), NULL);
 
 	return g_object_new (OHM_FACT_STORE_TYPE_VIEW,
 			     "fact-store", fact_store,
 			     "listener", listener,
+			     "transparent", transparent,
 			     NULL);
+}
+
+
+static gboolean ohm_fact_store_view_is_transparent(OhmFactStoreView *self) {
+	g_return_val_if_fail (OHM_FACT_STORE_IS_VIEW (self), FALSE);
+	
+	return ohm_fact_store_simple_view_get_transparent(OHM_FACT_STORE_SIMPLE_VIEW (self));
 }
 
 
@@ -2457,6 +2550,7 @@ static void ohm_fact_store_dispose (GObject * obj) {
 
 	/* FIXME: interest.foreach ((DataForeachFunc)_delete_func);*/
 	g_datalist_clear (&self->priv->interest);
+	g_datalist_clear (&self->priv->transp_interest);
 
 	if (self->priv->known_facts_qname != NULL) {
 	  g_slist_free (self->priv->known_facts_qname);

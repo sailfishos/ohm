@@ -395,6 +395,7 @@ void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean discard);
 OhmFactStore* ohm_fact_store_new (void);
 char* ohm_fact_store_to_string (OhmFactStore* self);
 OhmFactStoreView* ohm_fact_store_new_view (OhmFactStore* self, GObject* listener);
+OhmFactStoreView* ohm_fact_store_new_transparent_view (OhmFactStore* self, GObject* listener);
 void ohm_fact_store_change_set_add_match (OhmFactStoreChangeSet* self, OhmPatternMatch* match);
 void ohm_fact_store_change_set_remove_match (OhmFactStoreChangeSet* self, OhmPatternMatch* match);
 void ohm_fact_store_change_set_reset (OhmFactStoreChangeSet* self);

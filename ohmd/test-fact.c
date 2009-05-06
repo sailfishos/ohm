@@ -762,6 +762,7 @@ static void test_fact_store_transaction_push_and_commit (void) {
 	OhmFactStore* fs;
 	OhmFactStoreView* v;
 	OhmFactStoreView* v2;
+	OhmFactStoreView* tpv;
 	OhmPattern* _tmp0;
 	OhmPattern* _tmp1;
 	OhmFact* fact;
@@ -769,12 +770,17 @@ static void test_fact_store_transaction_push_and_commit (void) {
 	fs = ohm_fact_store_new ();
 	v = ohm_fact_store_new_view (fs, NULL);
 	v2 = ohm_fact_store_new_view (fs, NULL);
+	tpv = ohm_fact_store_new_transparent_view (fs, NULL);
 	_tmp0 = NULL;
 	ohm_fact_store_view_add (v, OHM_STRUCTURE ((_tmp0 = ohm_pattern_new ("org.test.match"))));
 	(_tmp0 == NULL ? NULL : (_tmp0 = (g_object_unref (_tmp0), NULL)));
 	_tmp1 = NULL;
 	ohm_fact_store_view_add (v2, OHM_STRUCTURE ((_tmp1 = ohm_pattern_new ("org.freedesktop.hello"))));
 	(_tmp1 == NULL ? NULL : (_tmp1 = (g_object_unref (_tmp1), NULL)));
+	_tmp1 = NULL;
+	ohm_fact_store_view_add (tpv, OHM_STRUCTURE ((_tmp1 = ohm_pattern_new ("org.test.match"))));
+	(_tmp1 == NULL ? NULL : (_tmp1 = (g_object_unref (_tmp1), NULL)));
+	_tmp1 = NULL;
 	/* insertion*/
 	ohm_fact_store_transaction_push (fs);
 	{
@@ -783,6 +789,7 @@ static void test_fact_store_transaction_push_and_commit (void) {
 		ohm_fact_store_insert (fs, fact);
 		g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 1);
 		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 0);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 1);
 	}
 	ohm_fact_store_transaction_pop (fs, FALSE);
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 1);
@@ -790,20 +797,24 @@ static void test_fact_store_transaction_push_and_commit (void) {
 	g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 1);
 	ohm_fact_set (fact, "field", ohm_value_from_int (43));
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 2);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 2);
 	ohm_fact_store_transaction_push (fs);
 	{
 		ohm_fact_store_remove (fs, fact);
 		g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 0);
 		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 2);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 3);
 	}
 	ohm_fact_store_transaction_pop (fs, FALSE);
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 3);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 3);
 	g_assert (g_slist_length (ohm_fact_store_get_facts_by_name (fs, "org.test.match")) == 0);
 	/* update*/
 	fact = ohm_fact_new ("org.test.match");
 	ohm_fact_set (fact, "field", ohm_value_from_int (41));
 	ohm_fact_store_insert (fs, fact);
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 4);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 4);
 	ohm_fact_store_transaction_push (fs);
 	{
 		GValue* val;
@@ -813,9 +824,11 @@ static void test_fact_store_transaction_push_and_commit (void) {
 		val = ((GValue*) ohm_fact_get (fact, "field"));
 		g_assert (g_value_get_int (val) == 42);
 		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 4);
+		g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 5);
 	}
 	ohm_fact_store_transaction_pop (fs, FALSE);
 	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (v)->change_set)) == 5);
+	g_assert (g_slist_length (ohm_fact_store_change_set_get_matches (OHM_FACT_STORE_SIMPLE_VIEW (tpv)->change_set)) == 5);
 	val = ((GValue*) ohm_fact_get (fact, "field"));
 	g_assert (g_value_get_int (val) == 42);
 	(fs == NULL ? NULL : (fs = (g_object_unref (fs), NULL)));
