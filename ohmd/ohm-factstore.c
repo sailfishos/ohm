@@ -1266,6 +1266,31 @@ static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, Ohm
 }
 
 
+static void _ohm_fact_store_transaction_update_views(OhmFactStore *self, OhmFactStoreTransaction *t) {
+	GSList* it;
+	OhmFactStoreTransactionCOW* cow;
+	
+	t->modifications = g_slist_reverse(t->modifications);
+	for (it = t->modifications; it != NULL; it = it->next) {
+		cow = (OhmFactStoreTransactionCOW*) it->data;
+
+		switch (cow->event) {
+		case OHM_FACT_STORE_EVENT_ADDED:
+			_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL);
+			break;
+		case OHM_FACT_STORE_EVENT_REMOVED:
+			_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
+			break;
+		case OHM_FACT_STORE_EVENT_UPDATED:
+			_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_UPDATED, cow->field,
+						     ohm_structure_qget(OHM_STRUCTURE(cow->fact), cow->field));
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static void _ohm_fact_store_update_transparent_views (OhmFactStore* self, OhmFact* fact, OhmFactStoreEvent event, GQuark field, GValue *value) {
 	GSList* patterns;
 	GSList* p_collection;
@@ -1634,28 +1659,7 @@ void ohm_fact_store_transaction_pop (OhmFactStore* self, gboolean rollback) {
 			}
 		}
 		else {
-			cow_collection = trans->modifications;
-			for (cow_it = cow_collection; cow_it != NULL; cow_it = cow_it->next) {
-				OhmFactStoreTransactionCOW* cow;
-
-				cow = (OhmFactStoreTransactionCOW*) cow_it->data;
-
-				switch (cow->event) {
-				case OHM_FACT_STORE_EVENT_ADDED:
-					_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_ADDED, 0, NULL);
-					break;
-				case OHM_FACT_STORE_EVENT_REMOVED:
-					_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
-					break;
-				case OHM_FACT_STORE_EVENT_UPDATED:
-					/* XXX TODO Ideally we should store the fact field and value for
-					   emitting the full-blown "updated" factstore gobject signal */
-					_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_UPDATED, 0, NULL);
-					break;
-				default:
-					break;
-				}
-			}
+			_ohm_fact_store_transaction_update_views(self, trans);
 		}
 	}
 	
