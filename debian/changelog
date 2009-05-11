@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo19) unstable; urgency=low
+
+  * Update views/emit signals only once the last transaction is committed.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Mon, 11 May 2009 15:56:22 +0300
+
 ohm (0.1.2-0maemo18) unstable; urgency=low
 
   * Desperate workaround for exit-path crash (Fixes: NB#111031).
