@@ -1266,13 +1266,18 @@ static void _ohm_fact_store_update_views (OhmFactStore* self, OhmFact* fact, Ohm
 }
 
 
+#undef SUPPRESS_DUPLICATES
 static void _ohm_fact_store_transaction_update_views(OhmFactStore *self, OhmFactStoreTransaction *t) {
-	GSList* it;
-	OhmFactStoreTransactionCOW* cow;
-	
+	GSList *it;
+	OhmFactStoreTransactionCOW *cow;
+#ifdef SUPPRESS_DUPLICATES
+	GSList *l;
+	OhmFactStoreTransactionCOW *recent, *found;
+#endif	
+
 	t->modifications = g_slist_reverse(t->modifications);
 	for (it = t->modifications; it != NULL; it = it->next) {
-		cow = (OhmFactStoreTransactionCOW*) it->data;
+		cow = (OhmFactStoreTransactionCOW *) it->data;
 
 		switch (cow->event) {
 		case OHM_FACT_STORE_EVENT_ADDED:
@@ -1282,8 +1287,18 @@ static void _ohm_fact_store_transaction_update_views(OhmFactStore *self, OhmFact
 			_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_REMOVED, 0, NULL);
 			break;
 		case OHM_FACT_STORE_EVENT_UPDATED:
-			_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_UPDATED, cow->field,
-						     ohm_structure_qget(OHM_STRUCTURE(cow->fact), cow->field));
+#ifdef SUPPRESS_DUPLICATES
+			found = NULL;
+			for (l = it->next; l != NULL; l = l->next) {
+				recent = (OhmFactStoreTransactionCOW *)l->data;
+				if (recent->fact == cow->fact && recent->field == cow->field)
+					found = recent;
+			}
+			
+			if (found == NULL)
+#endif
+				_ohm_fact_store_update_views(self, cow->fact, OHM_FACT_STORE_EVENT_UPDATED, cow->field,
+							     ohm_structure_qget(OHM_STRUCTURE(cow->fact), cow->field));
 			break;
 		default:
 			break;
