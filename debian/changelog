@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo20) unstable; urgency=low
+
+  * Start/stop ohmd also in ACT_DEAD state to send initial policy decision to enforcement points.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Wed, 27 May 2009 15:06:25 +0300
+
 ohm (0.1.2-0maemo19) unstable; urgency=low
 
   * Update views/emit signals only once the last transaction is committed.
