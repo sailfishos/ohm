@@ -2,6 +2,9 @@ author "Ismo Puustinen"
 description "This init script starts the OHM daemon"
 
 start on started dbus
+start on started dbus-actdead
+                             
+stop on stopping dbus-actdead
 stop on stopping dbus
 
 console output
