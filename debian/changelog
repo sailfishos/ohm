@@ -1,3 +1,10 @@
+ohm (0.1.2-0maemo21) unstable; urgency=low
+
+  * Treat command line parsing errors fatal.
+  * Added command line option to mlock memory after initialization.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Fri, 10 Jul 2009 01:24:03 +0300
+
 ohm (0.1.2-0maemo20) unstable; urgency=low
 
   * Start/stop ohmd also in ACT_DEAD state to send initial policy decision to enforcement points.
