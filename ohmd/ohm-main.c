@@ -40,8 +40,15 @@
 #include "ohm/ohm-dbus.h"
 #include "ohm/ohm-plugin-log.h"
 
+#if _POSIX_MEMLOCK > 0
+#  include <errno.h>
+#  include <string.h>
+#  include <sys/mman.h>
+#endif
+
 static GMainLoop *loop;
 static int        verbosity;
+static int        memlock;
 
 /**
  * ohm_object_register:
@@ -166,6 +173,32 @@ gboolean parse_verbosity(const gchar *option_name, const gchar *value,
 }
 
 
+#if _POSIX_MEMLOCK > 0
+static gboolean parse_memlock(const gchar *option_name, const gchar *value,
+			      gpointer data, GError **error)
+{
+	if (value == NULL)
+		memlock = MCL_CURRENT;
+	else if (!strcmp(value, "none"))
+		memlock = 0;
+	else if (!strcmp(value, "current"))
+		memlock = MCL_CURRENT;
+	else if (!strcmp(value, "future"))
+		memlock = MCL_FUTURE;
+	else if (!strcmp(value, "all"))
+		memlock = MCL_CURRENT | MCL_FUTURE;
+	else {
+		*error = g_error_new(G_OPTION_ERROR,
+				     G_OPTION_ERROR_FAILED,
+				     "invalid mlock flag \"%s\"", value);
+		return FALSE;
+	}
+  
+	return TRUE;
+}
+#endif
+
+
 int ohm_verbosity(void)
 {
 	return verbosity;
@@ -200,6 +233,11 @@ main (int argc, char *argv[])
 		  "Make all warnings fatal", NULL },
 		{ "g-fatal-critical", 0, 0, G_OPTION_ARG_NONE, &g_fatal_critical,
 		  "Make all critical warnings fatal", NULL },
+#if _POSIX_MEMLOCK > 0
+		{ "mlock", 'l', G_OPTION_FLAG_OPTIONAL_ARG,
+		  G_OPTION_ARG_CALLBACK, parse_memlock,
+		  "Lock process memory (none, current, future, all)", NULL },
+#endif
 		{ NULL}
 	};
 
@@ -265,6 +303,16 @@ main (int argc, char *argv[])
 
 	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
+
+#if _POSIX_MEMLOCK > 0
+	if (memlock) {
+		if (mlockall(memlock) != 0)
+	  		OHM_ERROR("ohmd: Failed to lock address space (%s).",
+				  strerror(errno));
+		else
+	  		OHM_INFO("ohmd: Address space successfully locked.");
+	}
+#endif
 
 	/* Only timeout and close the mainloop if we have specified it
 	 * on the command line */
