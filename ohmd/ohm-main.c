@@ -22,6 +22,7 @@
 #  include <config.h>
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -251,7 +252,13 @@ main (int argc, char *argv[])
 #else
 	g_option_context_add_main_entries (context, entries, NULL);
 #endif
-	g_option_context_parse (context, &argc, &argv, &error);
+	
+	if (!g_option_context_parse (context, &argc, &argv, &error)) {
+		g_critical("Failed to parse the command line.");
+		fprintf(stderr, "Failed to parse the command line.\n");
+		exit(1);
+	}
+
 	g_option_context_free (context);
 
 	if (g_fatal_warnings || g_fatal_critical)
