@@ -116,50 +116,51 @@ struct _OhmPluginDesc {
 #define OHM_PLUGIN_PREVENTS(...) \
 	G_MODULE_EXPORT const gchar *ohm_plugin_prevents[] = {__VA_ARGS__,NULL}
 
+#define OHM_VAR(prefix, var) prefix##var
 
-#define OHM_EXPORTABLE(return_type, name, arguments)		 \
-  static const char *name##_SIGNATURE = #return_type #arguments; \
+#define OHM_EXPORTABLE(return_type, name, arguments)			 \
+  static const char *OHM_VAR(name,_SIGNATURE) = #return_type #arguments; \
   static return_type name arguments
 
-#define OHM_EXPORT(name, public_name)		\
-  { public_name, name##_SIGNATURE, name, NULL }
+#define OHM_EXPORT(name, public_name)			\
+  { public_name, OHM_VAR(name,_SIGNATURE), name, NULL }
 
 #define OHM_EXPORT_VAR "_plugin_exports"
-#define OHM_PLUGIN_PROVIDES_METHODS(plugin, n, ...)			\
-  G_MODULE_EXPORT ohm_method_t plugin##_plugin_exports[(n)+1] = {	\
-    [0 ... (n)] = OHM_PLUGIN_METHODS_END };				\
-  static void __attribute__((constructor)) plugin_init_exports(void)	\
-  {									\
-    G_MODULE_EXPORT ohm_method_t exports[] = {				\
-      __VA_ARGS__,							\
-      OHM_PLUGIN_METHODS_END						\
-    };									\
-    int i;								\
-    for (i = 0; exports[i].name; i++)					\
-      plugin##_plugin_exports[i] = exports[i];				\
+#define OHM_PLUGIN_PROVIDES_METHODS(plugin, n, ...)			  \
+  G_MODULE_EXPORT ohm_method_t OHM_VAR(plugin,_plugin_exports)[(n)+1] = { \
+    [0 ... (n)] = OHM_PLUGIN_METHODS_END };				  \
+  static void __attribute__((constructor)) plugin_init_exports(void)	  \
+  {									  \
+    G_MODULE_EXPORT ohm_method_t exports[] = {				  \
+      __VA_ARGS__,							  \
+      OHM_PLUGIN_METHODS_END						  \
+    };									  \
+    int i;								  \
+    for (i = 0; exports[i].name; i++)					  \
+      OHM_VAR(plugin,_plugin_exports)[i] = exports[i];			  \
   }
 
 
-#define OHM_IMPORTABLE(return_type, name, arguments)			\
-    static const char *name##_SIGNATURE = #return_type #arguments;	\
-    static return_type (*name) arguments
+#define OHM_IMPORTABLE(return_type, name, arguments)			 \
+  static const char *OHM_VAR(name,_SIGNATURE) = #return_type #arguments; \
+  static return_type (*name) arguments
 
-#define OHM_IMPORT(public_name, name)			\
-  { public_name, name##_SIGNATURE, (void *)&name, NULL }
+#define OHM_IMPORT(public_name, name)					\
+  { public_name, OHM_VAR(name,_SIGNATURE), (void *)&name, NULL }
     
 #define OHM_IMPORT_VAR "_plugin_imports"
-#define OHM_PLUGIN_REQUIRES_METHODS(plugin, n, ...)			\
-  G_MODULE_EXPORT ohm_method_t plugin##_plugin_imports[(n)+1] = {	\
-    [0 ... (n)] = OHM_PLUGIN_METHODS_END };				\
-  static void __attribute__((constructor)) plugin_init_imports(void)	\
-  {									\
-    G_MODULE_EXPORT ohm_method_t imports[] = {				\
-      __VA_ARGS__,							\
-      OHM_PLUGIN_METHODS_END						\
-    };									\
-    int i;								\
-    for (i = 0; imports[i].name; i++)					\
-      plugin##_plugin_imports[i] = imports[i];				\
+#define OHM_PLUGIN_REQUIRES_METHODS(plugin, n, ...)			  \
+  G_MODULE_EXPORT ohm_method_t OHM_VAR(plugin,_plugin_imports)[(n)+1] = { \
+    [0 ... (n)] = OHM_PLUGIN_METHODS_END };				  \
+  static void __attribute__((constructor)) plugin_init_imports(void)	  \
+  {									  \
+    G_MODULE_EXPORT ohm_method_t imports[] = {				  \
+      __VA_ARGS__,							  \
+      OHM_PLUGIN_METHODS_END						  \
+    };									  \
+    int i;								  \
+    for (i = 0; imports[i].name; i++)					  \
+      OHM_VAR(plugin,_plugin_imports)[i] = imports[i];			  \
   }
 
 #define OHM_PLUGIN_DBUS_METHODS(...)				  \
