@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo22) unstable; urgency=low
+
+  * Changed plugin method importing/exporting macros to be more macro-safe.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Sat, 18 Jul 2009 19:27:37 +0300
+
 ohm (0.1.2-0maemo21) unstable; urgency=low
 
   * Treat command line parsing errors fatal.
