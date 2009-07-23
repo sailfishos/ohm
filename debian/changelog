@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo23) unstable; urgency=low
+
+  * OHM packaging fixes (Fixes: NB#129675).
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Thu, 23 Jul 2009 19:32:57 +0300
+
 ohm (0.1.2-0maemo22) unstable; urgency=low
 
   * Changed plugin method importing/exporting macros to be more macro-safe.
