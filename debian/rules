@@ -41,11 +41,13 @@ clean::
 	-rm -rf debian/stamp-autogen
 
 # do not include docs and changelogs in these packages
+DEB_INSTALL_DOCS_ohm := --no-act
+DEB_INSTALL_CHANGELOGS_ohm := --no-act
+DEB_INSTALL_DOCS_libohm-plugin-core0 := --no-act
+DEB_INSTALL_CHANGELOGS_libohm-plugin-core0 := --no-act
 DEB_INSTALL_DOCS_ohm-dev := --no-act
 DEB_INSTALL_CHANGELOGS_ohm-dev := --no-act
-DEB_INSTALL_DOCS_ohm-plugins := --no-act
-DEB_INSTALL_CHANGELOGS_ohm-plugins := --no-act
 DEB_INSTALL_DOCS_ohm-utils := --no-act
 DEB_INSTALL_CHANGELOGS_ohm-utils := --no-act
-
-
+DEB_INSTALL_DOCS_ohm-plugins-legacy := --no-act
+DEB_INSTALL_CHANGELOGS_ohm-plugins-legacy := --no-act

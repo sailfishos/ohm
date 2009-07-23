@@ -7,7 +7,7 @@ Build-Depends: cdbs, debhelper (>= 4.1.0), flex, libhal-dev, libgtk2.0-dev, libt
 
 Package: ohm
 Architecture: any
-Depends: ohm-plugin-core0, ${shlibs:Depends}
+Depends: libohm-plugin-core0, ${shlibs:Depends}
 Recommends: osso-af-startup
 XB-GIT-ID: ${Git-Id}
 Description: Open Hardware Manager with Nokia policy add-ons.
@@ -15,9 +15,11 @@ Description: Open Hardware Manager with Nokia policy add-ons.
  .
  Open Hardware Manager with Nokia add-ons.
 
-Package: ohm-plugin-core0
+Package: libohm-plugin-core0
 Architecture: any
 Depends: ${shlibs:Depends}
+Replaces: ohm-plugin-core0
+Provides: ohm-plugin-core0
 Section: utils
 XB-GIT-ID: ${Git-Id}
 Description: Common OHM libraries.
@@ -27,7 +29,7 @@ Description: Common OHM libraries.
 
 Package: ohm-dev
 Architecture: any
-Depends: ohm-plugin-core0, ${shlibs:Depends}
+Depends: libohm-plugin-core0, ${shlibs:Depends}
 Section: libdevel
 XB-GIT-ID: ${Git-Id}
 Description: Files necessary for OHM plugin development.
