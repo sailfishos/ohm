@@ -67,8 +67,9 @@ ohmd_SOURCES = 							\
 	ohm-dbus.c						\
 	ohm-main.c
 
-ohmd_LDADD = libohmplugin.la libohmfact.la                      \
-        $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
+ohmd_LDADD = libohmplugin.la libohmfact.la                       \
+        $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS) \
+	$(LIBTRACE_LIBS)
 
 BUILT_SOURCES =							\
 	ohm-marshal.c						\

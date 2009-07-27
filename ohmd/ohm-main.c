@@ -34,6 +34,8 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
+#include <simple-trace/simple-trace.h>
+
 #include "ohm-debug.h"
 #include "ohm-common.h"
 #include "ohm-manager.h"
@@ -47,9 +49,13 @@
 #  include <sys/mman.h>
 #endif
 
+#define MAX_TRACE_FLAGS 64
+
 static GMainLoop *loop;
 static int        verbosity;
 static int        memlock;
+static char      *trace_flags[MAX_TRACE_FLAGS];
+static int        num_flags = 0;
 
 /**
  * ohm_object_register:
@@ -200,6 +206,42 @@ static gboolean parse_memlock(const gchar *option_name, const gchar *value,
 #endif
 
 
+static gboolean parse_trace(const gchar *option_name, const gchar *value,
+			    gpointer data, GError **error)
+{
+  	if (num_flags < MAX_TRACE_FLAGS)
+		if (value && *value)
+			trace_flags[num_flags++] = strdup(value);
+	
+	return TRUE;
+}
+
+
+static void activate_trace(void)
+{
+	int  i;
+	char help[32*1024];
+
+	if (!num_flags)
+		return;
+
+	for (i = 0; i < num_flags; i++) {
+		if (!strcmp(trace_flags[i], "help")) {
+			printf("The possible plugin trace flags are:\n");
+			trace_show(TRACE_DEFAULT_NAME, help, sizeof(help),
+				   "  %-25.25F %-30.30d [%-3.3s]");
+			exit(0);
+		}
+		else {
+			trace_configure(trace_flags[i]);
+			free(trace_flags[i]);
+		}
+	}
+
+	trace_context_enable(TRACE_DEFAULT_CONTEXT);
+}
+
+
 int ohm_verbosity(void)
 {
 	return verbosity;
@@ -220,7 +262,7 @@ main (int argc, char *argv[])
 	OhmManager *manager = NULL;
 	GError *error = NULL;
 	GOptionContext *context;
-
+	
 	const GOptionEntry entries[] = {
 		{ "no-daemon", '\0', 0, G_OPTION_ARG_NONE, &no_daemon,
 		  "Do not daemonize", NULL },
@@ -239,6 +281,9 @@ main (int argc, char *argv[])
 		  G_OPTION_ARG_CALLBACK, parse_memlock,
 		  "Lock process memory (none, current, future, all)", NULL },
 #endif
+		{ "trace", 't', G_OPTION_FLAG_OPTIONAL_ARG,
+		  G_OPTION_ARG_CALLBACK, parse_trace,
+		  "Set plugin trace flags", NULL },
 		{ NULL}
 	};
 
@@ -307,6 +352,8 @@ main (int argc, char *argv[])
 	}
 
 	signal (SIGINT, sighandler);
+
+	activate_trace();
 
 	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
