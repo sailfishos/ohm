@@ -749,6 +749,7 @@ ohm_module_resolve_methods(OhmModule *module)
       if ((m = g_hash_table_lookup(symtable, key)) == NULL) {
 	g_warning("Could not resolve method %s.", key);
 	failed = TRUE;
+	continue;
       }
       
       if (!ohm_check_method_signature(method->signature, m->signature)) {
