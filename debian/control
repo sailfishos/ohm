@@ -18,9 +18,9 @@ Description: Open Hardware Manager with Nokia policy add-ons.
 Package: libohm-plugin-core0
 Architecture: any
 Depends: ${shlibs:Depends}
-Replaces: ohm-plugin-core0
 Provides: ohm-plugin-core0
-Obsoletes: ohm-plugin-core0
+Conflicts: ohm-plugin-core0
+Replaces: ohm-plugin-core0
 Section: utils
 XB-GIT-ID: ${Git-Id}
 Description: Common OHM libraries.
