@@ -10,6 +10,13 @@ stop on stopping dbus
 console output
 
 script 
+	echo "Mounting cgroup fs"
+	test -d /syspart || mkdir /syspart
+	grep -q /syspart /proc/mounts || mount -t cgroup -ofreezer cgroup /syspart
+	test -d /syspart/system       || mkdir /syspart/system
+	test -d /syspart/telephony    || mkdir /syspart/telephony
+	test -d /syspart/applications || mkdir /syspart/applications
+	test -d /syspart/background   || mkdir /syspart/background
         echo "Starting ohmd"
         /usr/sbin/waitdbus system
         export TZ=twilightzone
