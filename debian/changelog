@@ -1,6 +1,8 @@
 ohm (0.1.2-0maemo23) unstable; urgency=low
 
   * OHM packaging fixes (Fixes: NB#129675).
+  * Don't crash on method-resolution failures.
+  * Added support for specifying (plugin) trace flags on the command line.
 
  -- Krisztian Litkey <krisztian.litkey@nokia.com>  Thu, 23 Jul 2009 19:32:57 +0300
 
