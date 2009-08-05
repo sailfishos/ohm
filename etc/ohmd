@@ -13,11 +13,18 @@ script
 	echo "Mounting cgroup fs"
 	test -d /syspart || mkdir /syspart
 	grep -q /syspart /proc/mounts || mount -t cgroup -ofreezer,cpu,memory cgroup /syspart
-	mkdir -p /syspart/system
-	mkdir -p /syspart/telephony
+	mkdir -p /syspart/desktop
 	mkdir -p /syspart/applications
 	mkdir -p /syspart/applications/standby
 	mkdir -p /syspart/applications/standby/background
+	echo -n  50M > /syspart/desktop/memory.limit_in_bytes
+	echo -n 135M > /syspart/applications/memory.limit_in_bytes
+	echo -n  75M > /syspart/applications/standby/memory.limit_in_bytes
+	echo -n  15M > /syspart/applications/standby/background/memory.limit_in_bytes
+	echo -n 4096 > /syspart/desktop/cpu.shares
+	echo -n 2048 > /syspart/applications/cpu.shares
+	echo "Disabling core dumps"
+	echo -n "/nocore/foo" > /proc/sys/kernel/core_pattern
         echo "Starting ohmd"
         /usr/sbin/waitdbus system
         export TZ=twilightzone
