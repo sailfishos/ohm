@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo24) unstable; urgency=low
+
+  * Modified partition layouts for cgroups
+
+ -- Janos Kovacs <janos.f.kovacs@nokia.com>  Fri, 07 Aug 2009 02:32:00 +0300
+
 ohm (0.1.2-0maemo23) unstable; urgency=low
 
   * Don't crash on method-resolution failures.
