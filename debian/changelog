@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo25) unstable; urgency=low
+
+  * Don't disable core dumps globally.
+
+ -- Janos Kovacs <janos.f.kovacs@nokia.com>  Fri, 14 Aug 2009 13:51:01 +0300
+
 ohm (0.1.2-0maemo24) unstable; urgency=low
 
   * Modified partition layouts for cgroups
