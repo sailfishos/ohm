@@ -1,5 +1,6 @@
-ohm (0.1.2-0maemo25) unstable; urgency=low
+ohm (0.1.2-0maemo25cgroup) unstable; urgency=low
 
+  * Don't disable core dumps globally.
   * Partition creation moved to ohm/cgroups plugin
 
  -- Janos Kovacs <janos.f.kovacs@nokia.com>  Fri, 14 Aug 2009 13:00:00 +0300
