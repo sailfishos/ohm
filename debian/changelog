@@ -1,4 +1,4 @@
-ohm (0.1.2-0maemo25cgroup) unstable; urgency=low
+ohm (0.1.2-0maemo26cgroup) unstable; urgency=low
 
   * Don't disable core dumps globally.
   * Partition creation moved to ohm/cgroups plugin
