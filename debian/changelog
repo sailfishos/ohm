@@ -1,8 +1,8 @@
-ohm (0.1.2-0maemo24) unstable; urgency=low
+ohm (0.1.2-0maemo25) unstable; urgency=low
 
-  * Modified partition layouts for cgroups
+  * Partition creation moved to ohm/cgroups plugin
 
- -- Janos Kovacs <janos.f.kovacs@nokia.com>  Fri, 07 Aug 2009 02:32:00 +0300
+ -- Janos Kovacs <janos.f.kovacs@nokia.com>  Fri, 14 Aug 2009 13:00:00 +0300
 
 ohm (0.1.2-0maemo23) unstable; urgency=low
 
