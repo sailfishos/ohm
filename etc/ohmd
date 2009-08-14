@@ -18,7 +18,6 @@ script
 	mkdir -p /syspart/applications/standby
 	mkdir -p /syspart/applications/standby/background
 	echo "Disabling core dumps"
-	echo -n "/nocore/foo" > /proc/sys/kernel/core_pattern
         echo "Starting ohmd"
         /usr/sbin/waitdbus system
         export TZ=twilightzone
