@@ -13,7 +13,7 @@ script
         echo "Starting ohmd"
         /usr/sbin/waitdbus system
         export TZ=twilightzone
-        exec /usr/sbin/ohmd --no-daemon # -l all
+        exec /usr/sbin/ohmd --no-daemon
 end script
 
 respawn
