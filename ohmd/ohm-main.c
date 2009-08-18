@@ -53,7 +53,7 @@
 
 static GMainLoop *loop;
 static int        verbosity;
-static int        memlock;
+static int        memlock = -1;
 static char      *trace_flags[MAX_TRACE_FLAGS];
 static int        num_flags = 0;
 
@@ -359,11 +359,19 @@ main (int argc, char *argv[])
 	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
 
-	
-
-
 #if _POSIX_MEMLOCK > 0
-	if (memlock) {
+	if (memlock == -1) {
+		value = ohm_manager_get_string_option(manager,
+						      "options", "mlock");
+	  
+		if (value && !parse_memlock("mlock", value, NULL, &error)) {
+			OHM_ERROR("ohmd: invalid mlock option \"%s\".", value);
+			g_error_free(error);
+			error = NULL;
+		}
+	}
+	
+	if (memlock > 0) {
 		if (mlockall(memlock) != 0)
 	  		OHM_ERROR("ohmd: Failed to lock address space (%s).",
 				  strerror(errno));
