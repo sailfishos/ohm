@@ -261,6 +261,7 @@ main (int argc, char *argv[])
 	gboolean g_fatal_critical = FALSE;
 	OhmManager *manager = NULL;
 	GError *error = NULL;
+	gchar *value;
 	GOptionContext *context;
 	
 	const GOptionEntry entries[] = {
@@ -357,6 +358,9 @@ main (int argc, char *argv[])
 
 	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
+
+	
+
 
 #if _POSIX_MEMLOCK > 0
 	if (memlock) {

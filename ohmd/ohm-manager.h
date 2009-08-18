@@ -67,6 +67,25 @@ gboolean	 ohm_manager_get_plugins		(OhmManager	*manager,
 							 gchar		***retval,
 							 GError		**error);
 
+
+gboolean         ohm_manager_get_boolean_option         (OhmManager *manager,
+							 const gchar *group,
+							 const gchar *key);
+
+
+gchar *          ohm_manager_get_string_option          (OhmManager *manager,
+							 const gchar *group,
+							 const gchar *key);
+
+gint             ohm_manager_get_integer_option         (OhmManager *manager,
+							 const gchar *group,
+							 const gchar *key);
+
+gdouble          ohm_manager_get_double_option          (OhmManager *manager,
+							 const gchar *group,
+							 const gchar *key);
+
+
 G_END_DECLS
 
 #endif /* __OHM_MANAGER_H */

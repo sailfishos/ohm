@@ -58,6 +58,7 @@ struct OhmManagerPrivate
 	OhmConf			*conf;
 	OhmModule		*module;
 	OhmKeystore		*keystore;
+        GKeyFile                *options;
 };
 
 enum {
@@ -124,6 +125,113 @@ ohm_manager_get_plugins (OhmManager  *manager,
 	return TRUE;
 }
 
+
+static void
+ohm_manager_load_options(OhmManager *manager)
+{
+	char    path[PATH_MAX], *dir;
+	GError *error;
+	
+	if ((dir = getenv("OHM_CONF_DIR")) != NULL)
+		snprintf(path, sizeof(path), "%s%sohmd.ini",
+			 dir, G_DIR_SEPARATOR_S);
+	else
+		snprintf(path, sizeof(path), "%s%s%s%sohmd.ini",
+			 SYSCONFDIR, G_DIR_SEPARATOR_S,
+			 "ohm", G_DIR_SEPARATOR_S);
+	
+	manager->priv->options = g_key_file_new();
+	
+	error = NULL;
+	if (!g_key_file_load_from_file(manager->priv->options, path,
+				       G_KEY_FILE_NONE, &error) && 
+	    error && error->code != G_KEY_FILE_ERROR_NOT_FOUND)
+		g_warning("Failed to load config file \"%s\".", path);
+}
+
+
+static void
+ohm_manager_free_options(OhmManager *manager)
+{
+	if (manager->priv->options != NULL)
+		g_key_file_free(manager->priv->options);
+	
+	manager->priv->options = NULL;
+}
+
+
+/**
+ * ohm_manager_get_boolean_option:
+ */
+gboolean
+ohm_manager_get_boolean_option(OhmManager *manager,
+			       const gchar *group, const gchar *key)
+{
+  	GError *error;
+
+  	if (manager->priv->options == NULL)
+  		return FALSE;
+      
+	error = NULL;
+	return g_key_file_get_boolean(manager->priv->options,
+				      group ? group : "global", key, &error);
+}
+
+
+/**
+ * ohm_manager_get_string_option:
+ */
+gchar *
+ohm_manager_get_string_option(OhmManager *manager,
+			      const gchar *group, const gchar *key)
+{
+  	GError *error;
+
+	if (manager->priv->options == NULL)
+		return NULL;
+      
+	error = NULL;
+	return g_key_file_get_string(manager->priv->options,
+				     group ? group : "global", key, &error);
+}
+
+
+/**
+ * ohm_manager_get_integer_option:
+ */
+gint
+ohm_manager_get_integer_option(OhmManager *manager,
+			       const gchar *group, const gchar *key)
+{
+	GError *error;
+
+	if (manager->priv->options == NULL)
+		return 0;
+      
+	error = NULL;
+	return g_key_file_get_integer(manager->priv->options,
+				      group ? group : "global", key, &error);
+}
+
+
+/**
+ * ohm_manager_get_double_option:
+ */
+gdouble
+ohm_manager_get_double_option(OhmManager *manager,
+			      const gchar *group, const gchar *key)
+{
+	GError *error;
+
+	if (manager->priv->options == NULL)
+		return 0.0;
+      
+	error = NULL;
+	return g_key_file_get_double(manager->priv->options,
+				     group ? group : "global", key, &error);
+}
+
+
 /**
  * ohm_manager_class_init:
  * @klass: The OhmManagerClass
@@ -167,6 +275,8 @@ ohm_manager_init (OhmManager *manager)
 		g_error_free (error);
 	}
 
+	ohm_manager_load_options(manager);
+
 	manager->priv->conf = ohm_conf_new ();
 	manager->priv->module = ohm_module_new ();
 
@@ -200,6 +310,8 @@ ohm_manager_dispose (GObject *object)
 	g_object_unref (manager->priv->module);
 	g_object_unref (manager->priv->keystore);
 	g_object_unref (manager->priv->conf);
+
+	ohm_manager_free_options(manager);
 
 	G_OBJECT_CLASS (ohm_manager_parent_class)->dispose (object);
 }
