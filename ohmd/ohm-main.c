@@ -113,7 +113,8 @@ ohm_object_register (DBusGConnection *connection,
 }
 
 
-void sighandler(int signum)
+void
+sighandler(int signum)
 {
 	if (signum == SIGINT) {
 		g_debug ("Caught SIGINT, exiting");
@@ -122,8 +123,9 @@ void sighandler(int signum)
 }
 
 
-gboolean parse_verbosity(const gchar *option_name, const gchar *value,
-			 gpointer data, GError **error)
+gboolean
+parse_verbosity(const gchar *option_name, const gchar *value,
+		gpointer data, GError **error)
 {
 #define CHECK_ARG(s) (!strncmp(arg, (s), length))
 
@@ -181,8 +183,9 @@ gboolean parse_verbosity(const gchar *option_name, const gchar *value,
 
 
 #if _POSIX_MEMLOCK > 0
-static gboolean parse_memlock(const gchar *option_name, const gchar *value,
-			      gpointer data, GError **error)
+static gboolean
+parse_memlock(const gchar *option_name, const gchar *value,
+	      gpointer data, GError **error)
 {
 	if (value == NULL)
 		memlock = MCL_CURRENT;
@@ -206,7 +209,8 @@ static gboolean parse_memlock(const gchar *option_name, const gchar *value,
 #endif
 
 
-static gboolean parse_trace(const gchar *option_name, const gchar *value,
+static gboolean
+parse_trace(const gchar *option_name, const gchar *value,
 			    gpointer data, GError **error)
 {
   	if (num_flags < MAX_TRACE_FLAGS)
@@ -217,7 +221,8 @@ static gboolean parse_trace(const gchar *option_name, const gchar *value,
 }
 
 
-static void activate_trace(void)
+static void
+activate_trace(void)
 {
 	int  i;
 	char help[32*1024];
@@ -242,10 +247,50 @@ static void activate_trace(void)
 }
 
 
-int ohm_verbosity(void)
+int
+ohm_verbosity(void)
 {
 	return verbosity;
 }
+
+
+#define MAX_ARGS 32
+static char *saved_argv[MAX_ARGS + 1];
+
+static void
+save_args(int argc, char **argv)
+{
+	char exe[64];
+	int  i;
+
+	if (argc > MAX_ARGS)
+	  argc = MAX_ARGS;
+
+	sprintf(exe, "/proc/%u/exe", getpid());
+	saved_argv[0] = strdup(argv[0]);
+
+	for (i = 1; i < argc; i++)
+		saved_argv[i] = strdup(argv[i]);
+	saved_argv[i] = NULL;
+}
+
+
+void
+ohm_restart(int delay)
+{
+  	int fd;
+
+	OHM_INFO("ohmd: re-execing after %d seconds", delay);
+	sleep(delay);
+	
+	for (fd = 0; fd < 4096; fd++)
+		close(fd);
+
+	sleep(1);
+	execv(saved_argv[0], saved_argv);
+}
+
+
 
 
 /**
@@ -289,6 +334,8 @@ main (int argc, char *argv[])
 	};
 
 	setenv("TZ", "foo", 0);  /* my lips are sealed about this... */
+
+	save_args(argc, argv);
 
 	context = g_option_context_new (OHM_NAME);
 #ifdef USE_GI18N

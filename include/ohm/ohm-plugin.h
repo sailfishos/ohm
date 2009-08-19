@@ -233,6 +233,9 @@ DBusConnection *ohm_plugin_dbus_get_connection(void);
 gboolean ohm_module_find_method(char *name, char **sigptr, void **methptr);
 
 
+/* used by plugins to request restarting ohmd within the same processs */
+void ohm_restart(int delay);
+
 G_END_DECLS
 
 #endif /* __OHM_PLUGIN_H */
