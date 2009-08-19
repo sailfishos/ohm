@@ -283,7 +283,7 @@ ohm_restart(int delay)
 	OHM_INFO("ohmd: re-execing after %d seconds", delay);
 	sleep(delay);
 	
-	for (fd = 0; fd < 4096; fd++)
+	for (fd = 3; fd < 4096; fd++)
 		close(fd);
 
 	sleep(1);
