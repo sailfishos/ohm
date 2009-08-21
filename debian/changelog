@@ -1,6 +1,6 @@
 ohm (0.1.2-0maemo27) unstable; urgency=low
 
-  * Don't close stdin, stdout and stderr upon re-execing.
+  * Don't close stdin, stdout and stderr upon re-execing (Fixes: NB#134319).
 
  -- Krisztian Litkey <krisztian.litkey@nokia.com>  Wed, 19 Aug 2009 21:45:43 +0300
 
