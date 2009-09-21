@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo28) unstable; urgency=low
+
+  * Start after HAL is started
+
+ -- Janos Kovacs <janos.f.kovacs@nokia.com>  Mon, 21 Aug 2009 10:45:00 +0300
+	
 ohm (0.1.2-0maemo27) unstable; urgency=low
 
   * Don't close stdin, stdout and stderr upon re-execing (Fixes: NB#134319).
