@@ -1,9 +1,15 @@
+ohm (0.1.2-0maemo29) unstable; urgency=low
+
+  * Generate separate main, utils, and plugins-legacy debug packages (using CDBS black magic).
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Mon, 05 Oct 2009 13:17:42 +0300
+
 ohm (0.1.2-0maemo28) unstable; urgency=low
 
   * Start after HAL is started
 
  -- Janos Kovacs <janos.f.kovacs@nokia.com>  Mon, 21 Aug 2009 10:45:00 +0300
-	
+
 ohm (0.1.2-0maemo27) unstable; urgency=low
 
   * Don't close stdin, stdout and stderr upon re-execing (Fixes: NB#134319).
