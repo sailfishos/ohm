@@ -66,3 +66,21 @@ XB-GIT-ID: ${Git-Id}
 Description: Debug symbols for OHM.
  Debug symbols for OHM.
 
+Package: ohm-utils-dbg
+Priority: extra
+Section: utils
+Architecture: any
+Depends: ohm-utils (= ${binary:Version})
+XB-GIT-ID: ${Git-Id}
+Description: Debug symbols for OHM utils.
+ Debug symbols for OHM utils.
+
+Package: ohm-plugins-legacy-dbg
+Priority: extra
+Section: utils
+Architecture: any
+Depends: ohm-plugins-legacy (= ${binary:Version})
+XB-GIT-ID: ${Git-Id}
+Description: Debug symbols for OHM legacy plugins.
+ Debug symbols for OHM legacy plugins.
+
