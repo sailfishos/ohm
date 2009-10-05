@@ -1,6 +1,6 @@
 ohm (0.1.2-0maemo29) unstable; urgency=low
 
-  * Generate separate main, utils, and plugins-legacy debug packages (using CDBS black magic).
+  * Generate separate main, utils, and plugins-legacy debug packages using CDBS black magic (Fixes: NB141574).
 
  -- Krisztian Litkey <krisztian.litkey@nokia.com>  Mon, 05 Oct 2009 13:17:42 +0300
 
