@@ -283,6 +283,88 @@ ohm_module_add_all_plugins (OhmModule *module)
 
 
 
+static gint
+has_name(gconstpointer p, gconstpointer n)
+{
+        OhmPlugin *plugin = (OhmPlugin *)p;
+        char      *name   = (char *)n;
+
+        return strcmp(ohm_plugin_get_name(plugin), name);
+}
+
+
+static gboolean
+ohm_module_reorder_plugins(OhmModule *module)
+{
+        OhmPlugin     *plugin;
+        ohm_method_t  *method;
+        GSList        *ordered, *l;
+        const char   **requires;
+        gboolean       success;
+        
+
+        /*
+         * Notes:
+         *   Try to reorganize plugins so that all plugins importing methods
+         *   are initialized after plugins that provide/export those methods.
+         *
+         *   We do _not_ perform a full topological sort based on both explicit
+         *   and method-based dependency. Instead we simply go through the plugin
+         *   list readily sorted by explicit dependency and make sure all
+         *   method dependecies are fullfilled. Finally we go through the
+         *   reordered list and verify that explicit dependencies are not
+         *   violated.
+         */
+        success = TRUE;
+        ordered = NULL;
+        for (l = module->priv->plugins; l != NULL; l = l->next) {
+                plugin = (OhmPlugin *)l->data;
+
+                /* skip if plugin already there */
+                if (g_slist_find(ordered, plugin) != NULL)
+                        continue;
+
+                for (method = ohm_plugin_imports(plugin); method && method->ptr; method++) {
+                        /* add exporter if not there, skip otherwise */
+                        if (g_slist_find(ordered, method->plugin) != NULL)
+                                continue;
+                        else {
+                                ohm_debug("going to initialize plugin %s before %s because of method dependency",
+                                          ohm_plugin_get_name(method->plugin),
+                                          ohm_plugin_get_name(plugin));
+                                ordered = g_slist_append(ordered, method->plugin);
+                        }
+                }
+                
+                ordered = g_slist_append(ordered, plugin);
+        }
+        
+        
+        /* check whether any explicit plugin dependencies are violated */
+        for (l = module->priv->plugins; l != NULL; l = l->next) {
+                plugin = (OhmPlugin *)l->data;
+                for (requires = plugin->requires; requires && *requires; requires++) {
+                        if (g_slist_find_custom(l->next, *requires, has_name) != NULL) {
+                                g_warning("explicit dependency of plugin %s on %s violated",
+                                          ohm_plugin_get_name(plugin), *requires);
+                                success = FALSE;
+                        }
+                }
+        }
+        
+        g_slist_free(module->priv->plugins);
+        module->priv->plugins = ordered;
+        
+        ohm_debug("plugin initialization order:");
+        for (l = module->priv->plugins; l != NULL; l = l->next) {
+                plugin = (OhmPlugin *)l->data;
+                ohm_debug("  plugin %s", ohm_plugin_get_name(plugin));
+        }
+
+        return success;
+}
+
+
 static gchar **
 discover_plugins(OhmModule *module, gsize *nplugin)
 {
@@ -1009,6 +1091,11 @@ ohm_module_init (OhmModule *module)
 				 name, error->message);
 		}
 	}
+
+
+	/* try to reorder plugins to initialize method importees before importers */
+	ohm_module_reorder_plugins(module);
+
 
 	ohm_conf_set_initializing (module->priv->conf, TRUE);
 	/* initialize each plugin */
