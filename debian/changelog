@@ -1,3 +1,9 @@
+ohm (0.1.2-0maemo30) unstable; urgency=low
+
+  * Honour implicit plugin dependencies (ie. method import dependencies).
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Tue, 13 Oct 2009 19:21:55 +0300
+
 ohm (0.1.2-0maemo29) unstable; urgency=low
 
   * Generate separate main, utils, and plugins-legacy debug packages using CDBS black magic (Fixes: NB141574).
