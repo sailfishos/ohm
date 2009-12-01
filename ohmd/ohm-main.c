@@ -47,7 +47,15 @@
 #  include <errno.h>
 #  include <string.h>
 #  include <sys/mman.h>
+
+#  define MCL_DATA (MCL_FUTURE << 8)                    /* kludgish at best */
 #endif
+
+#if HAVE_MLOCKNICE_H
+#  include <mlocknice.h>
+#endif
+
+
 
 #define MAX_TRACE_FLAGS 64
 
@@ -197,16 +205,75 @@ parse_memlock(const gchar *option_name, const gchar *value,
 		memlock = MCL_FUTURE;
 	else if (!strcmp(value, "all"))
 		memlock = MCL_CURRENT | MCL_FUTURE;
+	else if (!strcmp(value, "data"))
+	  	memlock = MCL_DATA;
+	else if (!strcmp(value, "data,future") ||
+		 !strcmp(value, "future,data"))
+		memlock = MCL_FUTURE | MCL_DATA;
+	else if (!strcmp(value, "data,current") ||
+		 !strcmp(value, "current,data"))
+		memlock = MCL_CURRENT | MCL_DATA;
 	else {
 		*error = g_error_new(G_OPTION_ERROR,
 				     G_OPTION_ERROR_FAILED,
 				     "invalid mlock flag \"%s\"", value);
+		memlock = 0;
 		return FALSE;
 	}
   
 	return TRUE;
 }
 #endif
+
+
+static void
+lock_memory(OhmManager *mgr)
+{
+	int     lock, data;
+	gchar  *what;
+	GError *error = NULL;
+	
+	if (memlock < 0) {
+		what = ohm_manager_get_string_option(mgr, "options", "mlock");
+		if (!what)
+			return;
+		
+		if (!parse_memlock("mlock", what, NULL, &error)) {
+			OHM_ERROR("ohmd: invalid mlock option \"%s\".", what);
+			g_error_free(error);
+			return;
+		}
+	}
+	
+	if (!memlock)
+		return;
+	
+	lock = memlock & ~MCL_DATA;
+	data = memlock &  MCL_DATA;
+	
+	if (lock) {
+		if (mlockall(lock) != 0)
+			OHM_ERROR("ohmd: failed to lock address space (%s).",
+				  strerror(errno));
+		else
+			OHM_INFO("ohmd: address space successfully locked.");
+	}
+	
+	if (data) {
+#if HAVE_MLOCKNICE_H
+		if (mln_lock_data() != 0)
+			OHM_ERROR("ohmd: failed to lock data segments (%s).",
+				  strerror(errno));
+		else
+			OHM_INFO("ohmd: data segments successfully locked.");
+#else
+		OHM_WARNING("ohmd: compiled without mlocknice support.");
+#endif
+	}
+}
+
+
+
 
 
 static gboolean
@@ -278,12 +345,18 @@ save_args(int argc, char **argv)
 void
 ohm_restart(int delay)
 {
-  	int fd;
+  	int fd, max;
+
+#ifdef _SC_OPEN_MAX
+	max = (int)sysconf(_SC_OPEN_MAX);
+#else
+	max = 4096;
+#endif
 
 	OHM_INFO("ohmd: re-execing after %d seconds", delay);
 	sleep(delay);
 	
-	for (fd = 3; fd < 4096; fd++)
+	for (fd = 3; fd < max; fd++)
 		close(fd);
 
 	sleep(1);
@@ -306,7 +379,6 @@ main (int argc, char *argv[])
 	gboolean g_fatal_critical = FALSE;
 	OhmManager *manager = NULL;
 	GError *error = NULL;
-	gchar *value;
 	GOptionContext *context;
 	
 	const GOptionEntry entries[] = {
@@ -406,26 +478,7 @@ main (int argc, char *argv[])
 	ohm_debug ("Idle");
 	loop = g_main_loop_new (NULL, FALSE);
 
-#if _POSIX_MEMLOCK > 0
-	if (memlock == -1) {
-		value = ohm_manager_get_string_option(manager,
-						      "options", "mlock");
-	  
-		if (value && !parse_memlock("mlock", value, NULL, &error)) {
-			OHM_ERROR("ohmd: invalid mlock option \"%s\".", value);
-			g_error_free(error);
-			error = NULL;
-		}
-	}
-	
-	if (memlock > 0) {
-		if (mlockall(memlock) != 0)
-	  		OHM_ERROR("ohmd: Failed to lock address space (%s).",
-				  strerror(errno));
-		else
-	  		OHM_INFO("ohmd: Address space successfully locked.");
-	}
-#endif
+	lock_memory(manager);
 
 	/* Only timeout and close the mainloop if we have specified it
 	 * on the command line */

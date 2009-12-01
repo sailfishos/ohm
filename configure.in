@@ -355,6 +355,28 @@ else
     AC_MSG_RESULT(no)
 fi
 
+dnl -----------------------------------
+dnl - OSSO mlocknice support
+dnl -----------------------------------
+AC_ARG_ENABLE(mlocknice,
+              [  --enable-mlocknice     enable OSSO mlocknice support],
+              enable_mlocknice=$enableval,enable_mlocknice=auto)
+
+if test x$enable_mlocknice = xauto; then
+    AC_CHECK_HEADERS([mlocknice.h], [mlocknice=yes], [mlocknice=no])
+elif test x$enable_mlocknice = xyes; then
+    AC_CHECK_HEADERS([mlocknice.h],
+                     [mlocknice=yes],
+                     [AC_MSG_ERROR([OSSO mlocknice not available])])
+else
+    mlocknice=no
+fi
+
+if test x$mlocknice = xyes; then
+    AC_MSG_NOTICE([OSSO mlocknice support enabled])
+    LDFLAGS="$LDFLAGS -lmlocknice"
+fi
+
 
 AC_OUTPUT([
 ohm.pc
@@ -409,4 +431,5 @@ echo "
         Docbook support:           ${enable_docbook_docs}
         Gtk-doc support:           ${enable_gtk_doc}
         Profiling support:         ${enable_gprof}
+        OSSO mlockince support:    ${mlocknice}
 "
