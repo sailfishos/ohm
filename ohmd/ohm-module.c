@@ -400,9 +400,11 @@ discover_plugins(OhmModule *module, gsize *nplugin)
     base = plugindir;
   }
 
-  if ((dir = opendir(base)) == NULL)
-    return FALSE;
-
+  if ((dir = opendir(base)) == NULL) {
+    *nplugin = 0;
+    return NULL;
+  }
+  
   while ((entry = readdir(dir)) != NULL) {
     name = entry->d_name;
     if ((suff = strrchr(name, '.')) == NULL) {
