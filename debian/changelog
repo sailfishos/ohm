@@ -1,8 +1,14 @@
-ohm (0.1.2-0maemo31) unstable; urgency=low
+ohm (0.1.2-0maemo32) unstable; urgency=low
 
-  * Support for OSSO mlocknice (Fixes: NB 147979).
+  * Support for OSSO mlocknice (Fixes: NB#147979).
 
  -- Krisztian Litkey <krisztian.litkey@nokia.com>  Tue, 01 Dec 2009 16:18:41 +0200
+
+ohm (0.1.2-0maemo31) unstable; urgency=low
+
+  * Bumped version.
+
+ -- Krisztian Litkey <krisztian.litkey@nokia.com>  Tue, 01 Dec 2009 16:18:00 +0200
 
 ohm (0.1.2-0maemo30) unstable; urgency=low
 
