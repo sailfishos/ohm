@@ -384,6 +384,7 @@ libfactstore/Makefile
 ohmd/Makefile
 ohmd/libohmplugin.pc
 ohmd/libohmfact.pc
+tests/Makefile
 initscript/Makefile
 initscript/RedHat/Makefile
 initscript/Gentoo/Makefile

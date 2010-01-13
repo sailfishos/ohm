@@ -3,6 +3,7 @@ SUBDIRS = 				\
 	libfactstore                    \
 	ohmd				\
 	initscript			\
+	tests				\
 	etc				\
 #	po				
 #	docs
