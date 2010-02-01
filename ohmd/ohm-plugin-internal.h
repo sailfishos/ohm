@@ -41,7 +41,7 @@ typedef struct _OhmPluginClass OhmPluginClass;
 struct _OhmPlugin
 {
 	GObject		 parent;
-	const OhmPluginDesc *desc;
+	OhmPluginDesc   *desc;
 	const OhmPluginKeyIdMap *interested;
 	const char **provides;
 	const char **requires;

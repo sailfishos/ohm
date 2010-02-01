@@ -88,7 +88,7 @@ struct _OhmPluginDesc {
 };
 
 #define OHM_PLUGIN_DESCRIPTION(description, version, author, license, initialize, destroy, notify) \
-	G_MODULE_EXPORT const OhmPluginDesc ohm_plugin_desc = { \
+	G_MODULE_EXPORT OhmPluginDesc ohm_plugin_desc = { \
 		description, \
 		version, \
 		author, \
