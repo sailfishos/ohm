@@ -865,41 +865,44 @@ END_TEST
 
 
 TCase *
-factstore_case (void)
+factstore_case (int desired_step_id)
 {
     g_type_init();
 
-    TCase *tc_factstore = tcase_create ("factstore");
+	int step_id = 1;
+	#define PREPARE_TEST(tc, fun) if (desired_step_id == 0 || step_id++ == desired_step_id)  tcase_add_test (tc, fun);
+
+	TCase *tc_factstore = tcase_create ("factstore");
     tcase_set_timeout(tc_factstore, 60);
-    tcase_add_test (tc_factstore, test_fact_structure_new);
-    tcase_add_test (tc_factstore, test_fact_structure_name);
-    tcase_add_test (tc_factstore, test_fact_structure_set_get);
-    tcase_add_test (tc_factstore, test_fact_structure_free);
-    tcase_add_test (tc_factstore, test_fact_structure_to_string);
-    tcase_add_test (tc_factstore, test_fact_fact_new);
-    tcase_add_test (tc_factstore, test_fact_fact_set_get);
-    tcase_add_test (tc_factstore, test_fact_pattern_new);
-    tcase_add_test (tc_factstore, test_fact_pattern_new_for_fact);
-    tcase_add_test (tc_factstore, test_fact_pattern_set_get);
-    tcase_add_test (tc_factstore, test_fact_pattern_free);
-    tcase_add_test (tc_factstore, test_fact_pattern_match);
-    tcase_add_test (tc_factstore, test_fact_pattern_match_instance);
-    tcase_add_test (tc_factstore, test_fact_pattern_match_fields);
-    tcase_add_test (tc_factstore, test_fact_pattern_match_free);
-    tcase_add_test (tc_factstore, test_fact_store_new);
-    tcase_add_test (tc_factstore, test_fact_store_insert);
-    tcase_add_test (tc_factstore, test_fact_store_to_string);
-    tcase_add_test (tc_factstore, test_fact_store_insert_remove);
-    tcase_add_test (tc_factstore, test_fact_store_free);
-    tcase_add_test (tc_factstore, test_fact_store_view_new);
-    tcase_add_test (tc_factstore, test_fact_store_view_two);
-    tcase_add_test (tc_factstore, test_fact_store_view_free);
-    tcase_add_test (tc_factstore, test_fact_store_transaction_push_pop);
-    tcase_add_test (tc_factstore, test_fact_store_transaction_push_and_watch);
-    tcase_add_test (tc_factstore, test_fact_store_transaction_push_and_cancel);
-    tcase_add_test (tc_factstore, test_fact_store_transaction_free);
-    tcase_add_test (tc_factstore, test_fact_store_pattern_delete);
-    tcase_add_test (tc_factstore, test_fact_store_transaction_push_and_commit);
+    PREPARE_TEST (tc_factstore, test_fact_structure_new);
+    PREPARE_TEST (tc_factstore, test_fact_structure_name);
+    PREPARE_TEST (tc_factstore, test_fact_structure_set_get);
+    PREPARE_TEST (tc_factstore, test_fact_structure_free);
+    PREPARE_TEST (tc_factstore, test_fact_structure_to_string);
+    PREPARE_TEST (tc_factstore, test_fact_fact_new);
+    PREPARE_TEST (tc_factstore, test_fact_fact_set_get);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_new);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_new_for_fact);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_set_get);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_free);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_match);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_match_instance);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_match_fields);
+    PREPARE_TEST (tc_factstore, test_fact_pattern_match_free);
+    PREPARE_TEST (tc_factstore, test_fact_store_new);
+    PREPARE_TEST (tc_factstore, test_fact_store_insert);
+    PREPARE_TEST (tc_factstore, test_fact_store_to_string);
+    PREPARE_TEST (tc_factstore, test_fact_store_insert_remove);
+    PREPARE_TEST (tc_factstore, test_fact_store_free);
+    PREPARE_TEST (tc_factstore, test_fact_store_view_new);
+    PREPARE_TEST (tc_factstore, test_fact_store_view_two);
+    PREPARE_TEST (tc_factstore, test_fact_store_view_free);
+    PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_pop);
+    PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_and_watch);
+    PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_and_cancel);
+    PREPARE_TEST (tc_factstore, test_fact_store_transaction_free);
+    PREPARE_TEST (tc_factstore, test_fact_store_pattern_delete);
+    PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_and_commit);
 
     return tc_factstore;
 }
@@ -908,12 +911,17 @@ factstore_case (void)
 
 
 int
-main() {
+main(int argc, char* argv[]) {
 	Suite *s = suite_create ("factstore");
-	suite_add_tcase (s, factstore_case());
+
+	int step_id = 0;
+	if (argc == 2) {
+		step_id = strtol(argv[1], NULL, 10);
+	}
+	suite_add_tcase (s, factstore_case(step_id));
 
 	SRunner *sr = srunner_create (s);
-	srunner_run_all (sr, CK_NORMAL);
+	srunner_run_all (sr, CK_VERBOSE);
 	int number_failed = srunner_ntests_failed (sr);
 	srunner_free (sr);
 
