@@ -1,4 +1,0 @@
-usr/sbin/*
-etc/ohm/modules.ini
-etc/dbus-1/system.d/ohm.conf
-etc/event.d/ohmd

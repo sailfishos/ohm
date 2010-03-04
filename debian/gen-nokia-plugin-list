@@ -1,1 +1,0 @@
-for p in `dpkg --contents ../ohm_0.1.2_armel.deb | grep -v '\.la' | sed 's#^.* \./##g' | egrep '(libohm_)' | sed 's#^.*libohm_##g;s#.so$##g'`; do echo "debian/tmp/usr/lib/ohm/libohm_$p.so /usr/lib/ohm"; done

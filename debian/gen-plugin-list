@@ -1,1 +1,0 @@
-for p in `dpkg --contents ../ohm_0.1.2_armel.deb | sed 's#^.* \./##g' | egrep '(plugin)' | sed 's#^.*/##g;s#.ini$##g'`; do echo "debian/tmp/usr/lib/ohm/libohm_$p.so /usr/lib/ohm"; echo "debian/tmp/etc/ohm/plugins.d/$p.ini /etc/ohm/plugins.d"; done > debian/ohm-plugins.install
