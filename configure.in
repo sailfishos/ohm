@@ -388,7 +388,6 @@ ohmd/Makefile
 ohmd/libohmplugin.pc
 ohmd/libohmfact.pc
 libohm/Makefile
-tools/Makefile
 initscript/Makefile
 initscript/RedHat/Makefile
 initscript/Gentoo/Makefile

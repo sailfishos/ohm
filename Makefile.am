@@ -4,7 +4,6 @@ SUBDIRS = 				\
 	initscript			\
 	libohm				\
 	libidletime			\
-	tools				\
 	etc				\
 #	po				
 #	docs
