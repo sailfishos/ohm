@@ -2,7 +2,6 @@ SUBDIRS = 				\
 	include				\
 	ohmd				\
 	initscript			\
-	libohm				\
 	libidletime			\
 	etc				\
 #	po				
