@@ -6,7 +6,6 @@ SUBDIRS = 				\
 	libidletime			\
 	tools				\
 	etc				\
-	plugins
 #	po				
 #	docs
 
