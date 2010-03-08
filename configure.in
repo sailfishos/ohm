@@ -380,6 +380,7 @@ ohm.conf
 Makefile
 etc/Makefile
 include/Makefile
+libfactstore/Makefile
 ohmd/Makefile
 ohmd/libohmplugin.pc
 ohmd/libohmfact.pc

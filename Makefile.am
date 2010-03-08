@@ -1,5 +1,6 @@
 SUBDIRS = 				\
 	include				\
+	libfactstore                    \
 	ohmd				\
 	initscript			\
 	etc				\

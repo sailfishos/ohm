@@ -28,24 +28,14 @@ ohmd_test_SOURCES = 						\
 	ohm-test.c
 ohmd_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 
-lib_LTLIBRARIES = libohmplugin.la libohmfact.la
+lib_LTLIBRARIES = libohmplugin.la
 
 libohmplugin_la_SOURCES =                                       \
 	ohm-plugin.c ohm-plugin-log.c
 
 libohmplugin_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE@
 
-libohmfact_la_SOURCES =                                         \
-	ohm-fact.h 						\
-	ohm-factstore.h						\
-	ohm-factstore.c
-
-libohmfact_la_LDFLAGS = -version-info @LT_CURRENT@:@LT_REVISION@:@LT_AGE@
-
-test_fact_SOURCES   = test-fact.c
-test_fact_LDADD     = libohmfact.la $(GLIB_LIBS)
-
-noinst_PROGRAMS = ohmd-test test-fact
+noinst_PROGRAMS = ohmd-test
 
 sbin_PROGRAMS = ohmd
 
@@ -67,7 +57,7 @@ ohmd_SOURCES = 							\
 	ohm-dbus.c						\
 	ohm-main.c
 
-ohmd_LDADD = libohmplugin.la libohmfact.la                       \
+ohmd_LDADD = libohmplugin.la ../libfactstore/libohmfact.la       \
         $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS) \
 	$(LIBTRACE_LIBS)
 
