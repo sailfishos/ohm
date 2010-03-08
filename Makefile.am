@@ -4,7 +4,7 @@ SUBDIRS = 				\
 	ohmd				\
 	initscript			\
 	tests				\
-	etc				\
+	etc				
 #	po				
 #	docs
 
