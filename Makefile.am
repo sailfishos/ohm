@@ -8,6 +8,9 @@ SUBDIRS = 				\
 #	po				
 #	docs
 
+if BUILD_LEGACY
+SUBDIRS += libidletime plugins
+endif
 
 pkgconfigdir = ${libdir}/pkgconfig
 pkgconfig_DATA = ohm.pc ohmd/libohmplugin.pc ohmd/libohmfact.pc
