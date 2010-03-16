@@ -409,9 +409,11 @@ ohmd/Makefile
 ohmd/libohmplugin.pc
 ohmd/libohmfact.pc
 plugins/Makefile
+plugins/policy/Makefile
 plugins/policy/display/Makefile
 plugins/policy/suspend/Makefile
 plugins/policy/timeouts/Makefile
+plugins/glue/Makefile
 plugins/glue/acadapter/Makefile
 plugins/glue/backlight/Makefile
 plugins/glue/battery/Makefile
