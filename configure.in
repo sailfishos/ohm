@@ -398,11 +398,38 @@ fi
 AC_SUBST(BUILD_LEGACY)
 
 
+dnl -----------------------------------
+dnl - aegis support
+dnl -----------------------------------
+AC_ARG_ENABLE(aegis,
+              [  --enable-aegis     enable aegis support],
+              enable_aegis=$enableval,enable_aegis=auto)
+
+if test x$enable_aegis = xauto; then
+    AC_CHECK_FILES([/usr/bin/aegis-deb-add], [aegis=yes], [aegis=no])
+elif test x$enable_aegis = xyes; then
+    AC_CHECK_FILES([/usr/bin/aegis-deb-add],
+                     [aegis=yes],
+                     [AC_MSG_ERROR([aegis-deb-add (aegis-builder) not available])])
+else
+    aegis=no
+fi
+
+AM_CONDITIONAL(AEGIS_SUPPORT, test x$aegis = xyes)
+
+if test x$aegis = xyes; then
+    AC_DEFINE([AEGIS_SUPPORT], 1, [Support for aegis ?])
+    AC_MSG_NOTICE([aegis support enabled])
+fi
+
+AC_SUBST(AEGIS_SUPPORT)
+
 AC_OUTPUT([
 ohm.pc
 ohm.conf
 Makefile
 etc/Makefile
+aegis/Makefile
 include/Makefile
 libfactstore/Makefile
 ohmd/Makefile
@@ -452,4 +479,5 @@ echo "
         Gtk-doc support:           ${enable_gtk_doc}
         Profiling support:         ${enable_gprof}
         OSSO mlockince support:    ${mlocknice}
+	Aegis support:             ${aegis}
 "

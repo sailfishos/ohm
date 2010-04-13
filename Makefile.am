@@ -12,6 +12,10 @@ if BUILD_LEGACY
 SUBDIRS += libidletime plugins
 endif
 
+if AEGIS_SUPPORT
+SUBDIRS += aegis
+endif
+
 pkgconfigdir = ${libdir}/pkgconfig
 pkgconfig_DATA = ohm.pc ohmd/libohmplugin.pc ohmd/libohmfact.pc
 
