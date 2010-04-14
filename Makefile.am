@@ -12,6 +12,10 @@ if BUILD_LEGACY
 SUBDIRS += libidletime plugins
 endif
 
+if BUILD_TOOLS
+SUBDIRS += libohm tools
+endif
+
 if AEGIS_SUPPORT
 SUBDIRS += aegis
 endif

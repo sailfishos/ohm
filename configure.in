@@ -399,6 +399,26 @@ AC_SUBST(BUILD_LEGACY)
 
 
 dnl -----------------------------------
+dnl - Miscallaneous OHM tools (old keystore commandline stuff)
+dnl -----------------------------------
+AC_ARG_ENABLE(tools,
+              [  --enable-tools    enable miscallaneous OHM tools],
+              enable_tools=$enableval,enable_tools=no)
+
+AM_CONDITIONAL(BUILD_TOOLS, test x$enable_tools = xyes)
+
+if test x$enable_tools = xyes;
+then
+  AC_DEFINE([BUILD_TOOLS], 1, [Build miscallaneous OHM tools ?])
+  AC_MSG_NOTICE([Miscallaneous OHM tools WILL BE built])
+else
+  AC_MSG_NOTICE([Miscallaneous OHM tools WILL NOT be built])
+fi
+
+AC_SUBST(BUILD_TOOLS)
+
+
+dnl -----------------------------------
 dnl - aegis support
 dnl -----------------------------------
 AC_ARG_ENABLE(aegis,
@@ -452,6 +472,8 @@ plugins/glue/timeremaining/Makefile
 plugins/glue/xorg/Makefile
 plugins/glue/xrandr/Makefile
 libidletime/Makefile
+libohm/Makefile
+tools/Makefile
 tests/Makefile
 initscript/Makefile
 initscript/RedHat/Makefile
@@ -479,5 +501,7 @@ echo "
         Gtk-doc support:           ${enable_gtk_doc}
         Profiling support:         ${enable_gprof}
         OSSO mlockince support:    ${mlocknice}
+	Legacy OHM plugins:        ${enable_legacy}
+	Legacy OHM tools:          ${enable_tools}
 	Aegis support:             ${aegis}
 "
