@@ -296,73 +296,264 @@ has_name(gconstpointer p, gconstpointer n)
 static gboolean
 ohm_module_reorder_plugins(OhmModule *module)
 {
-        OhmPlugin     *plugin;
-        ohm_method_t  *method;
-        GSList        *ordered, *l;
-        const char   **requires;
-        gboolean       success;
-        
+    
+  /*
+   * Notes:
+   *
+   *   We create a dependency graph of our plugins. Importing a method
+   *   from a plugin adds a dependency from the importer to the importee.
+   *   Declaring explicit dependency on a plugin also adds a dependency
+   *   from the declaring plugin to the declared dependency.
+   * 
+   *   We then sort our dependency graph toplogically to determine a possible
+   *   initialization order. Our topological sort algorithm is the following:
+   *
+   *       L <- empty list where we put the sorted elements
+   *       Q <- set of all nodes with no incoming edges
+   *       while Q is non-empty do
+   *           remove a node n from Q
+   *           insert n into L
+   *           for each node m with an edge e from n to m do
+   *               remove edge e from the graph
+   *               if m has no other incoming edges then
+   *                   insert m into Q
+   *       if graph has edges then
+   *           output error message (graph has a cycle)
+   *       else 
+   *           return topologically sorted order: L
+   *
+   *   In addition to L and Q we use C and P to keep track of the number of
+   *   incoming edges (ie. dependencies on) of plugins and dependencies
+   *   between plugins.
+   */
+  
+  enum {
+    DBG_NONE  = 0x0,
+    DBG_Q     = 0x1,
+    DBG_SORT  = 0x2,
+    DBG_GRAPH = 0x4,
+  };
 
-        /*
-         * Notes:
-         *   Try to reorganize plugins so that all plugins importing methods
-         *   are initialized after plugins that provide/export those methods.
-         *
-         *   We do _not_ perform a full topological sort based on both explicit
-         *   and method-based dependency. Instead we simply go through the plugin
-         *   list readily sorted by explicit dependency and make sure all
-         *   method dependecies are fullfilled. Finally we go through the
-         *   reordered list and verify that explicit dependencies are not
-         *   violated.
-         */
-        success = TRUE;
-        ordered = NULL;
-        for (l = module->priv->plugins; l != NULL; l = l->next) {
-                plugin = (OhmPlugin *)l->data;
+  int debug_on = DBG_NONE;
+  
+#define DEBUG(flag, fmt, args...) do {			\
+    if ((flag) & debug_on)				\
+      printf("*** D: "fmt"\n" , ## args);		\
+  } while (0)
 
-                /* skip if plugin already there */
-                if (g_slist_find(ordered, plugin) != NULL)
-                        continue;
 
-                for (method = ohm_plugin_imports(plugin); method && method->ptr; method++) {
-                        /* add exporter if not there, skip otherwise */
-                        if (g_slist_find(ordered, method->plugin) != NULL)
-                                continue;
-                        else {
-                                ohm_debug("going to initialize plugin %s before %s because of method dependency",
-                                          ohm_plugin_get_name(method->plugin),
-                                          ohm_plugin_get_name(plugin));
-                                ordered = g_slist_append(ordered, method->plugin);
-                        }
-                }
-                
-                ordered = g_slist_append(ordered, plugin);
-        }
-        
-        
-        /* check whether any explicit plugin dependencies are violated */
-        for (l = module->priv->plugins; l != NULL; l = l->next) {
-                plugin = (OhmPlugin *)l->data;
-                for (requires = plugin->requires; requires && *requires; requires++) {
-                        if (g_slist_find_custom(l->next, *requires, has_name) != NULL) {
-                                g_warning("explicit dependency of plugin %s on %s violated",
-                                          ohm_plugin_get_name(plugin), *requires);
-                                success = FALSE;
-                        }
-                }
-        }
-        
-        g_slist_free(module->priv->plugins);
-        module->priv->plugins = ordered;
-        
-        ohm_debug("plugin initialization order:");
-        for (l = module->priv->plugins; l != NULL; l = l->next) {
-                plugin = (OhmPlugin *)l->data;
-                ohm_debug("  plugin %s", ohm_plugin_get_name(plugin));
-        }
+#define PUSH(q, item) do {                                    \
+        int __t = t##q;                                       \
+        int __size = nplugin;				      \
+                                                              \
+        DEBUG(DBG_Q, "PUSH(%s, %s), as item #%d...", #q,      \
+	      ohm_plugin_get_name(plugins[item]), __t);	      \
+        q[__t++]  =   item;                                   \
+        __t      %= __size;                                   \
+        t##q = __t;                                           \
+    } while (0)
+    
+            
 
-        return success;
+#define POP(q) ({							\
+      int         __h = h##q, __t = t##q;				\
+      int         __size = nplugin;					\
+      int         __item = -1;						\
+      const char *__n;							\
+      									\
+      if (__h != __t) {							\
+	__item = q[__h++];						\
+	__h %= __size;							\
+      }									\
+      									\
+      __n = (__item < 0) ? "none":ohm_plugin_get_name(plugins[__item]); \
+      DEBUG(DBG_Q, "POP(%s): %s, head is #%d...", #q, __n, __h);	\
+									\
+      h##q = __h;							\
+      __item;								\
+    })
+
+
+#define NEDGE(id) (C[(id)])
+
+#define PREREQ(idx1, idx2) (P[((idx1) * nplugin) + (idx2)])
+
+#define PLUGIN_IDX(plugin) ({					\
+    int _i, _idx;						\
+    								\
+    for (_i = 0, _idx = -1; _idx < 0 && _i < nplugin; _i++)	\
+      if (plugins[_i] == (plugin))				\
+	_idx = _i;						\
+								\
+    if (_idx < 0)						\
+      g_error("Failed to find plugin index for %s.",		\
+	      ohm_plugin_get_name(plugin));			\
+    								\
+    _idx;							\
+  })
+
+
+  int *L, *Q, *C, *P;
+  int  hL, hQ, tL, tQ;
+  int  node;
+  
+  int            i, j, n, nplugin;
+  GSList        *l, *reordered;
+  OhmPlugin    **plugins;
+  OhmPlugin     *plugin, *plg;
+  ohm_method_t  *method;
+  const char   **req;
+  
+  nplugin = 0;
+  for (l = module->priv->plugins; l != NULL; l = l->next)
+    nplugin++;
+  
+  DEBUG(DBG_GRAPH, "found %d plugins to sort", nplugin);
+  
+  plugins = g_new0(OhmPlugin *, nplugin);
+  if (plugins == NULL)
+    g_error("Failed to allocate plugin table for %d plugins.", nplugin);
+  
+  for (i = 0, l = module->priv->plugins; l != NULL; l = l->next, i++) {
+    plugin = (OhmPlugin *)l->data;
+    plugins[i] = plugin;
+  }
+  
+  L = Q = C = P = NULL;
+  n = nplugin;
+  
+  if ((L = malloc((n+1) * sizeof(*L))) == NULL ||
+      (Q = malloc( n    * sizeof(*Q))) == NULL ||
+      (C = malloc( n    * sizeof(*C))) == NULL ||
+      (P = malloc( n*n  * sizeof(*P))) == NULL)
+    goto fail;
+  
+  memset(L, -1, (n+1) * sizeof(*L));
+  memset(Q, -1,  n    * sizeof(*Q));
+  memset(C,  0,  n    * sizeof(*C));
+  memset(P,  0,  n*n  * sizeof(*P));
+  
+  hL = tL = hQ = tQ = 0;
+  
+  /* build prerequisites (dependencies) */
+  DEBUG(DBG_GRAPH, "plugin dependencies:");
+  for (i = 0; i < nplugin; i++) {
+    plugin = plugins[i];
+    
+    /* add method-importing prerequisites */
+    for (method = ohm_plugin_imports(plugin); method && method->ptr; method++) {
+      j = PLUGIN_IDX(method->plugin);
+      PREREQ(i, j) = 1;
+      DEBUG(DBG_GRAPH, "  %s depends on %s (method-import)",
+	    ohm_plugin_get_name(plugin), ohm_plugin_get_name(method->plugin));
+    }
+    
+    /* add explicitly declared prerequisites */
+    for (req = plugin->requires; req && *req; req++) {
+      l = g_slist_find_custom(module->priv->plugins, *req, has_name);
+      if (l == NULL || (plg = (OhmPlugin *)l->data) == NULL) {
+	g_error("Failed to find plugin %s.", *req);
+	goto fail;
+      }
+      
+      j = PLUGIN_IDX(plg);
+      PREREQ(i, j) = 1;
+      DEBUG(DBG_GRAPH, "  %s depends on %s (explicitly declared)",
+	    ohm_plugin_get_name(plugin), ohm_plugin_get_name(plg));
+    }
+  }
+  
+  /* count incoming edges */
+  DEBUG(DBG_GRAPH, "graph edges:");
+  for (i = 0; i < nplugin; i++) {
+    for (j = 0; j < nplugin; j++) {
+      if (PREREQ(j, i)) {
+	DEBUG(DBG_GRAPH, "  %s -> %s", ohm_plugin_get_name(plugins[i]),
+	      ohm_plugin_get_name(plugins[j]));
+	if (NEDGE(j) < 0)
+	  NEDGE(j)  = 1;
+	else
+	  NEDGE(j) += 1;
+      }
+    }
+  }
+  
+  /* initialize sorting: push plugins with no edges */
+  DEBUG(DBG_GRAPH, "incoming edge counts:");
+  for (i = 0; i < nplugin; i++) {
+    DEBUG(DBG_GRAPH, "  C[%s] = %d", ohm_plugin_get_name(plugins[i]), NEDGE(i));
+    if (NEDGE(i) <= 0)
+      PUSH(Q, i);
+  }
+    
+  /* sort the graph topologically */
+  hQ = hL = 0;
+  while ((node = POP(Q)) >= 0) {
+    DEBUG(DBG_SORT, "popped %s (%d)", ohm_plugin_get_name(plugins[node]), node);
+    
+    PUSH(L, node);
+    
+    for (i = 0; i < nplugin; i++) {
+      if (PREREQ(i, node)) {
+	DEBUG(DBG_SORT, "  delete edge %s -> %s",
+	      ohm_plugin_get_name(plugins[node]),
+	      ohm_plugin_get_name(plugins[i]));
+	PREREQ(i, node) = 0;
+	NEDGE(i) -= 1;
+	
+	if (NEDGE(i) == 0) {
+	  DEBUG(DBG_SORT, "  push %s (%d)", ohm_plugin_get_name(plugins[i]), i);
+	  PUSH(Q, i);
+	}
+      }
+    }
+  }
+  
+  /* check that we have exhausted the graph */
+  for (i = 0; i < nplugin; i++) {
+    if (NEDGE(i) > 0) {
+      g_error("Cyclical dependency among plugins (%s?).",
+	      ohm_plugin_get_name(plugins[i]));
+      goto fail;
+    }
+  }
+  
+  /* update plugin initialization order */
+  reordered = NULL;
+  for (i = 0; i < nplugin; i++) {
+    if (L[i] < 0) {
+      g_error("invalid plugin as #%d in reordered plugin list", i);
+      goto fail;
+    }
+    
+    ohm_debug("plugin initialized as #%d: %s", i,
+	      ohm_plugin_get_name(plugins[L[i]]));
+    
+    reordered = g_slist_append(reordered, plugins[L[i]]);
+  }
+  
+  g_slist_free(module->priv->plugins);
+  module->priv->plugins = reordered;
+  
+  free(L);
+  free(Q);
+  free(C);
+  free(P);
+  return TRUE;
+  
+ fail:
+  if (L)
+    free(L);
+  if (Q)
+    free(Q);
+  if (C)
+    free(C);
+  if (P)
+    free(P);
+  
+  return FALSE;
 }
+
 
 
 static gchar **
@@ -1095,9 +1286,9 @@ ohm_module_init (OhmModule *module)
 	}
 
 
-	/* try to reorder plugins to initialize method importees before importers */
-	ohm_module_reorder_plugins(module);
-
+	/* determine plugin load order satisfying plugin dependencies */
+	if (!ohm_module_reorder_plugins(module))
+	  g_error("Cannot load plugins.");
 
 	ohm_conf_set_initializing (module->priv->conf, TRUE);
 	/* initialize each plugin */
