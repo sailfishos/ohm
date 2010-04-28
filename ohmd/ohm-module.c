@@ -1091,6 +1091,7 @@ ohm_module_find_method(char *name, char **sigptr, void **funcptr)
   if ((m = g_hash_table_lookup(symtable, name)) == NULL) {
     method.name      = name;
     method.signature = (sigptr && *sigptr ? *sigptr : NULL);
+    method.plugin    = NULL;
     
     if (g_hash_table_find(symtable, find_matching_method, (gpointer)&method))
       m = &method;
@@ -1102,6 +1103,13 @@ ohm_module_find_method(char *name, char **sigptr, void **funcptr)
     if (sigptr != NULL)
       *sigptr = (char *)m->signature;
     
+    if (m->plugin != NULL) {
+      ohm_debug("refcounting plugin %s because of dynamic method lookup",
+		ohm_plugin_get_name(m->plugin));
+      g_object_ref(m->plugin);
+    }
+
+
     return TRUE;
   }
   
