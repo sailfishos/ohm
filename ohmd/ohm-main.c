@@ -437,9 +437,12 @@ main (int argc, char *argv[])
 	}
 
 	g_type_init ();
+
+#ifdef HAVE_GTHREAD
 	if (!g_thread_supported ())
 		g_thread_init (NULL);
 	dbus_g_thread_init ();
+#endif
 
 	/* we need to daemonize before we get a system connection */
 	if (no_daemon == FALSE) {

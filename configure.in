@@ -90,21 +90,11 @@ PKG_CHECK_MODULES(GMODULE, gmodule-2.0)
 AC_SUBST(GMODULE_CFLAGS)
 AC_SUBST(GMODULE_LIBS)
 
-PKG_CHECK_MODULES(GTHREAD, gthread-2.0)
-AC_SUBST(GTHREAD_CFLAGS)
-AC_SUBST(GTHREAD_LIBS)
 
 PKG_CHECK_MODULES(DBUS, dbus-glib-1 >= 0.70 dbus-1 >= 0.70)
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
-PKG_CHECK_MODULES(HAL, hal >= 0.5.7)
-AC_SUBST(HAL_CFLAGS)
-AC_SUBST(HAL_LIBS)
-
-if pkg-config --atleast-version=0.5.10 hal; then
-    AC_DEFINE(HAL_SET_BRIGHTNESS_UNSIGNED, 1, [org.freedesktop.Hal.Device.LaptopPanel.SetBrightness returns UINT32])
-fi
 
 PKG_CHECK_MODULES(LIBTRACE, libsimple-trace >= 0.0.0)
 AC_SUBST(LIBTRACE_CFLAGS)
@@ -396,6 +386,104 @@ else
 fi
 
 AC_SUBST(BUILD_LEGACY)
+
+
+dnl --------------------------------
+dnl - keystore support
+dnl --------------------------------
+AC_ARG_ENABLE(keystore,
+              [  --enable-keystore     enable keystore support],
+              enable_keystore=$enableval,enable_keystore=no)
+
+if test x$enable_gthread = xauto; then
+    if test x$enable_legacy = xyes; then
+        enable_keystore=yes
+    else
+        enable_keystore=no
+    fi
+fi
+
+if test x$enable_keystore = xyes; then
+    PKG_CHECK_MODULES(KEYSTORE, keystore-2.0)
+
+    AC_DEFINE([HAVE_KEYSTORE], 1, [Build keystore support ?])
+    AC_MSG_NOTICE([keystore support WILL BE built])
+else
+    AC_MSG_NOTICE([keystore support WILL NOT be built])
+fi
+
+AM_CONDITIONAL(HAVE_KEYSTORE, test x$enable_keystore = xyes)
+AC_SUBST(KEYSTORE_CFLAGS)
+AC_SUBST(KEYSTORE_LIBS)
+AC_SUBST(HAVE_KEYSTORE)
+
+
+dnl ------------------------------------
+dnl - gthread support
+dnl ------------------------------------
+AC_ARG_ENABLE(gthread,
+              [  --enable-gthread     enable gthread support],
+              enable_gthread=$enableval,enable_gthread=auto)
+
+if test x$enable_gthread = xauto; then
+    if test x$enable_legacy = xyes; then
+        enable_gthread=yes
+    else
+        enable_gthread=no
+    fi
+fi
+
+if test x$enable_gthread = xyes; then
+    PKG_CHECK_MODULES(GTHREAD, gthread-2.0)
+
+    AC_DEFINE([HAVE_GTHREAD], 1, [Build gthread support ?])
+    AC_MSG_NOTICE([gthread support WILL BE built])
+else
+    AC_MSG_NOTICE([gthread support WILL NOT be built])
+fi
+
+AM_CONDITIONAL(HAVE_GTHREAD, test x$enable_gthread = xyes)
+AC_SUBST(GTHREAD_CFLAGS)
+AC_SUBST(GTHREAD_LIBS)
+AC_SUBST(HAVE_GTHREAD)
+
+PKG_CHECK_MODULES(DBUS, dbus-glib-1 >= 0.70 dbus-1 >= 0.70)
+AC_SUBST(DBUS_CFLAGS)
+AC_SUBST(DBUS_LIBS)
+
+
+dnl ------------------------------------
+dnl - HAL support
+dnl ------------------------------------
+AC_ARG_ENABLE(hal,
+              [  --enable-hal     enable HAL support],
+              enable_hal=$enableval,enable_hal=auto)
+
+if test x$enable_hal = xauto; then
+    if test x$enable_legacy = xyes; then
+        enable_hal=yes
+    else
+        enable_hal=no
+    fi
+fi
+
+if test x$enable_hal = xyes; then
+    PKG_CHECK_MODULES(HAL, hal >= 0.5.7)
+
+    if pkg-config --atleast-version=0.5.10 hal; then
+        AC_DEFINE(HAL_SET_BRIGHTNESS_UNSIGNED, 1, [org.freedesktop.Hal.Device.LaptopPanel.SetBrightness returns UINT32])
+    fi
+
+    AC_DEFINE([HAVE_HAL], 1, [Build hal support ?])
+    AC_MSG_NOTICE([HAL support will be built])
+else
+    AC_MSG_NOTICE([HAL support will not be built])
+fi
+
+AM_CONDITIONAL(HAVE_HAL, test x$enable_hal = xyes)
+AC_SUBST(HAL_CFLAGS)
+AC_SUBST(HAL_LIBS)
+AC_SUBST(HAVE_HAL)
 
 
 dnl -----------------------------------

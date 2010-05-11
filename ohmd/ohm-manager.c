@@ -42,9 +42,12 @@
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-conf.h"
+#ifdef HAVE_KEYSTORE
 #include "ohm-keystore.h"
-#include "ohm-module.h"
 #include "ohm-dbus-keystore.h"
+#endif
+#include "ohm-module.h"
+
 
 static void     ohm_manager_class_init	(OhmManagerClass *klass);
 static void     ohm_manager_init	(OhmManager      *manager);
@@ -57,7 +60,11 @@ struct OhmManagerPrivate
 {
 	OhmConf			*conf;
 	OhmModule		*module;
+#ifdef HAVE_KEYSTORE
 	OhmKeystore		*keystore;
+#else
+        void                    *no_keystore;
+#endif
         GKeyFile                *options;
 };
 
@@ -280,6 +287,7 @@ ohm_manager_init (OhmManager *manager)
 	manager->priv->conf = ohm_conf_new ();
 	manager->priv->module = ohm_module_new ();
 
+#ifdef HAVE_KEYSTORE
 	/* add the keystore and the DBUS interface */
 	manager->priv->keystore = ohm_keystore_new ();
 	dbus_g_object_type_install_info (OHM_TYPE_KEYSTORE, &dbus_glib_ohm_keystore_object_info);
@@ -289,6 +297,7 @@ ohm_manager_init (OhmManager *manager)
 	ohm_conf_add_key (manager->priv->conf, "manager.version.major", VERSION_MAJOR, FALSE, &error);
 	ohm_conf_add_key (manager->priv->conf, "manager.version.minor", VERSION_MINOR, FALSE, &error);
 	ohm_conf_add_key (manager->priv->conf, "manager.version.patch", VERSION_PATCH, FALSE, &error);
+#endif
 }
 
 /**
@@ -308,7 +317,9 @@ ohm_manager_dispose (GObject *object)
 	g_return_if_fail (manager->priv != NULL);
 
 	g_object_unref (manager->priv->module);
+#ifdef HAVE_KEYSTORE
 	g_object_unref (manager->priv->keystore);
+#endif
 	g_object_unref (manager->priv->conf);
 
 	ohm_manager_free_options(manager);

@@ -47,8 +47,6 @@ ohmd_SOURCES = 							\
 	ohm-conf.h						\
 	ohm-marshal.h						\
 	ohm-marshal.c						\
-	ohm-keystore.c						\
-	ohm-keystore.h						\
 	ohm-module.c						\
 	ohm-module.h						\
 	ohm-plugin-internal.h					\
@@ -56,6 +54,13 @@ ohmd_SOURCES = 							\
 	ohm-manager.h						\
 	ohm-dbus.c						\
 	ohm-main.c
+
+if HAVE_KEYSTORE
+ohmd_SOURCES +=
+	ohm-keystore.c						\
+	ohm-keystore.h
+endif
+
 
 ohmd_LDADD = libohmplugin.la ../libfactstore/libohmfact.la       \
         $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS) \

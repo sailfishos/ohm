@@ -45,7 +45,9 @@
 
 #include <glib/gi18n.h>
 #include <gmodule.h>
+#ifdef HAVE_HAL
 #include <libhal.h>
+#endif
 
 #include "ohm-debug.h"
 #include "ohm-plugin-internal.h"
@@ -61,12 +63,19 @@ struct _OhmPluginPrivate
 	GModule			*handle;
 	gchar			*name;
         GHashTable              *params;
+#ifdef HAVE_HAL
 	/* not assigned unless a plugin uses hal */
 	LibHalContext		*hal_ctx;
 	GPtrArray		*hal_udis;
 	OhmPluginHalPropMod	 hal_property_changed_cb;
 	OhmPluginHalCondition	 hal_condition_cb;
-	const char		*key_being_set;
+#else
+        void                    *no_hal_ctx;
+        void                    *no_hal_udis;
+        void                    *no_hal_property_changed_cb;
+        void                    *no_hal_condition_cb;
+#endif
+        const char		*key_being_set;
 };
 
 G_DEFINE_TYPE (OhmPlugin, ohm_plugin, G_TYPE_OBJECT)
@@ -393,10 +402,12 @@ ohm_plugin_imports (OhmPlugin *plugin)
     return NULL;
 }
 
+#ifdef HAVE_HAL
 /* only use this when required */
 gboolean
 ohm_plugin_hal_init (OhmPlugin   *plugin)
 {
+
 	DBusConnection *conn;
 
 	if (plugin->priv->hal_ctx != NULL) {
@@ -416,7 +427,7 @@ ohm_plugin_hal_init (OhmPlugin   *plugin)
 
 	/* connect */
 	libhal_ctx_init (plugin->priv->hal_ctx, NULL);
-
+	
 	return TRUE;
 }
 
@@ -621,6 +632,17 @@ ohm_plugin_free_hal_table (OhmPlugin *plugin)
 	}
 }
 
+#else  /* !HAVE_HAL */
+
+gboolean
+ohm_plugin_hal_init (OhmPlugin   *plugin)
+{
+  return FALSE;
+}
+
+#endif /* !HAVE_HAL */
+
+
 
 /**
  * ohm_plugin_dbus_get_connection:
@@ -689,6 +711,7 @@ ohm_plugin_finalize (GObject *object)
 
 	g_debug ("finalizing plugin %s", plugin->priv->name);
 
+#ifdef HAVE_HAL
 	if (plugin->desc != NULL) {
 		/* free hal stuff, if used */
 		if (plugin->priv->hal_ctx != NULL) {
@@ -699,11 +722,13 @@ ohm_plugin_finalize (GObject *object)
 		
 	}
 
+	g_ptr_array_free (plugin->priv->hal_udis, TRUE);
+#endif
+
 	if (plugin->priv->name != NULL) {
 		g_free (plugin->priv->name);
 	}
-	g_ptr_array_free (plugin->priv->hal_udis, TRUE);
-
+	
 	g_debug ("g_module_close(%p)", plugin->priv->handle);
 	g_module_close (plugin->priv->handle);
 
@@ -731,7 +756,9 @@ ohm_plugin_init (OhmPlugin *plugin)
 {
 	plugin->priv = OHM_PLUGIN_GET_PRIVATE (plugin);
 
+#ifdef HAVE_HAL
 	plugin->priv->hal_udis = g_ptr_array_new ();
+#endif
 	plugin->priv->conf = ohm_conf_new ();
 	plugin->priv->params = NULL;
 }
