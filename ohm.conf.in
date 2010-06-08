@@ -9,6 +9,14 @@
 		<allow send_interface="org.freedesktop.ohm.Manager"/>
 		<allow send_interface="org.freedesktop.ohm.Policy"/>
         </policy>
+        <policy user="root">
+		<allow own="org.maemo.resource.manager"/>
+		<allow send_interface="org.maemo.resource.client"/>
+        </policy>
+        <policy user="root">
+                <allow own="com.nokia.NonGraphicFeedback1"/>
+		<allow send_interface="com.nokia.NonGraphicFeedback1.Backend"/>
+        </policy>
         <policy context="default">
                 <deny own="org.freedesktop.ohm"/>
                 <allow send_destination="org.freedesktop.ohm"/>
@@ -25,5 +33,15 @@
                 <allow send_destination="com.nokia.policy"/>
                 <allow send_interface="com.nokia.policy"/>
         </policy>
+        <policy context="default">
+		<allow send_destination="org.maemo.resource.manager"/>
+		<allow send_interface="org.maemo.resource.manager"/>
+		<allow receive_sender="org.maemo.resource.manager"/>
+        </policy>
+	<policy context="default">
+                <allow send_destination="com.nokia.NonGraphicFeedback1"/>
+                <allow send_interface="com.nokia.NonGraphicFeedback1"/>
+		<allow receive_sender="com.nokia.NonGraphicFeedback1"/>
+	</policy>
 </busconfig>
 
