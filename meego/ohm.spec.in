@@ -27,9 +27,9 @@ Summary: Files necessary for OHM plugin development.
 Group: Development/Libraries
 Requires: ohm-plugin-core, libtrace-devel
 
-%package plugins-legacy
-Summary: Legacy plugins for the Open Hardware Manager.
-Group: System Environment/Daemons
+#%package plugins-legacy
+#Summary: Legacy plugins for the Open Hardware Manager.
+#Group: System Environment/Daemons
 
 %package utils
 Summary: Miscallaneous OHM utilities.
@@ -49,8 +49,8 @@ developing OHM plugins.
 This package contains header files, libraries, pkg-config files, etc.
 necessary for developing OHM plugins.
 
-%description plugins-legacy
-Lagacy plugins for OHM.
+#%description plugins-legacy
+#Lagacy plugins for OHM.
 
 %description utils
 This package contains miscallaneous OHM utilities that are either not
@@ -61,12 +61,14 @@ very useful or not necessary for everyday OHM usage.
 
 %build
 export CFLAGS="-O0 -g3"
-%configure --disable-static --without-xauth --disable-dpms --enable-legacy
+%configure --disable-static --without-xauth --disable-dpms --disable-legacy
 make
 
 %install
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 %makeinstall
+# make sure we get a plugin config dir even with legacy plugins disabled
+mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/ohm/plugins.d
 
 
 %clean
@@ -96,10 +98,10 @@ make
 #%{_libdir}/libohm.*
 %{_libdir}/pkgconfig/*
 
-%files plugins-legacy
-%defattr(-,root,root,-)
-%config %{_sysconfdir}/ohm/plugins.d/*
-%{_libdir}/ohm
+#%files plugins-legacy
+#%defattr(-,root,root,-)
+#%config %{_sysconfdir}/ohm/plugins.d/*
+#%{_libdir}/ohm
 
 %files utils
 %defattr(-,root,root,-)
