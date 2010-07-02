@@ -1,38 +1,41 @@
-%define _enable_debug_packages 0
-%define _unpackaged_files_terminate_build 0
-
 Summary: Open Hardware Manager
 Name: ohm
 Version: ##__VERSION__##
 Release: 1
-License: LGPL
-Group: System Environment/Daemons
-URL: http://127.0.0.1
+License: LGPLv2.1
+Group: System/Daemons
+URL: http://meego.gitorious.org/maemo-multimedia/ohm
 Source0: %{name}-%{version}.tar.gz
-BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: pl >= 5.6.32, ohm-plugin-core
-BuildRequires: libtrace-devel
+Requires: pl >= 5.6.32
+Requires: ohm-plugin-core
+BuildRequires: pkgconfig(glib-2.0)
+BuildRequires: pkgconfig(dbus-1)
+BuildRequires: pkgconfig(dbus-glib-1)
+BuildRequires: pkgconfig(check)
+BuildRequires: pkgconfig(libsimple-trace)
 
 %package config
-Summary: Common configuration files for OHM.
+Summary: Common configuration files for OHM
 Group: System Environment/Daemons
 
 %package plugin-core
-Summary: Common OHM libraries.
-Group: System Environment/Daemons
+Summary: Common OHM libraries
+Group: System/Daemons
 
 %package devel
-Summary: Files necessary for OHM plugin development.
+Summary: Files necessary for OHM plugin development
 Group: Development/Libraries
-Requires: ohm-plugin-core, libtrace-devel
+Requires: %{name} = %{version}
+Requires: ohm-plugin-core
+Requires: libtrace-devel
 
 #%package plugins-legacy
 #Summary: Legacy plugins for the Open Hardware Manager.
 #Group: System Environment/Daemons
 
 %package utils
-Summary: Miscallaneous OHM utilities.
+Summary: Miscallaneous OHM utilities
 Group: System Environment/Daemons
 
 %description
@@ -60,25 +63,33 @@ very useful or not necessary for everyday OHM usage.
 %setup -q -n ##__TARDIR__##
 
 %build
-export CFLAGS="-O0 -g3"
-%configure --disable-static --without-xauth --disable-dpms --disable-legacy
+%configure --disable-static --without-xauth --disable-dpms --disable-legacy --with-distro=redhat
 make
 
 %install
-[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
-%makeinstall
+rm -rf $RPM_BUILD_ROOT
+%make_install
 # make sure we get a plugin config dir even with legacy plugins disabled
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/ohm/plugins.d
 
 
 %clean
-[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT
+
+%post plugin-core
+/sbin/ldconfig
+
+%postun plugin-core
+/sbin/ldconfig
+
 
 %files
 %defattr(-,root,root,-)
 %{_initrddir}/ohmd
 %{_sbindir}/*ohm*
+%{_sysconfdir}/event.d/ohmd
 #%{_datadir}/locale
+%doc README COPYING INSTALL AUTHORS NEWS ChangeLog
 
 %files config
 %defattr(-,root,root,-)
@@ -89,13 +100,12 @@ mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/ohm/plugins.d
 
 %files plugin-core
 %defattr(-,root,root,-)
-%{_libdir}/libohmplugin.*
-%{_libdir}/libohmfact.*
+%{_libdir}/libohm*.so.*
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/ohm
-#%{_libdir}/libohm.*
+%{_libdir}/libohm*.so
 %{_libdir}/pkgconfig/*
 
 #%files plugins-legacy
@@ -106,8 +116,3 @@ mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/ohm/plugins.d
 %files utils
 %defattr(-,root,root,-)
 #%{_bindir}/*ohm*
-
-
-%changelog
-* Tue Jun 29 2010 Krisztian Litkey <mmf-audio-bounces@projects.maemo.org> - 
-- Quick'n dirty initial packaging.
