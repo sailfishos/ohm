@@ -88,13 +88,7 @@ END_TEST
 
 START_TEST (test_fact_structure_free)
 {
-    {
-        gint i;
-        i = 0;
-        for (; i < 20000; i++) {
-            test_fact_structure_set_get(_i);
-        }
-    }
+    test_fact_structure_set_get(_i);
 }
 END_TEST
 
@@ -206,15 +200,9 @@ END_TEST
 
 START_TEST (test_fact_pattern_free)
 {
-    {
-        gint i;
-        i = 0;
-        for (; i < 1000; i++) {
-            test_fact_pattern_new(_i);
-            test_fact_pattern_new_for_fact(_i);
-            test_fact_pattern_set_get(_i);
-        }
-    }
+    test_fact_pattern_new(_i);
+    test_fact_pattern_new_for_fact(_i);
+    test_fact_pattern_set_get(_i);
 }
 END_TEST
 
@@ -346,13 +334,7 @@ END_TEST
 
 START_TEST (test_fact_pattern_match_free)
 {
-    {
-        gint i;
-        i = 0;
-        for (; i < 1000; i++) {
-            test_fact_pattern_match_fields(_i);
-        }
-    }
+    test_fact_pattern_match_fields(_i);
 }
 END_TEST
 
@@ -537,13 +519,7 @@ END_TEST
 
 START_TEST (test_fact_store_free)
 {
-    {
-        gint i;
-        i = 0;
-        for (; i < 1000; i++) {
-            test_fact_store_insert_remove(_i);
-        }
-    }
+    test_fact_store_insert_remove(_i);
 }
 END_TEST
 
@@ -626,14 +602,8 @@ END_TEST
 
 START_TEST (test_fact_store_view_free)
 {
-    {
-        gint i;
-        i = 0;
-        for (; i < 1000; i++) {
-            test_fact_store_view_new(_i);
-            test_fact_store_view_two(_i);
-        }
-    }
+    test_fact_store_view_new(_i);
+    test_fact_store_view_two(_i);
 }
 END_TEST
 
@@ -850,13 +820,7 @@ END_TEST
 
 START_TEST (test_fact_store_transaction_free)
 {
-    {
-        gint i;
-        i = 1;
-        for (; i < 1000; (i = i + 1)) {
-            test_fact_store_transaction_push_and_cancel(_i);
-        }
-    }
+    test_fact_store_transaction_push_and_cancel(_i);
 }
 END_TEST
 
@@ -871,36 +835,38 @@ factstore_case (int desired_step_id)
 
 	int step_id = 1;
 	#define PREPARE_TEST(tc, fun) if (desired_step_id == 0 || step_id++ == desired_step_id)  tcase_add_test (tc, fun);
+  #define PREPARE_LOOP_TEST(tc, fun, reps) \
+      if (desired_step_id == 0 || step_id++ == desired_step_id)  tcase_add_loop_test (tc, fun, 0, reps);
 
 	TCase *tc_factstore = tcase_create ("factstore");
     tcase_set_timeout(tc_factstore, 60);
     PREPARE_TEST (tc_factstore, test_fact_structure_new);
     PREPARE_TEST (tc_factstore, test_fact_structure_name);
     PREPARE_TEST (tc_factstore, test_fact_structure_set_get);
-    PREPARE_TEST (tc_factstore, test_fact_structure_free);
+    PREPARE_LOOP_TEST (tc_factstore, test_fact_structure_free, 20000);
     PREPARE_TEST (tc_factstore, test_fact_structure_to_string);
     PREPARE_TEST (tc_factstore, test_fact_fact_new);
     PREPARE_TEST (tc_factstore, test_fact_fact_set_get);
     PREPARE_TEST (tc_factstore, test_fact_pattern_new);
     PREPARE_TEST (tc_factstore, test_fact_pattern_new_for_fact);
     PREPARE_TEST (tc_factstore, test_fact_pattern_set_get);
-    PREPARE_TEST (tc_factstore, test_fact_pattern_free);
+    PREPARE_LOOP_TEST (tc_factstore, test_fact_pattern_free, 1000);
     PREPARE_TEST (tc_factstore, test_fact_pattern_match);
     PREPARE_TEST (tc_factstore, test_fact_pattern_match_instance);
     PREPARE_TEST (tc_factstore, test_fact_pattern_match_fields);
-    PREPARE_TEST (tc_factstore, test_fact_pattern_match_free);
+    PREPARE_LOOP_TEST (tc_factstore, test_fact_pattern_match_free, 1000);
     PREPARE_TEST (tc_factstore, test_fact_store_new);
     PREPARE_TEST (tc_factstore, test_fact_store_insert);
     PREPARE_TEST (tc_factstore, test_fact_store_to_string);
     PREPARE_TEST (tc_factstore, test_fact_store_insert_remove);
-    PREPARE_TEST (tc_factstore, test_fact_store_free);
+    PREPARE_LOOP_TEST (tc_factstore, test_fact_store_free, 1000);
     PREPARE_TEST (tc_factstore, test_fact_store_view_new);
     PREPARE_TEST (tc_factstore, test_fact_store_view_two);
-    PREPARE_TEST (tc_factstore, test_fact_store_view_free);
+    PREPARE_LOOP_TEST (tc_factstore, test_fact_store_view_free, 1000);
     PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_pop);
     PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_and_watch);
     PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_and_cancel);
-    PREPARE_TEST (tc_factstore, test_fact_store_transaction_free);
+    PREPARE_LOOP_TEST (tc_factstore, test_fact_store_transaction_free, 1000);
     PREPARE_TEST (tc_factstore, test_fact_store_pattern_delete);
     PREPARE_TEST (tc_factstore, test_fact_store_transaction_push_and_commit);
 
@@ -921,7 +887,8 @@ main(int argc, char* argv[]) {
 	suite_add_tcase (s, factstore_case(step_id));
 
 	SRunner *sr = srunner_create (s);
-	srunner_run_all (sr, CK_VERBOSE);
+	srunner_set_fork_status (sr, CK_NOFORK);
+	srunner_run_all (sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed (sr);
 	srunner_free (sr);
 
