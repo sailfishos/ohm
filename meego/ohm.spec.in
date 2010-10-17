@@ -6,6 +6,7 @@ License: LGPL
 Group: System Environment/Daemons
 URL: http://127.0.0.1
 Source0: %{name}-%{version}.tar.gz
+Source100: %{name}-rpmlintrc
 BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: pl >= 5.6.32
@@ -17,26 +18,26 @@ BuildRequires: pkgconfig(check)
 BuildRequires: pkgconfig(libsimple-trace)
 
 %package config
-Summary: Common configuration files for OHM.
+Summary: Common configuration files for OHM
 Group: System Environment/Daemons
 
 %package plugin-core
-Summary: Common OHM libraries.
+Summary: Common OHM libraries
 Group: System Environment/Daemons
 
 %package devel
-Summary: Files necessary for OHM plugin development.
+Summary: Files necessary for OHM plugin development
 Group: Development/Libraries
 Requires: ohm-plugin-core, libtrace-devel
 
 %if %{defined with_legacy}
 %package plugins-legacy
-Summary: Legacy plugins for the Open Hardware Manager.
+Summary: Legacy plugins for the Open Hardware Manager
 Group: System Environment/Daemons
 %endif
 
 %package utils
-Summary: Miscallaneous OHM utilities.
+Summary: Miscallaneous OHM utilities
 Group: System Environment/Daemons
 
 %description
@@ -69,8 +70,7 @@ very useful or not necessary for everyday OHM usage.
 ./autogen.sh
 %configure --disable-static \
            --without-xauth \
-           --without-dpms-ext \
-           --with-distro=redhat \
+           --with-distro=meego \
            %{?_with_legacy}
 make
 
@@ -82,6 +82,12 @@ mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/ohm/plugins.d
 
 %clean
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
+
+%post plugin-core
+/sbin/ldconfig
+
+%postun plugin-core
+/sbin/ldconfig
 
 %files
 %defattr(-,root,root,-)
