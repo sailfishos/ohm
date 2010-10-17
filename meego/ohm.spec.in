@@ -7,7 +7,6 @@ Group: System Environment/Daemons
 URL: http://127.0.0.1
 Source0: %{name}-%{version}.tar.gz
 Source100: %{name}-rpmlintrc
-BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: pl >= 5.6.32
 Requires: ohm-plugin-core
