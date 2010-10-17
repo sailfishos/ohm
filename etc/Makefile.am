@@ -1,10 +1,7 @@
-EXTRA_DIST =				\
-	$(Data_DATA)
+EXTRA_DIST = $(Data_DATA)
 
-Datadir = $(OHM_CONF_DIR)
-upstartconfdir = $(sysconfdir)/event.d
+Datadir    = $(OHM_CONF_DIR)
+Data_DATA  = modules.ini
 
-Data_DATA =				\
-	modules.ini
-
-dist_upstartconf_DATA = ohmd
+#upstartconfdir        = $(sysconfdir)/event.d
+#dist_upstartconf_DATA = ohmd
