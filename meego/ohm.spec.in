@@ -2,10 +2,11 @@ Summary: Open Hardware Manager
 Name: ohm
 Version: ##__VERSION__##
 Release: 1
-License: LGPLv2.1
-Group: System/Daemons
-URL: http://meego.gitorious.org/maemo-multimedia/ohm
+License: LGPL
+Group: System Environment/Daemons
+URL: http://127.0.0.1
 Source0: %{name}-%{version}.tar.gz
+BuildArch: ##__ARCH__##
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Requires: pl >= 5.6.32
 Requires: ohm-plugin-core
@@ -16,30 +17,30 @@ BuildRequires: pkgconfig(check)
 BuildRequires: pkgconfig(libsimple-trace)
 
 %package config
-Summary: Common configuration files for OHM
+Summary: Common configuration files for OHM.
 Group: System Environment/Daemons
 
 %package plugin-core
-Summary: Common OHM libraries
-Group: System/Daemons
+Summary: Common OHM libraries.
+Group: System Environment/Daemons
 
 %package devel
-Summary: Files necessary for OHM plugin development
+Summary: Files necessary for OHM plugin development.
 Group: Development/Libraries
-Requires: %{name} = %{version}
-Requires: ohm-plugin-core
-Requires: libtrace-devel
+Requires: ohm-plugin-core, libtrace-devel
 
-#%package plugins-legacy
-#Summary: Legacy plugins for the Open Hardware Manager.
-#Group: System Environment/Daemons
+%if %{defined with_legacy}
+%package plugins-legacy
+Summary: Legacy plugins for the Open Hardware Manager.
+Group: System Environment/Daemons
+%endif
 
 %package utils
-Summary: Miscallaneous OHM utilities
+Summary: Miscallaneous OHM utilities.
 Group: System Environment/Daemons
 
 %description
-Open Hardware Manager
+Open Hardware Manager with Nokia policy add-ons.
 
 %description config
 This package contains common OHM configuration files.
@@ -52,44 +53,41 @@ developing OHM plugins.
 This package contains header files, libraries, pkg-config files, etc.
 necessary for developing OHM plugins.
 
-#%description plugins-legacy
-#Lagacy plugins for OHM.
+%if %{defined with_legacy}
+%description plugins-legacy
+Legacy plugins for OHM.
+%endif
 
 %description utils
 This package contains miscallaneous OHM utilities that are either not
 very useful or not necessary for everyday OHM usage.
 
 %prep
-%setup -q -n ##__TARDIR__##
+%setup -q
 
 %build
-%configure --disable-static --without-xauth --disable-dpms --disable-legacy --with-distro=redhat
+./autogen.sh
+%configure --disable-static \
+           --without-xauth \
+           --without-dpms-ext \
+           --with-distro=redhat \
+           %{?_with_legacy}
 make
 
 %install
-rm -rf $RPM_BUILD_ROOT
-%make_install
+[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
+%makeinstall
 # make sure we get a plugin config dir even with legacy plugins disabled
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/ohm/plugins.d
 
-
 %clean
-rm -rf $RPM_BUILD_ROOT
-
-%post plugin-core
-/sbin/ldconfig
-
-%postun plugin-core
-/sbin/ldconfig
-
+[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
 %{_initrddir}/ohmd
 %{_sbindir}/*ohm*
-%{_sysconfdir}/event.d/ohmd
 #%{_datadir}/locale
-%doc README COPYING INSTALL AUTHORS NEWS ChangeLog
 
 %files config
 %defattr(-,root,root,-)
@@ -100,19 +98,23 @@ rm -rf $RPM_BUILD_ROOT
 
 %files plugin-core
 %defattr(-,root,root,-)
-%{_libdir}/libohm*.so.*
+%{_libdir}/libohmplugin.*
+%{_libdir}/libohmfact.*
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/ohm
-%{_libdir}/libohm*.so
+#%{_libdir}/libohm.*
 %{_libdir}/pkgconfig/*
 
-#%files plugins-legacy
-#%defattr(-,root,root,-)
-#%config %{_sysconfdir}/ohm/plugins.d/*
-#%{_libdir}/ohm
+%if %{defined with_legacy}
+%files plugins-legacy
+%defattr(-,root,root,-)
+%config %{_sysconfdir}/ohm/plugins.d/*
+%{_libdir}/ohm
+%endif
 
 %files utils
 %defattr(-,root,root,-)
 #%{_bindir}/*ohm*
+
