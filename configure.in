@@ -51,8 +51,11 @@ if test "$GCC" = "yes"; then
     #CPPFLAGS="$CPPFLAGS -Wall"
 fi
 
-AC_ARG_WITH(distro, AC_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, gentoo, debian, slackware, or none]))
-if test "z$with_distro" = "z"; then
+dnl # Default to meego (avoids having to touch all branches right now)
+with_distro=meego
+AC_ARG_WITH(distro, AC_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, gentoo, debian, slackware, maemo, meego, auto, or none]))
+if test "x$with_distro" = "xauto"; then
+	AC_CHECK_FILE(/etc/meego-release,with_distro="meego")
 	AC_CHECK_FILE(/etc/mandrake-release,with_distro="mandrake")
 	AC_CHECK_FILE(/etc/redhat-release,with_distro="redhat")
 	AC_CHECK_FILE(/etc/fedora-release,with_distro="redhat")
@@ -62,6 +65,9 @@ if test "z$with_distro" = "z"; then
 fi
 with_distro=`echo ${with_distro} | tr '[[:upper:]]' '[[:lower:]]' `
 
+if test "x$with_distro" = "xauto"; then
+         with_distro=""
+fi
 if test "z$with_distro" = "z"; then
 	echo "Linux distribution autodetection failed, you must specify the distribution to target using --with-distro=DISTRO"
 	exit 1
@@ -69,7 +75,7 @@ elif test "z$with_distro" = "znone"; then
 	echo "No distro specific startup scripts will be built."
 else
 	case $with_distro in
-		redhat|gentoo|debian|slackware) ;;
+		redhat|gentoo|debian|slackware|meego|maemo) ;;
 		*)
 			echo "Your distribution (${with_distro}) is not yet supported!  (patches welcome)"
 			exit 1
@@ -81,6 +87,8 @@ AM_CONDITIONAL(TARGET_GENTOO, test x"$with_distro" = xgentoo)
 AM_CONDITIONAL(TARGET_DEBIAN, test x"$with_distro" = xdebian)
 AM_CONDITIONAL(TARGET_MANDRAKE, test x"$with_distro" = xmandrake)
 AM_CONDITIONAL(TARGET_SLACKWARE, test x"$with_distro" = xslackware)
+AM_CONDITIONAL(TARGET_MAEMO, test x"$with_distro" = xmaemo)
+AM_CONDITIONAL(TARGET_MEEGO, test x"$with_distro" = xmeego)
 
 PKG_CHECK_MODULES(GLIB, glib-2.0 gobject-2.0)
 AC_SUBST(GLIB_CFLAGS)

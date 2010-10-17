@@ -8,3 +8,9 @@ endif
 if TARGET_SLACKWARE
 SUBDIRS += Slackware
 endif
+if TARGET_MEEGO
+SUBDIRS += RedHat
+endif
+if TARGET_MAEMO
+SUBDIRS += Maemo
+endif
