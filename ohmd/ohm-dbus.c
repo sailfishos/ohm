@@ -28,6 +28,7 @@ typedef struct {
 static DBusConnection *conn;
 static GHashTable     *dbus_objects;
 static GSList *dbus_signal_handlers;
+static GSList *match_strings;
 
 
 /**
@@ -364,9 +365,19 @@ static gboolean unset_match_string(ohm_dbus_signal_t *signal_handler) {
     gchar *match_string = ohm_generate_match(signal_handler);
     gboolean retval = TRUE;
     DBusError error;
+    GSList *e;
 
     if (!match_string)
         return FALSE;
+
+    for (e = match_strings; e != NULL; e = g_slist_next(e)) {
+        gchar *str = e->data;
+        if (!strcmp(str, match_string)) {
+            match_strings = g_slist_delete_link(match_strings, e);
+            g_free(str);
+            break;
+        }
+    }
 
     dbus_error_init(&error);
     dbus_bus_remove_match(conn, match_string, &error);
@@ -390,23 +401,34 @@ static gboolean set_match_string(ohm_dbus_signal_t *signal_handler) {
     gchar *match_string = ohm_generate_match(signal_handler);
     gboolean retval = TRUE;
     DBusError error;
+    GSList *e;
 
     if (!match_string)
         return FALSE;
+
+    for (e = match_strings; e != NULL; e = g_slist_next(e)) {
+        gchar *str = e->data;
+        if (!strcmp(str, match_string)) {
+            /* we have already registered this match */
+            g_free(match_string);
+            return TRUE;
+        }
+    }
 
     dbus_error_init(&error);
     dbus_bus_add_match(conn, match_string, &error);
 
     if (dbus_error_is_set(&error)) {
         ohm_debug("Error setting D-Bus match '%s': '%s'", match_string, error.message);
+        g_free(match_string);
         retval = FALSE;
     }
     else {
         ohm_debug("Set match '%s'", match_string);
+        match_strings = g_slist_prepend(match_strings, match_string);
     }
 
     dbus_error_free(&error);
-    g_free(match_string);
 
     return retval;
 }
