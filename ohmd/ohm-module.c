@@ -235,7 +235,14 @@ ohm_module_add_all_plugins (OhmModule *module)
 			/* load module */
 			ret = ohm_module_add_plugin (module, entry);
 			if (ret == FALSE) {
-				g_error ("module %s failed to load but listed in require", entry);
+				char buf[64];
+
+				/* Work around the core dump abort problem associated
+				 * with g_error() */
+
+				snprintf (buf, 64,
+						"module %s failed to load but listed in require", entry);
+				g_error (buf);
 			}
 
 			/* add to loaded list */
