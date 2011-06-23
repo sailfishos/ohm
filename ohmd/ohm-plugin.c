@@ -223,7 +223,7 @@ ohm_plugin_conf_set_key (OhmPlugin   *plugin,
 }
 
 gboolean
-ohm_plugin_load_params (OhmPlugin *plugin, GError **error)
+ohm_plugin_load_params (OhmPlugin *plugin, GError **error, char *plfm)
 {
   static GQuark  domain = 0;
 
@@ -232,7 +232,7 @@ ohm_plugin_load_params (OhmPlugin *plugin, GError **error)
   const char *top   = getenv("OHM_CONF_DIR");
 
   char  path[PATH_MAX];
-  char  line[1024], saved[1024], *param, *value, *eq, *p;
+  char  line[1024], saved[1024], *param, *value, *eq, *p, new_name[128];
   FILE *fp;
   
   /*
@@ -260,12 +260,26 @@ ohm_plugin_load_params (OhmPlugin *plugin, GError **error)
   if (!domain)
     domain = g_quark_from_static_string("ohm_plugin_load_params");
 
+  if (plfm == NULL)
+    snprintf(new_name, sizeof(new_name), "%s", name);
+  else
+    snprintf(new_name, sizeof(new_name), "%s%s%s", plfm, "-", name);
+
   if (top == NULL)
     snprintf(path, sizeof(path), "%s%s%s%s%s%s%s%s",
-	     SYSCONFDIR, slash, "ohm", slash, "plugins.d", slash, name, ".ini");
+	     SYSCONFDIR, slash, "ohm", slash, "plugins.d", slash, new_name, ".ini");
   else
     snprintf(path, sizeof(path), "%s%s%s%s%s%s",
-	     top, slash, "plugins.d", slash, name, ".ini");
+	     top, slash, "plugins.d", slash, new_name, ".ini");
+
+  if (plfm != NULL && !g_file_test(path, G_FILE_TEST_EXISTS)) { /* Platform specific configure does not exist , rebuild the path */
+    if (top == NULL)
+      snprintf(path, sizeof(path), "%s%s%s%s%s%s%s%s",
+	       SYSCONFDIR, slash, "ohm", slash, "plugins.d", slash, name, ".ini");
+    else
+      snprintf(path, sizeof(path), "%s%s%s%s%s%s",
+	       top, slash, "plugins.d", slash, name, ".ini");
+  }
 
   ohm_debug ("Loading %s parameters from %s", name, path);
   

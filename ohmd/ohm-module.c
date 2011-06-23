@@ -27,6 +27,7 @@
 #include <time.h>
 #include <errno.h>
 
+#include <ctype.h>
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -39,6 +40,7 @@
 
 #include <glib/gi18n.h>
 #include <gmodule.h>
+#include <boardname/boardname.h>
 
 #include "ohm-debug.h"
 #include "ohm-module.h"
@@ -665,11 +667,12 @@ discover_plugins(OhmModule *module, gsize *nplugin)
  * ohm_module_read_defaults:
  **/
 static void
-ohm_module_read_defaults (OhmModule *module)
+ohm_module_read_defaults (OhmModule *module, gchar *conf_prefix)
 {
 	GKeyFile *keyfile;
 	gchar *filename;
 	gchar *conf_dir;
+ 	gchar *conf_file_name;
 	gsize length;
 	guint i;
 	GError *error;
@@ -678,15 +681,36 @@ ohm_module_read_defaults (OhmModule *module)
 	/* use g_key_file. It's quick, and portable */
 	keyfile = g_key_file_new ();
 
+        /* we may want to load different modules on different platform */    
+	if (conf_prefix != NULL) {
+		conf_file_name = g_strconcat(conf_prefix, "-", "modules.ini", NULL);
+	} else {
+		conf_file_name = g_strdup("modules.ini");
+	}
+
 	/* generate path for conf file */
 	conf_dir = getenv ("OHM_CONF_DIR");
 	if (conf_dir != NULL) {
 		/* we have from the environment */
-		filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, "modules.ini", NULL);
+		filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, conf_file_name, NULL);
 	} else {
 		/* we are running as normal */
-		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "modules.ini", NULL);
+		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", conf_file_name, NULL);
 	}
+	
+	if (conf_prefix != NULL && !g_file_test(filename, G_FILE_TEST_EXISTS)) { /* Platform specific configure does not exist , rebuild the filename */
+		g_free(conf_file_name);
+		g_free(filename);
+		conf_file_name = g_strdup("modules.ini");
+		if (conf_dir != NULL) {
+			/* we have from the environment */
+			filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, conf_file_name, NULL);
+		} else {
+			/* we are running as normal */
+			filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", conf_file_name, NULL);
+		}		
+	}
+
 	ohm_debug ("keyfile = %s", filename);
 
 	/* we can never save the file back unless we remove G_KEY_FILE_NONE */
@@ -696,6 +720,7 @@ ohm_module_read_defaults (OhmModule *module)
 		g_error ("cannot load keyfile %s", filename);
 	}
 	g_free (filename);
+	g_free (conf_file_name);
 
 	error = NULL;
 	module->priv->do_extra_checks = g_key_file_get_boolean (keyfile, "Modules", "PerformExtraChecks", &error);
@@ -1240,17 +1265,42 @@ ohm_module_init (OhmModule *module)
 	const gchar *name;
 	GError *error;
 	gboolean ret;
+        gchar *conf_prefix, *p; 
 
 	module->priv = OHM_MODULE_GET_PRIVATE (module);
 
 	module->priv->interested = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
 
 	module->priv->conf = ohm_conf_new ();
+
+	conf_prefix = getboardname(); 
+
+	if (conf_prefix != NULL) {
+		/* sanitize boardname before trying to use it as a prefix */
+		for (p = conf_prefix; *p; p++) {
+			if (isalnum(*p))
+				continue;
+			
+			switch (*p) {
+			case '+':
+			case '-':
+			case '_':
+			case ':':
+			case '.':
+				break;
+			case '\n':
+				*p = (p[1] == '\0' ? '\0' : '_');
+				break;
+			default:
+				*p = '_';
+			}
+		}
+	}
+
 	g_signal_connect (module->priv->conf, "key-changed",
 			  G_CALLBACK (key_changed_cb), module);
-
 	/* read the defaults in from modules.ini */
-	ohm_module_read_defaults (module);
+	ohm_module_read_defaults (module, conf_prefix);
 
 	/* Keep trying to empty both require and suggested lists.
 	 * We could have done this recursively, but that is really bad for the stack.
@@ -1285,7 +1335,7 @@ ohm_module_init (OhmModule *module)
 
 		/* load defaults from disk */
 		error = NULL;
-		ret = ohm_conf_load_defaults (module->priv->conf, name, &error);
+		ret = ohm_conf_load_defaults (module->priv->conf, name, &error, conf_prefix);
 		if (ret == FALSE) {
 			ohm_debug ("not defaults for %s: %s", name, error->message);
 			g_error_free (error);
@@ -1293,7 +1343,7 @@ ohm_module_init (OhmModule *module)
 
 		/* load plugin parameters */
 		error = NULL;
-		ret = ohm_plugin_load_params (plugin, &error);
+		ret = ohm_plugin_load_params (plugin, &error, conf_prefix);
 		if (ret == FALSE) {
 		        g_error ("failed to load plugin parameters for %s: %s",
 				 name, error->message);
@@ -1315,6 +1365,7 @@ ohm_module_init (OhmModule *module)
 		ohm_plugin_initialize (plugin);
 	}
 	ohm_conf_set_initializing (module->priv->conf, FALSE);
+        free(conf_prefix); 
 }
 
 /**
