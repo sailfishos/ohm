@@ -33,6 +33,13 @@
 
 G_BEGIN_DECLS
 
+#if !(defined G_PLATFORM_WIN32 || defined NATIVE_WIN32)
+#ifdef  G_MODULE_EXPORT
+#undef  G_MODULE_EXPORT
+#define G_MODULE_EXPORT __attribute__ ((visibility ("default")))
+#endif
+#endif
+
 typedef struct _OhmPlugin OhmPlugin;
 typedef struct _OhmPluginDesc OhmPluginDesc;
 typedef struct _OhmPluginKeyIdMap OhmPluginKeyIdMap;
