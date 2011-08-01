@@ -131,7 +131,7 @@ struct _OhmPluginDesc {
     [0 ... (n)] = OHM_PLUGIN_METHODS_END };				  \
   static void __attribute__((constructor)) plugin_init_exports(void)	  \
   {									  \
-    G_MODULE_EXPORT ohm_method_t exports[] = {				  \
+    ohm_method_t exports[] = {						  \
       __VA_ARGS__,							  \
       OHM_PLUGIN_METHODS_END						  \
     };									  \
@@ -154,7 +154,7 @@ struct _OhmPluginDesc {
     [0 ... (n)] = OHM_PLUGIN_METHODS_END };				  \
   static void __attribute__((constructor)) plugin_init_imports(void)	  \
   {									  \
-    G_MODULE_EXPORT ohm_method_t imports[] = {				  \
+    ohm_method_t imports[] = {						  \
       __VA_ARGS__,							  \
       OHM_PLUGIN_METHODS_END						  \
     };									  \
