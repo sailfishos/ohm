@@ -8,4 +8,4 @@ Description: OHM plugin library.
 Version: @VERSION@
 Requires: libsimple-trace
 Libs: -L${libdir} -lohmplugin
-Cflags: -I${includedir}
+Cflags: -fvisibility=hidden -I${includedir}
