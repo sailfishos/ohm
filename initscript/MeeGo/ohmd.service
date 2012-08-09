@@ -1,7 +1,6 @@
 [Unit]
 Description=ohm daemon for resource policy management
 After=boardname.service
-After=syslog.target
 
 [Service]
 Type=dbus
