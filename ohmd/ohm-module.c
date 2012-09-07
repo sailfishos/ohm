@@ -418,6 +418,11 @@ ohm_module_reorder_plugins(OhmModule *module)
     nplugin++;
   
   DEBUG(DBG_GRAPH, "found %d plugins to sort", nplugin);
+
+  /* Zero plugins is not useful way to run ohmd, but
+   * it still should be possible. */
+  if (nplugin == 0)
+    return TRUE;
   
   plugins = g_new0(OhmPlugin *, nplugin);
   if (plugins == NULL)
@@ -1366,6 +1371,9 @@ ohm_module_init (OhmModule *module)
 	}
 	ohm_conf_set_initializing (module->priv->conf, FALSE);
         free(conf_prefix); 
+
+	if (!module->priv->plugins)
+		g_warning ("no plugins loaded!");
 }
 
 /**
