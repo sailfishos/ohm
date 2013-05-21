@@ -9,7 +9,7 @@ if TARGET_SLACKWARE
 SUBDIRS += Slackware
 endif
 if TARGET_MEEGO
-SUBDIRS += RedHat
+SUBDIRS += MeeGo
 endif
 if TARGET_MAEMO
 SUBDIRS += Maemo

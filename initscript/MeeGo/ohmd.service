@@ -1,0 +1,13 @@
+[Unit]
+Description=ohm daemon for resource policy management
+After=boardname.service
+After=syslog.target
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.ohm
+ExecStart=/usr/sbin/ohmd --no-daemon
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=basic.target

@@ -1,0 +1,66 @@
+* Fri Sep 07 2012 Juho Hamalainen <juho.hamalainen@tieto.com> - 1.1.14
+- Fixes NEMO#322: Allow ohmd to run without modules.
+
+* Thu Aug 09 2012 Marko Saukko <marko.saukko@jollamobile.com> - 1.1.14
+- Add 0001-Remove-After-syslog.target.patch to work according to systemd recommendations
+
+* Thu Nov 17 2011 Marko Saukko <marko.saukko@cybercom.com> - 1.1.14
+- Fixed systemd service file link.
+
+* Fri Sep 09 2011 Krisztian Litkey <krisztian.litkey@intel.com> - 1.1.14
+- Removed the XAUTHORITY environment variable kludge
+
+* Thu Sep 08 2011 Kalle Lampila <kalle.lampila@cybercom.com> - 1.1.14
+- Added Xauthority environment (BMC#22887)
+
+* Thu Jul 28 2011 Brad Peters <brad.t.peters@intel.com> - 1.1.14
+- Fixing build, merging divergent modifications in Trunk
+
+* Tue Jun 28 2011 Kalle Lampila <kalle.lampila@cybercom.com> - 1.1.14
+- Changed systemd service type to dbus from forking
+
+* Wed Jun 22 2011 Chris Ferron <chris.e.ferron@linux.intel.com> - 1.1.14
+- added lib call to bordname instead of getenv for systemd work
+
+* Mon Jun 20 2011 Mika Laitio <ext-mika.1.laitio@nokia.com> - 1.1.14
+- BMC#18556: Updated module-configure.patch, 3 different config files are now tried to load
+  in following order:
+  "<boardname+boardrev>-modules.ini", if that fails then
+  "<boardname>-modules.ini" and if that fails then "modules.ini"
+- Added Makefile for generating ohm.spec from ohm.yaml
+
+* Mon Jun 20 2011 Markus Lehtonen <markus.lehtonen@linux.intel.com> - 1.1.14
+- Add compiler-warn-fix.patch to fix building
+- Sync .yaml and .spec
+- Systemd integration (FEA#16109): add ohmd.service file for systemd to be able
+  to manage ohmd
+
+* Thu May 5 2011 Zheng Huan <huan.zheng@intel.com> - 1.1.14
+- Enable plug-ins to load different configuration on different platform, for BMC#17106
+
+* Wed May 4 2011 Zheng Huan <huan.zheng@intel.com> - 1.1.14
+- Minor change, rename OHM_CONF_MODULE to OHM_CONF_PLATFORM for future extension
+
+* Fri Apr 15 2011 Zheng Huan <huan.zheng@intel.com> - 1.1.14
+- Add capability to load different modules per different platform, for BMC#7487
+
+* Mon Feb 24 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - 1.1.14
+- Remove preun/post/postun scriptlets as part of BMC#12898
+
+* Mon Jan 10 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - 1.1.14
+- Fix post/postun requirements
+
+* Thu Dec 28 2010 Kalle Lampila <kalle.lampila@cybercom.com> - 1.1.14
+- Fixed chkconfig registeration in installation
+- Changed package group to System/Resource Policy
+
+* Thu Dec 09 2010 Kalle Lampila <kalle.lampila@cybercom.com> - 1.1.14
+- Packaging now uses spectacle
+- Version update
+- Part of FEA#6701
+
+* Wed Jun 30 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.1.2
+- Initial import to MeeGo
+
+* Tue Jun 29 2010 Krisztian Litkey <mmf-audio-bounces@projects.maemo.org> - 0.1.2
+- Quick'n dirty initial packaging.
