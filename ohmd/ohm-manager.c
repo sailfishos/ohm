@@ -271,16 +271,20 @@ ohm_manager_class_init (OhmManagerClass *klass)
 static void
 ohm_manager_init (OhmManager *manager)
 {
+#ifdef HAVE_KEYSTORE
 	GError *error = NULL;
 	DBusGConnection *connection;
+#endif
 	manager->priv = OHM_MANAGER_GET_PRIVATE (manager);
 
+#ifdef HAVE_KEYSTORE
 	/* get system bus connection */
 	connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
 	if (error != NULL) {
 		g_error ("Cannot get connection to system bus!");
 		g_error_free (error);
 	}
+#endif
 
 	ohm_manager_load_options(manager);
 
@@ -336,11 +340,8 @@ ohm_manager_dispose (GObject *object)
 static void
 ohm_manager_finalize (GObject *object)
 {
-	OhmManager *manager;
-
 	g_return_if_fail (object != NULL);
 	g_return_if_fail (OHM_IS_MANAGER (object));
-	manager = OHM_MANAGER (object);
 
 	g_debug ("Finalizing ohm_manager");
 	G_OBJECT_CLASS (ohm_manager_parent_class)->finalize (object);
@@ -358,5 +359,6 @@ ohm_manager_new (void)
 
 	manager = g_object_new (OHM_TYPE_MANAGER, NULL);
 
-	return OHM_MANAGER (manager);
+	manager = OHM_MANAGER (manager);
+	return manager;
 }

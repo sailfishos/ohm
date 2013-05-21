@@ -242,7 +242,7 @@ ohm_module_add_all_plugins (OhmModule *module)
 
 				snprintf (buf, 64,
 						"module %s failed to load but listed in require", entry);
-				g_error (buf);
+				g_error ("%s", buf);
 			}
 
 			/* add to loaded list */

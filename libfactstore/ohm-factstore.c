@@ -408,13 +408,10 @@ static GObject * ohm_structure_constructor (GType type, guint n_construct_proper
 	GObject * obj;
 	OhmStructureClass * klass;
 	GObjectClass * parent_class;
-	OhmStructure * self;
 
 	klass = OHM_STRUCTURE_CLASS (g_type_class_peek (OHM_TYPE_STRUCTURE));
 	parent_class = G_OBJECT_CLASS (g_type_class_peek_parent (klass));
 	obj = parent_class->constructor (type, n_construct_properties, construct_properties);
-
-	self = OHM_STRUCTURE (obj);
 
 	g_value_register_transform_func (OHM_TYPE_STRUCTURE, G_TYPE_STRING, _ohm_structure_value_to_string_gvalue_transform);
 
