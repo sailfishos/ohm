@@ -1,6 +1,9 @@
 [Unit]
 Description=ohm daemon for resource policy management
-After=boardname.service
+DefaultDependencies=no
+Requires=dbus.socket
+After=boardname.service local-fs.target systemd-udev-settle.service
+Conflicts=shutdown.target
 
 [Service]
 Type=dbus
