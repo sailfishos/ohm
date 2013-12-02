@@ -124,6 +124,7 @@ systemctl daemon-reload
 %{_sbindir}/*ohm*
 /%{_lib}/systemd/system/ohmd.service
 /%{_lib}/systemd/system/basic.target.wants/ohmd.service
+%config %{_sysconfdir}/dbus-1/system.d/ohm.conf
 # << files
 
 %files configs-default
@@ -132,7 +133,6 @@ systemctl daemon-reload
 %dir %{_sysconfdir}/ohm
 %dir %{_sysconfdir}/ohm/plugins.d
 %config %{_sysconfdir}/ohm/modules.ini
-%config %{_sysconfdir}/dbus-1/system.d/ohm.conf
 # << files configs-default
 
 %files plugin-core
