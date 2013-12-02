@@ -12,7 +12,7 @@ Sources:
     - ohm-rpmlintrc
 
 Requires:
-    - ohm-config
+    - ohm-configs
     - boardname >= 0.4.1
 
 PkgConfigBR:
@@ -32,7 +32,12 @@ ConfigOptions:
 AutoSubPackages:
     - devel
 SubPackages:
-    - Name: config
+    - Name: configs-default
+      Provides:
+        - ohm-config > 1.1.15
+        - ohm-configs
+      Obsoletes:
+        - ohm-config <= 1.1.15
       Group: System/Resource Policy
       Summary: Common configuration files for %{name}
       Description: |
