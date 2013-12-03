@@ -17,7 +17,7 @@ URL:        http://meego.gitorious.org/maemo-multimedia/ohm
 Source0:    %{name}-%{version}.tar.gz
 Source1:    ohm-rpmlintrc
 Source100:  ohm.yaml
-Requires:   ohm-config
+Requires:   ohm-configs
 Requires:   boardname >= 0.4.1
 Requires:   systemd
 Requires(preun): systemd
@@ -34,12 +34,15 @@ BuildRequires:  pkgconfig(boardname)
 Open Hardware Manager.
 
 
-%package config
+%package configs-default
 Summary:    Common configuration files for %{name}
 Group:      System/Resource Policy
 Requires:   %{name} = %{version}-%{release}
+Provides:   ohm-config > 1.1.15
+Provides:   ohm-configs
+Obsoletes:  ohm-config <= 1.1.15
 
-%description config
+%description configs-default
 This package contains common OHM configuration files.
 
 
@@ -121,16 +124,16 @@ systemctl daemon-reload
 %{_sbindir}/*ohm*
 /%{_lib}/systemd/system/ohmd.service
 /%{_lib}/systemd/system/basic.target.wants/ohmd.service
+%config %{_sysconfdir}/dbus-1/system.d/ohm.conf
 # << files
 
-%files config
+%files configs-default
 %defattr(-,root,root,-)
-# >> files config
+# >> files configs-default
 %dir %{_sysconfdir}/ohm
 %dir %{_sysconfdir}/ohm/plugins.d
 %config %{_sysconfdir}/ohm/modules.ini
-%config %{_sysconfdir}/dbus-1/system.d/ohm.conf
-# << files config
+# << files configs-default
 
 %files plugin-core
 %defattr(-,root,root,-)
