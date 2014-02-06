@@ -81,15 +81,15 @@ ln -s ../ohmd.service %{buildroot}/%{_lib}/systemd/system/basic.target.wants/ohm
 
 %preun
 if [ "$1" -eq 0 ]; then
-systemctl stop ohmd.service
+systemctl stop ohmd.service || :
 fi
 
 %post
-systemctl daemon-reload
-systemctl reload-or-try-restart ohmd.service
+systemctl daemon-reload || :
+systemctl reload-or-try-restart ohmd.service || :
 
 %postun
-systemctl daemon-reload
+systemctl daemon-reload || :
 
 %post plugin-core -p /sbin/ldconfig
 
