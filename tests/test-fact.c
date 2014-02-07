@@ -831,7 +831,9 @@ END_TEST
 TCase *
 factstore_case (int desired_step_id)
 {
+#if (GLIB_MAJOR_VERSION <= 2) && (GLIB_MINOR_VERSION < 36)
     g_type_init();
+#endif
 
 	int step_id = 1;
 	#define PREPARE_TEST(tc, fun) if (desired_step_id == 0 || step_id++ == desired_step_id)  tcase_add_test (tc, fun);

@@ -65,7 +65,9 @@ main (int argc, char *argv[])
 		use_private = TRUE;
 	}
 
+#if (GLIB_MAJOR_VERSION <= 2) && (GLIB_MINOR_VERSION < 36)
 	g_type_init ();
+#endif
 	ctx = libohm_new ();
 	error = NULL;
 	ret = libohm_connect (ctx, &error);

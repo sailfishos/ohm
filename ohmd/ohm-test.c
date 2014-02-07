@@ -42,7 +42,9 @@ main (int argc, char *argv[])
 	GError *error;
 	gint value;
 
+#if (GLIB_MAJOR_VERSION <= 2) && (GLIB_MINOR_VERSION < 36)
 	g_type_init ();
+#endif
 
 	ohm_debug_init (TRUE);
 

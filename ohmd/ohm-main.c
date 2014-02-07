@@ -436,7 +436,9 @@ main (int argc, char *argv[])
 		g_log_set_always_fatal (fatal_mask);
 	}
 
+#if (GLIB_MAJOR_VERSION <= 2) && (GLIB_MINOR_VERSION < 36)
 	g_type_init ();
+#endif
 
 #ifdef HAVE_GTHREAD
 	if (!g_thread_supported ())

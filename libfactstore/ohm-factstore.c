@@ -2731,7 +2731,7 @@ gint ohm_value_cmp (GValue* v1, GValue* v2) {
 	}
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_CHAR) {
-		return g_value_get_char (v2) - g_value_get_char (v1);
+		return g_value_get_schar (v2) - g_value_get_schar (v1);
 	}
 
 	/*   if (v1.type () == typeof (double))
