@@ -87,8 +87,7 @@ gboolean	 ohm_conf_add_key			(OhmConf	*conf,
 							 GError		**error);
 gboolean	 ohm_conf_load_defaults			(OhmConf	*conf,
 							 const gchar	*pluginname,
-							 GError		**error,
-							 gchar          *conf_prefix);
+							 GError		**error);
 G_END_DECLS
 
 #endif /* __OHM_CONF_H */

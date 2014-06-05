@@ -1,7 +1,6 @@
 INCLUDES =							\
 	$(HAL_CFLAGS)						\
 	$(GLIB_CFLAGS)						\
-	$(BOARDNAME_CFLAGS)					\
 	$(DBUS_CFLAGS)						\
 	$(GTHREAD_CFLAGS)					\
 	-DDBUS_API_SUBJECT_TO_CHANGE				\
@@ -27,7 +26,7 @@ ohmd_test_SOURCES = 						\
 	ohm-marshal.h						\
 	ohm-marshal.c						\
 	ohm-test.c
-ohmd_test_LDADD = $(DBUS_LIBS) $(BOARDNAME_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
+ohmd_test_LDADD = $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS)
 
 lib_LTLIBRARIES = libohmplugin.la
 
@@ -64,7 +63,7 @@ endif
 
 
 ohmd_LDADD = libohmplugin.la ../libfactstore/libohmfact.la       \
-        $(HAL_LIBS) $(DBUS_LIBS) $(BOARDNAME_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS) \
+        $(HAL_LIBS) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GMODULE_LIBS) \
 	$(LIBTRACE_LIBS)
 
 BUILT_SOURCES =							\

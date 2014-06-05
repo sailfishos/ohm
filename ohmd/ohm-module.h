@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 #include <ohm/ohm-plugin.h>
-#include <boardname.h>
 
 G_BEGIN_DECLS
 
