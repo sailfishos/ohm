@@ -416,8 +416,7 @@ ohm_conf_process_line (OhmConf     *conf,
 gboolean
 ohm_conf_load_defaults (OhmConf     *conf,
 			const gchar *plugin_name,
-			GError      **error,
-                        gchar       *conf_prefix)
+			GError     **error)
 {
 	gboolean ret;
 	gchar *contents;
@@ -427,7 +426,6 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	gchar *filename;
 	gchar *conf_dir;
 	gchar *inifile;
-	gchar *conf_file_name;
 
 	g_return_val_if_fail (OHM_IS_CONF (conf), FALSE);
 	g_return_val_if_fail (plugin_name != NULL, FALSE);
@@ -435,34 +433,14 @@ ohm_conf_load_defaults (OhmConf     *conf,
 	/* we have an ini extension, but not format */
 	inifile = g_strdup_printf ("%s.ini", plugin_name);
 
-	/* we may want to load different configure on different platform */    
-	if (conf_prefix != NULL) {
-		conf_file_name = g_strconcat(conf_prefix, "-", inifile, NULL);
-	} else {
-		conf_file_name = g_strdup(inifile);
-	}
-
 	/* generate path for each module */
 	conf_dir = getenv ("OHM_CONF_DIR");
 	if (conf_dir != NULL) {
 		/* we have from the environment */
-		filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, "plugins.d", conf_file_name, NULL);
+		filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, "plugins.d", inifile, NULL);
 	} else {
 		/* we are running as normal */
-		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins.d", conf_file_name, NULL);
-	}
-
-	if (conf_prefix != NULL && !g_file_test(filename, G_FILE_TEST_EXISTS)) { /* Platform specific configure does not exist , rebuild the filename */
-		g_free(conf_file_name);
-		g_free(filename);
-		conf_file_name = g_strdup(inifile);
-		if (conf_dir != NULL) {
-			/* we have from the environment */
-			filename = g_build_path (G_DIR_SEPARATOR_S, conf_dir, "plugins.d", conf_file_name, NULL);
-		} else {
-			/* we are running as normal */
-			filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins.d", conf_file_name, NULL);
-		}	
+		filename = g_build_path (G_DIR_SEPARATOR_S, SYSCONFDIR, "ohm", "plugins.d", inifile, NULL);
 	}
 
 	g_free (inifile);
@@ -471,8 +449,6 @@ ohm_conf_load_defaults (OhmConf     *conf,
 
 	/* load from file */
 	ret = g_file_get_contents (filename, &contents, &length, error);
-	
-	g_free(conf_file_name);
 	g_free (filename);
 	if (ret == FALSE) {
 		/* we already set error */

@@ -203,8 +203,7 @@ gboolean	 ohm_plugin_conf_set_key		(OhmPlugin      *plugin,
 							 const gchar	*key,
 							 gint		 value);
 gboolean         ohm_plugin_load_params                 (OhmPlugin *plugin,
-							 GError   **error,
-							 gchar     *plfm);
+							 GError **error);
 
 gboolean         ohm_plugin_add_param                   (OhmPlugin *plugin,
 							 const gchar *param,

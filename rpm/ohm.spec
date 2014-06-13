@@ -8,7 +8,6 @@ URL:        http://meego.gitorious.org/maemo-multimedia/ohm
 Source0:    %{name}-%{version}.tar.gz
 Source1:    ohm-rpmlintrc
 Requires:   ohm-configs
-Requires:   boardname >= 0.4.1
 Requires:   systemd
 Requires(preun): systemd
 Requires(post): systemd
@@ -18,7 +17,6 @@ BuildRequires:  pkgconfig(dbus-1) >= 0.70
 BuildRequires:  pkgconfig(dbus-glib-1) >= 0.70
 BuildRequires:  pkgconfig(check)
 BuildRequires:  pkgconfig(libsimple-trace)
-BuildRequires:  pkgconfig(boardname)
 
 %description
 Open Hardware Manager.
