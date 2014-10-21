@@ -77,6 +77,8 @@ mkdir -p %{buildroot}/%{_sysconfdir}/ohm/plugins.d
 install -d %{buildroot}/%{_lib}/systemd/system/basic.target.wants
 ln -s ../ohmd.service %{buildroot}/%{_lib}/systemd/system/basic.target.wants/ohmd.service
 
+install -d %{buildroot}/%{_libdir}/ohm
+
 %preun
 if [ "$1" -eq 0 ]; then
 systemctl stop ohmd.service || :
@@ -95,6 +97,8 @@ systemctl daemon-reload || :
 
 %files
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/ohm
+%dir %{_sysconfdir}/ohm/plugins.d
 %{_sbindir}/*ohm*
 /%{_lib}/systemd/system/ohmd.service
 /%{_lib}/systemd/system/basic.target.wants/ohmd.service
@@ -102,14 +106,13 @@ systemctl daemon-reload || :
 
 %files configs-default
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/ohm
-%dir %{_sysconfdir}/ohm/plugins.d
 %config %{_sysconfdir}/ohm/modules.ini
 
 %files plugin-core
 %defattr(-,root,root,-)
 %{_libdir}/libohmplugin.so.*
 %{_libdir}/libohmfact.so.*
+%dir %{_libdir}/ohm
 
 %files devel
 %defattr(-,root,root,-)
