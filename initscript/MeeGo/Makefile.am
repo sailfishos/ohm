@@ -1,4 +1,4 @@
 EXTRA_DIST = ohmd
 
-initddir = /lib/systemd/system
-initd_SCRIPTS = ohmd.service
+systemddir = /lib/systemd/system
+systemd_DATA = ohmd.service
