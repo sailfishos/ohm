@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.freedesktop.ohm
+Exec=/bin/false
+User=root
+SystemdService=dbus-org.freedesktop.ohm.service
