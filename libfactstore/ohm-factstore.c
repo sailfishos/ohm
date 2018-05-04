@@ -1703,7 +1703,7 @@ static gboolean _ohm_fact_store_transaction_rolledback(OhmFactStore *self) {
  * Returns: a new #OhmFactStore
  **/
 OhmFactStore* ohm_fact_store_new (void) {
-	return g_object_newv (OHM_TYPE_FACT_STORE, 0, NULL);
+	return g_object_new (OHM_TYPE_FACT_STORE, NULL);
 }
 
 
@@ -1922,7 +1922,7 @@ char* ohm_fact_store_change_set_to_string (OhmFactStoreChangeSet* self) {
 OhmFactStoreChangeSet* ohm_fact_store_change_set_new (void) {
 	OhmFactStoreChangeSet * self;
 
-	self = g_object_newv (OHM_FACT_STORE_TYPE_CHANGE_SET, 0, NULL);
+	self = g_object_new (OHM_FACT_STORE_TYPE_CHANGE_SET, NULL);
 
 	return self;
 }
@@ -2017,7 +2017,7 @@ GType ohm_fact_store_change_set_get_type (void) {
 OhmFactStoreSimpleView* ohm_fact_store_simple_view_new (void) {
 	OhmFactStoreSimpleView * self;
 
-	self = g_object_newv (OHM_FACT_STORE_TYPE_SIMPLE_VIEW, 0, NULL);
+	self = g_object_new (OHM_FACT_STORE_TYPE_SIMPLE_VIEW, NULL);
 
 	return self;
 }
