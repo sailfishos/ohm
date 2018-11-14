@@ -13,7 +13,7 @@
 
 #include "ohm-common.h"
 #include "ohm-debug.h"
-#include <ohm/ohm-dbus.h>
+#include "ohm-dbus-internal.h"
 
 #define VALUE_STARTSWITH  "startswith:"
 
