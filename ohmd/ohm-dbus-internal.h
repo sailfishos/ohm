@@ -19,14 +19,14 @@ int  ohm_dbus_add_signal(const char *sender,
                          const char *iface,
                          const char *sig,
                          const char *path,
-                         DBusObjectPathMessageFunction handler,
+                         DBusHandleMessageFunction handler,
                          void *data);
 
 void ohm_dbus_del_signal(const char *sender,
                          const char *iface,
                          const char *sig,
                          const char *path,
-                         DBusObjectPathMessageFunction handler,
+                         DBusHandleMessageFunction handler,
                          void *data);
 
 #endif /* __OHM_DBUS_INTERNAL_H */

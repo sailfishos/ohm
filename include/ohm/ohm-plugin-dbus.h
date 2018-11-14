@@ -11,7 +11,7 @@ typedef struct {
   const char                    *interface;           /* interface */
   const char                    *path;                /* DBUS object path */
   const char                    *name;                /* method name */
-  DBusObjectPathMessageFunction  handler;             /* method handler */
+  DBusHandleMessageFunction      handler;             /* method handler */
   void                          *data;                /* user data */
 } ohm_dbus_method_t;
 
@@ -22,7 +22,7 @@ typedef struct {
   const char                    *interface;
   const char                    *signal;
   const char                    *path;
-  DBusObjectPathMessageFunction  handler;
+  DBusHandleMessageFunction      handler;
   void                          *data;
 } ohm_dbus_signal_t;
 
@@ -37,14 +37,14 @@ int  ohm_plugin_dbus_add_signal(const char *sender,
                                 const char *iface,
                                 const char *signal,
                                 const char *path,
-                                DBusObjectPathMessageFunction handler,
+                                DBusHandleMessageFunction handler,
                                 void *data);
 
 void ohm_plugin_dbus_del_signal(const char *sender,
                                 const char *iface,
                                 const char *signal,
                                 const char *path,
-                                DBusObjectPathMessageFunction handler,
+                                DBusHandleMessageFunction handler,
                                 void *data);
 
 #define OHM_PLUGIN_DBUS_METHODS(...)				  \

@@ -670,7 +670,7 @@ ohm_plugin_dbus_add_signal(const char *sender,
                            const char *iface,
                            const char *signal,
                            const char *path,
-                           DBusObjectPathMessageFunction handler,
+                           DBusHandleMessageFunction handler,
                            void *data)
 {
     return ohm_dbus_add_signal(sender, iface, signal, path, handler, data);
@@ -681,7 +681,7 @@ ohm_plugin_dbus_del_signal(const char *sender,
                            const char *iface,
                            const char *signal,
                            const char *path,
-                           DBusObjectPathMessageFunction handler,
+                           DBusHandleMessageFunction handler,
                            void *data)
 {
     ohm_dbus_del_signal(sender, iface, signal, path, handler, data);

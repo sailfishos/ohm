@@ -33,7 +33,7 @@ typedef struct {
     char                           *signal;
     char                           *path;
     size_t                          path_startswith_len;
-    DBusObjectPathMessageFunction   handler;
+    DBusHandleMessageFunction       handler;
     void                           *data;
 } ohm_dbus_signal_priv_t;
 
@@ -458,7 +458,7 @@ static gboolean set_match_string(ohm_dbus_signal_priv_t *signal_handler) {
 int
 ohm_dbus_add_signal(const char *sender, const char *interface, const char *sig,
                     const char *path,
-                    DBusObjectPathMessageFunction handler, void *data)
+                    DBusHandleMessageFunction handler, void *data)
 {
 
     ohm_dbus_signal_priv_t *signal_handler = NULL;
@@ -519,7 +519,7 @@ signal_handler_free(ohm_dbus_signal_priv_t *signal_handler)
 void
 ohm_dbus_del_signal(const char *sender, const char *interface, const char *sig,
                     const char *path,
-                    DBusObjectPathMessageFunction handler, void *data)
+                    DBusHandleMessageFunction handler, void *data)
 {
     GSList *i = NULL;
     gboolean found;
