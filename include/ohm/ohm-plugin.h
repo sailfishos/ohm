@@ -26,10 +26,7 @@
 #endif
 #include <dlfcn.h>
 
-#include <dbus/dbus.h>
 #include <gmodule.h>
-
-#include <ohm/ohm-plugin-dbus.h>
 
 G_BEGIN_DECLS
 
@@ -168,18 +165,6 @@ struct _OhmPluginDesc {
     int i;								  \
     for (i = 0; imports[i].name; i++)					  \
       OHM_VAR(plugin,_plugin_imports)[i] = imports[i];			  \
-  }
-
-#define OHM_PLUGIN_DBUS_METHODS(...)				  \
-  G_MODULE_EXPORT ohm_dbus_method_t ohm_plugin_dbus_methods[] = { \
-    __VA_ARGS__,						  \
-    OHM_DBUS_METHODS_END,					  \
-  }
-
-#define OHM_PLUGIN_DBUS_SIGNALS(...) \
-  G_MODULE_EXPORT ohm_dbus_signal_t ohm_plugin_dbus_signals[] = { \
-    __VA_ARGS__,						  \
-    OHM_DBUS_SIGNALS_END					  \
   }
 
 

@@ -47,4 +47,16 @@ void ohm_plugin_dbus_del_signal(const char *sender,
                                 DBusObjectPathMessageFunction handler,
                                 void *data);
 
+#define OHM_PLUGIN_DBUS_METHODS(...)				  \
+  G_MODULE_EXPORT ohm_dbus_method_t ohm_plugin_dbus_methods[] = { \
+    __VA_ARGS__,						  \
+    OHM_DBUS_METHODS_END,					  \
+  }
+
+#define OHM_PLUGIN_DBUS_SIGNALS(...) \
+  G_MODULE_EXPORT ohm_dbus_signal_t ohm_plugin_dbus_signals[] = { \
+    __VA_ARGS__,						  \
+    OHM_DBUS_SIGNALS_END					  \
+  }
+
 #endif /* __OHM_PLUGIN_DBUS_H */
