@@ -549,7 +549,6 @@ fi
 AC_SUBST(AEGIS_SUPPORT)
 
 AC_OUTPUT([
-ohm.pc
 ohm.conf
 Makefile
 etc/Makefile

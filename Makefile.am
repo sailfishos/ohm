@@ -21,14 +21,13 @@ SUBDIRS += aegis
 endif
 
 pkgconfigdir = ${libdir}/pkgconfig
-pkgconfig_DATA = ohm.pc ohmd/libohmplugin.pc ohmd/libohmfact.pc
+pkgconfig_DATA = ohmd/libohmplugin.pc ohmd/libohmfact.pc
 
 dbusdir = @DBUS_SYS_DIR@
 dist_dbus_DATA = ohm.conf
 
 EXTRA_DIST =				\
 	$(dbusconf_DATA)		\
-	ohm.pc.in			\
 	ohm.conf.in
 #   intltool-update.in		
 #	intltool-merge.in		
