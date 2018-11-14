@@ -53,7 +53,7 @@
 #include "ohm-plugin-internal.h"
 #include "ohm-conf.h"
 #include "ohm-marshal.h"
-#include <ohm/ohm-dbus.h>
+#include "ohm-dbus-internal.h"
 
 #define OHM_PLUGIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_PLUGIN, OhmPluginPrivate))
 
@@ -653,6 +653,39 @@ ohm_plugin_dbus_get_connection(void)
   return ohm_dbus_get_connection();
 }
 
+int
+ohm_plugin_dbus_add_method(ohm_dbus_method_t *method)
+{
+    return ohm_dbus_add_method(method);
+}
+
+int
+ohm_plugin_dbus_del_method(ohm_dbus_method_t *method)
+{
+    return ohm_dbus_del_method(method);
+}
+
+int
+ohm_plugin_dbus_add_signal(const char *sender,
+                           const char *iface,
+                           const char *signal,
+                           const char *path,
+                           DBusObjectPathMessageFunction handler,
+                           void *data)
+{
+    return ohm_dbus_add_signal(sender, iface, signal, path, handler, data);
+}
+
+void
+ohm_plugin_dbus_del_signal(const char *sender,
+                           const char *iface,
+                           const char *signal,
+                           const char *path,
+                           DBusObjectPathMessageFunction handler,
+                           void *data)
+{
+    ohm_dbus_del_signal(sender, iface, signal, path, handler, data);
+}
 
 
 /**
