@@ -1,5 +1,5 @@
-#ifndef __OHM_DBUS_H__
-#define __OHM_DBUS_H__
+#ifndef __OHM_PLUGIN_DBUS_H
+#define __OHM_PLUGIN_DBUS_H
 
 #include <glib.h>
 #include <dbus/dbus-glib.h>
@@ -28,22 +28,23 @@ typedef struct {
 
 #define OHM_DBUS_SIGNALS_END { NULL, NULL, NULL, NULL, NULL, NULL }
 
-int  ohm_dbus_init(DBusGConnection *gconn);
-void ohm_dbus_exit(void);
+DBusConnection *ohm_plugin_dbus_get_connection(void);
 
-DBusConnection *ohm_dbus_get_connection(void);
+int ohm_plugin_dbus_add_method(ohm_dbus_method_t *method);
+int ohm_plugin_dbus_del_method(ohm_dbus_method_t *method);
 
-int ohm_dbus_add_method(ohm_dbus_method_t *method);
-int ohm_dbus_del_method(ohm_dbus_method_t *method);
+int  ohm_plugin_dbus_add_signal(const char *sender,
+                                const char *iface,
+                                const char *signal,
+                                const char *path,
+                                DBusObjectPathMessageFunction handler,
+                                void *data);
 
-int  ohm_dbus_add_signal(const char *sender, const char *iface, const char *sig,
-			 const char *path,
-			 DBusObjectPathMessageFunction handler, void *data);
-void ohm_dbus_del_signal(const char *sender, const char *iface, const char *sig,
-			 const char *path,
-			 DBusObjectPathMessageFunction handler, void *data);
+void ohm_plugin_dbus_del_signal(const char *sender,
+                                const char *iface,
+                                const char *signal,
+                                const char *path,
+                                DBusObjectPathMessageFunction handler,
+                                void *data);
 
-
-
-
-#endif /* __OHM_DBUS_H */
+#endif /* __OHM_PLUGIN_DBUS_H */
