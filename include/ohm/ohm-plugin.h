@@ -29,7 +29,7 @@
 #include <dbus/dbus.h>
 #include <gmodule.h>
 
-#include <ohm/ohm-dbus.h>
+#include <ohm/ohm-plugin-dbus.h>
 
 G_BEGIN_DECLS
 
@@ -229,12 +229,6 @@ gchar		*ohm_plugin_hal_get_udi			(OhmPlugin	*plugin,
 							 guint		 id);
 guint		 ohm_plugin_hal_add_device_capability	(OhmPlugin	*plugin,
 							 const gchar	*capability);
-
-
-/* used by plugin for non-HAL DBUS access */
-
-DBusConnection *ohm_plugin_dbus_get_connection(void);
-
 
 /* used by plugin for dynamically resolve exported plugin methods */
 gboolean ohm_module_find_method(char *name, char **sigptr, void **methptr);
