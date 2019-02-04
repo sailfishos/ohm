@@ -1,6 +1,6 @@
 Name:       ohm
 Summary:    Open Hardware Manager
-Version:    1.1.14
+Version:    1.1.22
 Release:    1
 Group:      System/Resource Policy
 License:    LGPLv2.1
@@ -62,9 +62,10 @@ Development files for %{name}.
 %configure --disable-static \
     --without-xauth \
     --with-distro=meego \
-    --disable-legacy
+    --disable-legacy \
+    VERSION="`echo %{version} | sed 's/+.*//'`"
 
-make %{?jobs:-j%jobs}
+make %{_smp_mflags}
 
 %install
 rm -rf %{buildroot}
@@ -123,4 +124,3 @@ systemctl daemon-reload || :
 %{_libdir}/pkgconfig/*
 %{_libdir}/libohmplugin.so
 %{_libdir}/libohmfact.so
-
