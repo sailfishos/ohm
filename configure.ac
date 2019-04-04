@@ -1,15 +1,19 @@
-AC_PREREQ(2.52)
+AC_PREREQ(2.61)
 
-AC_INIT(ohm, $VERSION)
-AC_CONFIG_SRCDIR(ohmd)
-AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
-AM_CONFIG_HEADER(config.h)
-VERSION_MAJOR=0
-VERSION_MINOR=0
-VERSION_PATCH=1
-AC_SUBST(VERSION_MAJOR)
-AC_SUBST(VERSION_MINOR)
-AC_SUBST(VERSION_PATCH)
+AC_INIT([ohm], m4_esyscmd([./git-version-gen .tarball-version]))
+AC_CONFIG_SRCDIR([ohmd/ohm-main.c])
+AM_INIT_AUTOMAKE
+AC_CONFIG_HEADER([config.h])
+
+m4_define(version_major, `echo $VERSION | cut -d- -f1 | cut -d. -f1`)
+m4_define(version_minor, `echo $VERSION | cut -d- -f1 | cut -d. -f1`)
+m4_define(version_patch, `echo $VERSION | cut -d- -f1 | cut -d. -f1`)
+
+AC_SUBST(VERSION)
+AC_SUBST(VERSION_MAJOR, version_major)
+AC_SUBST(VERSION_MINOR, version_minor)
+AC_SUBST(VERSION_PATCH, version_patch)
+AC_SUBST(VERSION_FULL, version_major.version_minor.version_patch)
 
 # libtool versioning - this applies to libohm
 #
@@ -198,7 +202,7 @@ dnl ---------------------------------------------------------------------------
 dnl - Some utility functions to make checking for X things easier.
 dnl ---------------------------------------------------------------------------
 # Like AC_CHECK_HEADER, but it uses the already-computed -I directories.
-AC_DEFUN(AC_CHECK_X_HEADER, [
+AC_DEFUN([AC_CHECK_X_HEADER], [
   ac_save_CPPFLAGS="$CPPFLAGS"
   if test \! -z "$includedir" ; then
     CPPFLAGS="$CPPFLAGS -I$includedir"
@@ -208,7 +212,7 @@ AC_DEFUN(AC_CHECK_X_HEADER, [
   CPPFLAGS="$ac_save_CPPFLAGS"])
 
 # Like AC_TRY_COMPILE, but it uses the already-computed -I directories.
-AC_DEFUN(AC_TRY_X_COMPILE, [
+AC_DEFUN([AC_TRY_X_COMPILE], [
   ac_save_CPPFLAGS="$CPPFLAGS"
   if test \! -z "$includedir" ; then
     CPPFLAGS="$CPPFLAGS -I$includedir"
@@ -219,7 +223,7 @@ AC_DEFUN(AC_TRY_X_COMPILE, [
 
 # Like AC_CHECK_LIB, but it uses the already-computed -I and -L directories.
 # Use this sparingly; it probably doesn't work very well on X programs.
-AC_DEFUN(AC_CHECK_X_LIB, [
+AC_DEFUN([AC_CHECK_X_LIB], [
   ac_save_CPPFLAGS="$CPPFLAGS"
   ac_save_LDFLAGS="$LDFLAGS"
 #  ac_save_LIBS="$LIBS"
@@ -253,7 +257,7 @@ AC_DEFUN(AC_CHECK_X_LIB, [
 # a directory (string beginning with a slash) it checks to see whether
 # /DIR/include and /DIR/lib exist, and adds them to $X_CFLAGS and $X_LIBS
 # as appropriate.
-AC_DEFUN(HANDLE_X_PATH_ARG, [
+AC_DEFUN([HANDLE_X_PATH_ARG], [
    case "$[$1]" in
     yes) ;;
     no)  ;;
