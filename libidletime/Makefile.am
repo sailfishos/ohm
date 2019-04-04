@@ -1,4 +1,4 @@
-INCLUDES = \
+AM_CPPFLAGS = \
 	$(GLIB_CFLAGS)						\
 	$(GDK_CFLAGS)						\
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\"

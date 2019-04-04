@@ -1,4 +1,4 @@
-INCLUDES =							\
+AM_CPPFLAGS =							\
 	$(HAL_CFLAGS)						\
 	$(GLIB_CFLAGS)						\
 	$(DBUS_CFLAGS)						\

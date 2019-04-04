@@ -40,7 +40,7 @@
 #include "ohm-common.h"
 #include "ohm-manager.h"
 #include "ohm-dbus-manager.h"
-#include "ohm/ohm-dbus.h"
+#include "ohm-dbus-internal.h"
 #include "ohm/ohm-plugin-log.h"
 
 #if _POSIX_MEMLOCK > 0

@@ -1,6 +1,6 @@
 Name:       ohm
 Summary:    Open Hardware Manager
-Version:    1.1.22
+Version:    1.2.0
 Release:    1
 Group:      System/Resource Policy
 License:    LGPLv2.1
@@ -58,12 +58,11 @@ Development files for %{name}.
 %setup -q -n %{name}-%{version}
 
 %build
+echo %{version} | cut -d+ -f1 | cut -d- -f1 > .tarball-version
 %autogen --disable-static
 %configure --disable-static \
     --without-xauth \
-    --with-distro=meego \
-    --disable-legacy \
-    VERSION="`echo %{version} | sed 's/+.*//'`"
+    --with-distro=meego
 
 make %{_smp_mflags}
 

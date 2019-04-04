@@ -23,7 +23,7 @@
 
 #include <glib-object.h>
 #include <ohm/ohm-plugin.h>
-#include <ohm/ohm-dbus.h>
+#include <ohm/ohm-plugin-dbus.h>
 
 
 G_BEGIN_DECLS

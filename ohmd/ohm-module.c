@@ -43,6 +43,7 @@
 #include "ohm-debug.h"
 #include "ohm-module.h"
 #include "ohm-plugin-internal.h"
+#include "ohm-dbus-internal.h"
 #include "ohm-conf.h"
 
 #define OHM_MODULE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), OHM_TYPE_MODULE, OhmModulePrivate))
