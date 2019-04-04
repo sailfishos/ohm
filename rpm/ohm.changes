@@ -44,13 +44,13 @@
 * Fri Apr 15 2011 Zheng Huan <huan.zheng@intel.com> - 1.1.14
 - Add capability to load different modules per different platform, for BMC#7487
 
-* Mon Feb 24 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - 1.1.14
+* Thu Feb 24 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - 1.1.14
 - Remove preun/post/postun scriptlets as part of BMC#12898
 
 * Mon Jan 10 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - 1.1.14
 - Fix post/postun requirements
 
-* Thu Dec 28 2010 Kalle Lampila <kalle.lampila@cybercom.com> - 1.1.14
+* Tue Dec 28 2010 Kalle Lampila <kalle.lampila@cybercom.com> - 1.1.14
 - Fixed chkconfig registeration in installation
 - Changed package group to System/Resource Policy
 
