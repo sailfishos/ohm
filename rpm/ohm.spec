@@ -74,11 +74,15 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}/%{_sysconfdir}/ohm/plugins.d
 
 # enable ohmd in the basic systemd target
-install -d %{buildroot}/%{_lib}/systemd/system/basic.target.wants
-ln -s ../ohmd.service %{buildroot}/%{_lib}/systemd/system/basic.target.wants/ohmd.service
-(cd %{buildroot}/%{_lib}/systemd/system && ln -s ohmd.service dbus-org.freedesktop.ohm.service)
+install -d %{buildroot}%{_libdir}/systemd/system/basic.target.wants
+ln -s ../ohmd.service %{buildroot}%{_libdir}/systemd/system/basic.target.wants/ohmd.service
+(cd %{buildroot}%{_libdir}/systemd/system && ln -s ohmd.service dbus-org.freedesktop.ohm.service)
 
-install -d %{buildroot}/%{_libdir}/ohm
+install -d %{buildroot}%{_libdir}/ohm
+
+# Move under /usr
+mv %{buildroot}/lib/systemd/system/* %{buildroot}%{_libdir}/systemd/system/
+rm -rf %{buildroot}/lib
 
 %preun
 if [ "$1" -eq 0 ]; then
@@ -101,9 +105,9 @@ systemctl daemon-reload || :
 %dir %{_sysconfdir}/ohm
 %dir %{_sysconfdir}/ohm/plugins.d
 %{_sbindir}/*ohm*
-/%{_lib}/systemd/system/ohmd.service
-/%{_lib}/systemd/system/basic.target.wants/ohmd.service
-/%{_lib}/systemd/system/dbus-org.freedesktop.ohm.service
+%{_libdir}/systemd/system/ohmd.service
+%{_libdir}/systemd/system/basic.target.wants/ohmd.service
+%{_libdir}/systemd/system/dbus-org.freedesktop.ohm.service
 %{_datadir}/dbus-1/system-services/org.freedesktop.ohm.service
 %config %{_sysconfdir}/dbus-1/system.d/ohm.conf
 
