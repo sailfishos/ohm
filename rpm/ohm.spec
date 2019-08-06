@@ -3,8 +3,8 @@ Summary:    Open Hardware Manager
 Version:    1.2.0
 Release:    1
 Group:      System/Resource Policy
-License:    LGPLv2.1
-URL:        http://meego.gitorious.org/maemo-multimedia/ohm
+License:    LGPLv2+
+URL:        https://git.sailfishos.org/mer-core/ohm
 Source0:    %{name}-%{version}.tar.gz
 Source1:    ohm-rpmlintrc
 Requires:   ohm-configs
