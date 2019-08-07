@@ -1,6 +1,6 @@
 Name:       ohm
 Summary:    Open Hardware Manager
-Version:    1.2.0
+Version:    1.2.1
 Release:    1
 Group:      System/Resource Policy
 License:    LGPLv2+
