@@ -22,6 +22,15 @@ BuildRequires:  pkgconfig(libsimple-trace)
 Open Hardware Manager.
 
 
+%package tracing
+Summary:    Enable tracing for %{name}
+Group:      System/Resource Policy
+Requires:   %{name}
+
+%description tracing
+This package enables verbose logging for %{name}.
+
+
 %package configs-default
 Summary:    Common configuration files for %{name}
 Group:      System/Resource Policy
@@ -106,6 +115,10 @@ systemctl daemon-reload || :
 /%{_lib}/systemd/system/dbus-org.freedesktop.ohm.service
 %{_datadir}/dbus-1/system-services/org.freedesktop.ohm.service
 %config %{_sysconfdir}/dbus-1/system.d/ohm.conf
+
+%files tracing
+%defattr(-,root,root,-)
+%{_sysconfdir}/sysconfig/ohmd.debug
 
 %files configs-default
 %defattr(-,root,root,-)
