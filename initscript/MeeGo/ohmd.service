@@ -8,7 +8,9 @@ Conflicts=shutdown.target
 [Service]
 Type=dbus
 BusName=org.freedesktop.ohm
-ExecStart=/usr/sbin/ohmd --no-daemon
+EnvironmentFile=-/etc/sysconfig/ohmd.debug
+EnvironmentFile=-/etc/sysconfig/ohmd
+ExecStart=/usr/sbin/ohmd --no-daemon $OHMD_FLAGS $DEBUG_FLAGS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1
