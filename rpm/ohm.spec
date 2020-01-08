@@ -88,6 +88,7 @@ ln -s ../ohmd.service %{buildroot}/%{_lib}/systemd/system/basic.target.wants/ohm
 (cd %{buildroot}/%{_lib}/systemd/system && ln -s ohmd.service dbus-org.freedesktop.ohm.service)
 
 install -d %{buildroot}/%{_libdir}/ohm
+install -d %{buildroot}/%{_sharedstatedir}/ohm
 
 %preun
 if [ "$1" -eq 0 ]; then
@@ -107,6 +108,7 @@ systemctl daemon-reload || :
 
 %files
 %defattr(-,root,root,-)
+%dir %{_sharedstatedir}/ohm
 %dir %{_sysconfdir}/ohm
 %dir %{_sysconfdir}/ohm/plugins.d
 %{_sbindir}/*ohm*
