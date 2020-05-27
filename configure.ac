@@ -596,6 +596,7 @@ echo "
                   ==============================
 
         prefix:                    ${prefix}
+        libdir:                    ${libdir}
         datadir:                   ${datadir}
         documentation dir:         ${docdir}
         compiler:                  ${CC}
