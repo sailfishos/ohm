@@ -1,6 +1,6 @@
 EXTRA_DIST = ohmd
 
-systemddir = /lib/systemd/system
+systemddir = /usr/lib/systemd/system
 systemd_DATA = ohmd.service
 
 dbusservicedir = /usr/share/dbus-1/system-services
