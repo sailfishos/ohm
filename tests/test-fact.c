@@ -76,19 +76,25 @@ static void _structure_set_get(OhmStructure* s)
 }
 
 
-START_TEST (test_fact_structure_set_get)
+static void do_test_fact_structure_set_get(void)
 {
     OhmStructure* s;
     s = ohm_structure_new("org.freedesktop.ohm.test");
     _structure_set_get(s);
     (s == NULL ? NULL : (s = (g_object_unref(s), NULL)));
 }
+
+
+START_TEST (test_fact_structure_set_get)
+{
+    do_test_fact_structure_set_get();
+}
 END_TEST
 
 
 START_TEST (test_fact_structure_free)
 {
-    test_fact_structure_set_get(_i);
+    do_test_fact_structure_set_get();
 }
 END_TEST
 
@@ -140,7 +146,7 @@ START_TEST (test_fact_fact_set_get)
 END_TEST
 
 
-START_TEST (test_fact_pattern_new)
+static void do_test_fact_pattern_new(void)
 {
     void* p;
     p = NULL;
@@ -155,10 +161,16 @@ START_TEST (test_fact_pattern_new)
     }
     fail_unless(p == NULL);
 }
+
+
+START_TEST (test_fact_pattern_new)
+{
+    do_test_fact_pattern_new();
+}
 END_TEST
 
 
-START_TEST (test_fact_pattern_new_for_fact)
+static void do_test_fact_pattern_new_for_fact(void)
 {
     void* pf;
     void* pp;
@@ -185,24 +197,36 @@ START_TEST (test_fact_pattern_new_for_fact)
     fail_unless(pf == NULL);
     fail_unless(pp == NULL);
 }
+
+
+START_TEST (test_fact_pattern_new_for_fact)
+{
+    do_test_fact_pattern_new_for_fact();
+}
 END_TEST
 
 
-START_TEST (test_fact_pattern_set_get)
+static void do_test_fact_pattern_set_get(void)
 {
     OhmPattern* f;
     f = ohm_pattern_new("org.freedesktop.ohm.test");
     _structure_set_get(OHM_STRUCTURE(f));
     (f == NULL ? NULL : (f = (g_object_unref(f), NULL)));
 }
+
+
+START_TEST (test_fact_pattern_set_get)
+{
+    do_test_fact_pattern_set_get();
+}
 END_TEST
 
 
 START_TEST (test_fact_pattern_free)
 {
-    test_fact_pattern_new(_i);
-    test_fact_pattern_new_for_fact(_i);
-    test_fact_pattern_set_get(_i);
+    do_test_fact_pattern_new();
+    do_test_fact_pattern_new_for_fact();
+    do_test_fact_pattern_set_get();
 }
 END_TEST
 
@@ -267,7 +291,7 @@ START_TEST (test_fact_pattern_match_instance)
 END_TEST
 
 
-START_TEST (test_fact_pattern_match_fields)
+static void do_test_fact_pattern_match_fields(void)
 {
     OhmPattern* p;
     OhmFact* match;
@@ -329,12 +353,18 @@ START_TEST (test_fact_pattern_match_fields)
     return;
     (void)test_fact_pattern_match_instance;
 }
+
+
+START_TEST (test_fact_pattern_match_fields)
+{
+    do_test_fact_pattern_match_fields();
+}
 END_TEST
 
 
 START_TEST (test_fact_pattern_match_free)
 {
-    test_fact_pattern_match_fields(_i);
+    do_test_fact_pattern_match_fields();
 }
 END_TEST
 
@@ -444,7 +474,7 @@ START_TEST (test_fact_store_to_string)
 END_TEST
 
 
-START_TEST (test_fact_store_insert_remove)
+static void do_test_fact_store_insert_remove(void)
 {
     void* p;
     void* pfs;
@@ -514,17 +544,23 @@ START_TEST (test_fact_store_insert_remove)
     fail_unless(pfs == NULL);
     fail_unless(pf == NULL);
 }
+
+
+START_TEST (test_fact_store_insert_remove)
+{
+    do_test_fact_store_insert_remove();
+}
 END_TEST
 
 
 START_TEST (test_fact_store_free)
 {
-    test_fact_store_insert_remove(_i);
+    do_test_fact_store_insert_remove();
 }
 END_TEST
 
 
-START_TEST (test_fact_store_view_new)
+static void do_test_fact_store_view_new(void)
 {
     void* p;
     p = NULL;
@@ -541,10 +577,16 @@ START_TEST (test_fact_store_view_new)
     }
     fail_unless(p == NULL);
 }
+
+
+START_TEST (test_fact_store_view_new)
+{
+    do_test_fact_store_view_new();
+}
 END_TEST
 
 
-START_TEST (test_fact_store_view_two)
+static void do_test_fact_store_view_two(void)
 {
     OhmFactStore* fs;
     OhmFactStoreView* v;
@@ -597,13 +639,19 @@ START_TEST (test_fact_store_view_two)
     (v2 == NULL ? NULL : (v2 = (g_object_unref(v2), NULL)));
     (f == NULL ? NULL : (f = (g_object_unref(f), NULL)));
 }
+
+
+START_TEST (test_fact_store_view_two)
+{
+    do_test_fact_store_view_two();
+}
 END_TEST
 
 
 START_TEST (test_fact_store_view_free)
 {
-    test_fact_store_view_new(_i);
-    test_fact_store_view_two(_i);
+    do_test_fact_store_view_new();
+    do_test_fact_store_view_two();
 }
 END_TEST
 
@@ -663,7 +711,7 @@ START_TEST (test_fact_store_transaction_push_and_watch)
 END_TEST
 
 
-START_TEST (test_fact_store_transaction_push_and_cancel)
+static void do_test_fact_store_transaction_push_and_cancel(void)
 {
     OhmFactStore* fs;
     OhmFactStoreView* v;
@@ -732,6 +780,12 @@ START_TEST (test_fact_store_transaction_push_and_cancel)
     (v == NULL ? NULL : (v = (g_object_unref(v), NULL)));
     (v2 == NULL ? NULL : (v2 = (g_object_unref(v2), NULL)));
     (fact == NULL ? NULL : (fact = (g_object_unref(fact), NULL)));
+}
+
+
+START_TEST (test_fact_store_transaction_push_and_cancel)
+{
+    do_test_fact_store_transaction_push_and_cancel();
 }
 END_TEST
 
@@ -820,7 +874,7 @@ END_TEST
 
 START_TEST (test_fact_store_transaction_free)
 {
-    test_fact_store_transaction_push_and_cancel(_i);
+    do_test_fact_store_transaction_push_and_cancel();
 }
 END_TEST
 
