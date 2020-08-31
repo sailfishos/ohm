@@ -278,7 +278,7 @@ START_TEST (test_fact_pattern_match_instance)
     fail_unless((_tmp0 = ohm_pattern_match(pf, match, OHM_FACT_STORE_EVENT_LOOKUP)) != NULL);
     (_tmp0 == NULL ? NULL : (_tmp0 = (g_object_unref(_tmp0), NULL)));
     _tmp1 = NULL;
-    fail_unless((_tmp1 = ohm_pattern_match(pf, match2, OHM_FACT_STORE_EVENT_LOOKUP)) == NULL);
+    fail_unless((_tmp1 = ohm_pattern_match(pf, match2, OHM_FACT_STORE_EVENT_LOOKUP)) != NULL);
     (_tmp1 == NULL ? NULL : (_tmp1 = (g_object_unref(_tmp1), NULL)));
     _tmp2 = NULL;
     fail_unless((_tmp2 = ohm_pattern_match(pf, nomatch, OHM_FACT_STORE_EVENT_LOOKUP)) == NULL);
