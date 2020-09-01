@@ -68,7 +68,7 @@ Development files for %{name}.
 
 %build
 echo %{version} | cut -d+ -f1 | cut -d- -f1 > .tarball-version
-%autogen --disable-static
+./autogen.sh
 %configure --disable-static \
     --without-xauth \
     --with-distro=meego
