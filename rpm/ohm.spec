@@ -90,6 +90,8 @@ ln -s ../ohmd.service %{buildroot}%{_unitdir}/basic.target.wants/ohmd.service
 install -d %{buildroot}/%{_libdir}/ohm
 install -d %{buildroot}/%{_sharedstatedir}/ohm
 
+rm -rf %{buildroot}/%{_libdir}/lib*.la
+
 %preun
 if [ "$1" -eq 0 ]; then
 systemctl stop ohmd.service || :
