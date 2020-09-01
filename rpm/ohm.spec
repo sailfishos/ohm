@@ -92,6 +92,9 @@ install -d %{buildroot}/%{_sharedstatedir}/ohm
 
 rm -rf %{buildroot}/%{_libdir}/lib*.la
 
+%check
+./tests/test-fact
+
 %preun
 if [ "$1" -eq 0 ]; then
 systemctl stop ohmd.service || :
