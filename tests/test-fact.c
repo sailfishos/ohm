@@ -73,6 +73,10 @@ static void _structure_set_get(OhmStructure* s)
     ohm_structure_set(s, "field2", NULL);
     v = ((GValue*) ohm_structure_get(s, "field2"));
     fail_unless(v == NULL);
+    ohm_structure_set(s, "pointer1", ohm_value_from_pointer(0xdeadbeef));
+    v = ohm_structure_get(s, "pointer1");
+    fail_unless(v != NULL);
+    fail_unless(g_value_get_pointer(v) == 0xdeadbeef);
 }
 
 
@@ -102,18 +106,24 @@ END_TEST
 START_TEST (test_fact_structure_to_string)
 {
     OhmStructure* s;
-    char* _tmp0;
-    char* _tmp1;
+    char* _tmp;
+    void* _ptr = 0xdeadbeef;
+
     s = ohm_structure_new("org.freedesktop.ohm.test");
     ohm_structure_set(s, "field1", ohm_value_from_string("test1"));
     ohm_structure_set(s, "field2", ohm_value_from_int(42));
-    _tmp0 = NULL;
-    fail_unless(_vala_strcmp0((_tmp0 = ohm_structure_to_string(s)), "org.freedesktop.ohm.test (field1 = \"test1\", field2 = 42)") == 0);
-    _tmp0 = (g_free(_tmp0), NULL);
+    fail_unless(_vala_strcmp0((_tmp = ohm_structure_to_string(s)), "org.freedesktop.ohm.test (field1 = \"test1\", field2 = 42)") == 0);
+    _tmp = (g_free(_tmp), NULL);
+
     ohm_structure_set(s, "field2", NULL);
-    _tmp1 = NULL;
-    fail_unless(_vala_strcmp0((_tmp1 = ohm_structure_to_string(s)), "org.freedesktop.ohm.test (field1 = \"test1\")") == 0);
-    _tmp1 = (g_free(_tmp1), NULL);
+    fail_unless(_vala_strcmp0((_tmp = ohm_structure_to_string(s)), "org.freedesktop.ohm.test (field1 = \"test1\")") == 0);
+    _tmp = (g_free(_tmp), NULL);
+
+    ohm_structure_set(s, "field1", NULL);
+    ohm_structure_set(s, "pointer1", ohm_value_from_pointer(_ptr));
+    fail_unless(_vala_strcmp0((_tmp = ohm_structure_to_string(s)), "org.freedesktop.ohm.test (pointer1 = ((gpointer) 0xdeadbeef))") == 0);
+    _tmp = (g_free(_tmp), NULL);
+
     (s == NULL ? NULL : (s = (g_object_unref(s), NULL)));
 }
 END_TEST
