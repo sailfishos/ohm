@@ -427,6 +427,7 @@ GValue* ohm_value_from_string (const char* str);
 GValue* ohm_value_from_int (gint val);
 GValue* ohm_value_from_structure (OhmStructure* val);
 GValue* ohm_value_from_fact (OhmFact* val);
+GValue* ohm_value_from_pointer (gpointer pointer);
 gint ohm_value_cmp (GValue* v1, GValue* v2);
 OhmStructure* ohm_value_get_structure (const GValue* value);
 OhmFact* ohm_value_get_fact (GValue* value);

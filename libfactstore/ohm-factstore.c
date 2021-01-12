@@ -2701,6 +2701,23 @@ GValue* ohm_value_from_fact (OhmFact* val) {
 	return value;
 }
 
+/**
+ * ohm_value_from_pointer:
+ * @pointer: a pointer
+ *
+ * Helper function to wrap a pointer in a new #GValue.
+ *
+ * Returns: a new GValue which has the value of @pointer.
+ **/
+GValue* ohm_value_from_pointer (gpointer pointer) {
+	GValue *value;
+
+	value = g_new0 (GValue, 1);
+	g_value_init (value, G_TYPE_POINTER);
+	g_value_set_pointer (value, pointer);
+
+	return value;
+}
 
 /**
  * ohm_value_cmp:
@@ -2751,6 +2768,11 @@ gint ohm_value_cmp (GValue* v1, GValue* v2) {
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_BOXED) {
 		return g_value_get_boxed (v1) == g_value_get_boxed (v2);
+	}
+
+	if (G_VALUE_TYPE (v1) == G_TYPE_POINTER) {
+		g_assert (G_VALUE_TYPE (v2) == G_TYPE_POINTER);
+		return g_value_get_pointer (v1) != g_value_get_pointer (v2);
 	}
 
 	return 0;
