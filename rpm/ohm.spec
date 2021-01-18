@@ -68,7 +68,7 @@ Development files for %{name}.
 
 %build
 echo %{version} | cut -d+ -f1 | cut -d- -f1 > .tarball-version
-%autogen --disable-static
+./autogen.sh
 %configure --disable-static \
     --without-xauth \
     --with-distro=meego
@@ -89,6 +89,11 @@ ln -s ../ohmd.service %{buildroot}%{_unitdir}/basic.target.wants/ohmd.service
 
 install -d %{buildroot}/%{_libdir}/ohm
 install -d %{buildroot}/%{_sharedstatedir}/ohm
+
+rm -rf %{buildroot}/%{_libdir}/lib*.la
+
+%check
+./tests/test-fact
 
 %preun
 if [ "$1" -eq 0 ]; then
