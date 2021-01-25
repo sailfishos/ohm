@@ -2719,6 +2719,15 @@ GValue* ohm_value_from_pointer (gpointer pointer) {
 	return value;
 }
 
+static gint ohm_gpointer_cmp(gpointer v1, gpointer v2) {
+	if (v1 == v2)
+		return 0;
+	else if (v1 < v2)
+		return -1;
+	else
+		return 1;
+}
+
 /**
  * ohm_value_cmp:
  * @v1: a value
@@ -2726,7 +2735,7 @@ GValue* ohm_value_from_pointer (gpointer pointer) {
  *
  * Helper function, to compare two #GValue.
  *
- * Returns: -diff, 0 or diff, if v1 is <, == or > than v2.
+ * Returns: -diff, 0 or diff, if v1 is <, == or >, respectively, than v2.
  **/
 gint ohm_value_cmp (GValue* v1, GValue* v2) {
 	if (v1 == v2) {
@@ -2744,7 +2753,14 @@ gint ohm_value_cmp (GValue* v1, GValue* v2) {
 	}
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_BOOLEAN) {
-		return g_value_get_boolean (v1) == g_value_get_boolean (v2);
+		gboolean b1 = g_value_get_boolean (v1);
+		gboolean b2 = g_value_get_boolean (v2);
+		if (b1 == b2)
+			return 0;
+		else if (b1)
+			return 1;
+		else
+			return -1;
 	}
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_CHAR) {
@@ -2759,20 +2775,20 @@ gint ohm_value_cmp (GValue* v1, GValue* v2) {
 	     return (int) (v1.get_flags () == v2.get_flags ());*/
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_NONE) {
-		return g_value_get_pointer (v1) == g_value_get_pointer (v2);
+		return ohm_gpointer_cmp (g_value_get_pointer (v1), g_value_get_pointer (v2));
 	}
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_OBJECT) {
-		return g_value_get_object (v1) == g_value_get_object (v2);
+		return ohm_gpointer_cmp (g_value_get_object (v1), g_value_get_object (v2));
 	}
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_BOXED) {
-		return g_value_get_boxed (v1) == g_value_get_boxed (v2);
+		return ohm_gpointer_cmp (g_value_get_boxed (v1), g_value_get_boxed (v2));
 	}
 
 	if (G_VALUE_TYPE (v1) == G_TYPE_POINTER) {
 		g_assert (G_VALUE_TYPE (v2) == G_TYPE_POINTER);
-		return g_value_get_pointer (v1) != g_value_get_pointer (v2);
+		return ohm_gpointer_cmp (g_value_get_pointer (v1), g_value_get_pointer (v2));
 	}
 
 	return 0;
