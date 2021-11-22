@@ -2,9 +2,8 @@ Name:       ohm
 Summary:    Open Hardware Manager
 Version:    1.3.0
 Release:    1
-Group:      System/Resource Policy
 License:    LGPLv2+
-URL:        https://git.sailfishos.org/mer-core/ohm
+URL:        https://github.com/sailfishos/ohm
 Source0:    %{name}-%{version}.tar.gz
 Source1:    ohm-rpmlintrc
 Requires:   ohm-configs
@@ -24,7 +23,6 @@ Open Hardware Manager.
 
 %package tracing
 Summary:    Enable tracing for %{name}
-Group:      System/Resource Policy
 Requires:   %{name}
 
 %description tracing
@@ -33,7 +31,6 @@ This package enables verbose logging for %{name}.
 
 %package configs-default
 Summary:    Common configuration files for %{name}
-Group:      System/Resource Policy
 Requires:   %{name} = %{version}-%{release}
 Provides:   ohm-config > 1.1.15
 Provides:   ohm-configs
@@ -45,7 +42,6 @@ This package contains common OHM configuration files.
 
 %package plugin-core
 Summary:    Common %{name} libraries
-Group:      System/Resource Policy
 Requires:   %{name} = %{version}-%{release}
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
@@ -57,7 +53,6 @@ developing OHM plugins.
 
 %package devel
 Summary:    Development files for %{name}
-Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
 %description devel
@@ -76,7 +71,6 @@ echo %{version} | cut -d+ -f1 | cut -d- -f1 > .tarball-version
 make %{_smp_mflags}
 
 %install
-rm -rf %{buildroot}
 %make_install
 
 # make sure we get a plugin config dir even with legacy plugins disabled
@@ -113,6 +107,7 @@ systemctl daemon-reload || :
 
 %files
 %defattr(-,root,root,-)
+%license COPYING
 %dir %{_sharedstatedir}/ohm
 %dir %{_sysconfdir}/ohm
 %dir %{_sysconfdir}/ohm/plugins.d
