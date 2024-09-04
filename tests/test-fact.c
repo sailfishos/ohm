@@ -73,7 +73,7 @@ static void _structure_set_get(OhmStructure* s)
     ohm_structure_set(s, "field2", NULL);
     v = ((GValue*) ohm_structure_get(s, "field2"));
     fail_unless(v == NULL);
-    ohm_structure_set(s, "pointer1", ohm_value_from_pointer(0xdeadbeef));
+    ohm_structure_set(s, "pointer1", ohm_value_from_pointer((void*)0xdeadbeef));
     v = ohm_structure_get(s, "pointer1");
     fail_unless(v != NULL);
     fail_unless(g_value_get_pointer(v) == 0xdeadbeef);
@@ -107,7 +107,7 @@ START_TEST (test_fact_structure_to_string)
 {
     OhmStructure* s;
     char* _tmp;
-    void* _ptr = 0xdeadbeef;
+    void* _ptr = (void*)0xdeadbeef;
 
     s = ohm_structure_new("org.freedesktop.ohm.test");
     ohm_structure_set(s, "field1", ohm_value_from_string("test1"));
